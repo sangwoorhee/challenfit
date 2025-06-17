@@ -7,7 +7,7 @@ import {
   SwaggerCustomOptions,
 } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import cookieParser from 'cookie-parser';
+import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptor/transform.interceptor'
 
@@ -70,5 +70,9 @@ async function bootstrap() {
 
   const PORT = configService.get<number>('PORT') ?? 3000;
   await app.listen(PORT);
+  console.log('DB_HOST:', configService.get<string>('DB_HOST'));
+  console.log('DB_USERNAME:', configService.get<string>('DB_USERNAME'));
+  console.log('DB_NAME:', configService.get<string>('DB_NAME'));
+  console.log(`POSTGRESQL_PORT: ${PORT} is running...`);
 }
 bootstrap();
