@@ -4,9 +4,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from '@nestjs/cache-manager';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
 import * as redisStore from 'cache-manager-redis-store';
+import { UserModule } from './common/routes/user/user.module';
+import { AuthModule } from './common/routes/auth/auth.module';
 
 @Module({
   imports: [
@@ -50,9 +50,8 @@ import * as redisStore from 'cache-manager-redis-store';
         synchronize: true, // 프로덕션에선 false
       }),
     }),
-
+    // 모듈 임포트
     AuthModule,
-
     UserModule,
   ],
   controllers: [AppController],
