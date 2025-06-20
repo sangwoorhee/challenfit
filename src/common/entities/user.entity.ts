@@ -56,7 +56,7 @@ export class User {
   @ApiProperty({ description: '소셜 UID', required: false })
   provider_uid?: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   @ApiProperty({ description: '생년월일', required: false })
   birth_date?: Date;
 

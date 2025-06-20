@@ -18,7 +18,7 @@ export class ChallengeParticipant {
   idx: number;
 
   @CreateDateColumn({
-    type: 'datetime',
+    type: 'timestamp',
     nullable: false,
     default: () => 'CURRENT_TIMESTAMP',
   })
@@ -30,7 +30,7 @@ export class ChallengeParticipant {
   status: string;
 
   @Column({
-    type: 'datetime',
+    type: 'timestamp',
     nullable: false,
     default: () => 'CURRENT_TIMESTAMP',
   })
