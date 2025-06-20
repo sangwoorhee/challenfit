@@ -7,6 +7,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { UserModule } from './common/routes/user/user.module';
 import { AuthModule } from './common/routes/auth/auth.module';
+import { ChallengeModule } from './common/routes/challenge/challenge.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AuthModule } from './common/routes/auth/auth.module';
     // 모듈 임포트
     AuthModule,
     UserModule,
+    ChallengeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
