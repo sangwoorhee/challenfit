@@ -1,5 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginReqDto, SignupReqDto } from './dto/req.dto';
+import { AuthTokenResDto } from './dto/res.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -9,5 +11,17 @@ export class AuthController {
   @Post('verify-sms')
   async verifySms(@Body('phone') phone: string) {
     return this.authService.sendVerificationCode(phone);
+  }
+
+  // 2. 회원가입
+  @Post('signup')
+  async signup(@Body() signupDto: SignupReqDto) {
+    return this.authService.signup(signupDto);
+  }
+
+  // 3. 로그인 (ID, PW)
+  @Post('login')
+  async login(@Body() loginDto: LoginReqDto): Promise<AuthTokenResDto> {
+    return this.authService.login(loginDto);
   }
 }

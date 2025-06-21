@@ -20,6 +20,9 @@ import { WorkoutLog } from './workout-log.entity';
 import { Ranking } from './ranking.entity';
 import { Challenge } from './challenge.entity';
 import { Notification } from './notification.entity';
+import { UserProfile } from './user_profile.entity';
+import { UserSetting } from './user_setting.entity';
+import { RefreshToken } from './refresh_token.entity';
 
 // User 엔티티
 @Entity({ name: 'user' })
@@ -56,34 +59,6 @@ export class User {
   @ApiProperty({ description: '소셜 UID', required: false })
   provider_uid?: string;
 
-  @Column({ type: 'timestamp', nullable: true })
-  @ApiProperty({ description: '생년월일', required: false })
-  birth_date?: Date;
-
-  @Column({ type: 'smallint', nullable: true })
-  @ApiProperty({ description: '키 (cm)', required: false })
-  height?: number;
-
-  @Column({ type: 'smallint', nullable: true })
-  @ApiProperty({ description: '몸무게 (kg)', required: false })
-  weight?: number;
-
-  @Column({ type: 'text', nullable: true })
-  @ApiProperty({ description: '관심 운동', required: false })
-  interest_exercises?: string;
-
-  @Column({ type: 'text', nullable: true })
-  @ApiProperty({ description: '운동 목적', required: false })
-  exercise_purpose?: string;
-
-  @Column({ type: 'text', nullable: true })
-  @ApiProperty({ description: '자기소개', required: false })
-  introduction?: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  @ApiProperty({ description: '프로필 이미지 URL', required: false })
-  profile_image_url?: string;
-
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
   @ApiProperty({ description: '상태', enum: UserStatus })
   status: UserStatus;
@@ -91,14 +66,6 @@ export class User {
   @Column({ type: 'boolean', default: false })
   @ApiProperty({ description: '챌린지 모드 여부', default: false })
   challenge_mode: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  @ApiProperty({ description: '마케팅 수신 동의 여부', default: false })
-  marketing_opt_in: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  @ApiProperty({ description: '야간 푸시 차단 여부', default: false })
-  no_push_night: boolean;
 
   @CreateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: '계정 생성일' })
@@ -148,4 +115,16 @@ export class User {
   @OneToMany(() => Challenge, (challenge) => challenge.user_idx)
   @ApiProperty({ type: () => [Challenge], description: '챌린지 목록' })
   challenges: Challenge[];
+
+  @OneToOne(() => UserSetting, (setting) => setting.user, { cascade: true })
+  @ApiProperty({ type: () => [UserSetting], description: '유저 셋팅' })
+  setting: UserSetting;
+
+  @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })
+  @ApiProperty({ type: () => [UserProfile], description: '유저 프로필' })
+  profile: UserProfile;
+
+  @OneToOne(() => RefreshToken, (refreshToken) => refreshToken.user)
+  @ApiProperty({ type: () => RefreshToken, description: '리프레시 토큰' })
+  refreshToken: RefreshToken;
 }

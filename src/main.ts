@@ -10,6 +10,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptor/transform.interceptor'
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -75,4 +77,5 @@ async function bootstrap() {
   console.log('DB_NAME:', configService.get<string>('DB_NAME'));
   console.log(`POSTGRESQL_PORT: ${PORT} is running...`);
 }
+
 bootstrap();
