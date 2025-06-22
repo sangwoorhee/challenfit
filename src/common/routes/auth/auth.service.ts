@@ -59,7 +59,6 @@ export class AuthService {
     try {
       await validateOrReject(signupDto); // 유효성 검사
       
-      return await this.dataSource.transaction(async (manager) => {
         // (1). DB에 User 저장
         const user = queryRunner.manager.create(User, {
           email,
@@ -108,8 +107,8 @@ export class AuthService {
         console.log('savedRefreshToken', savedRefreshToken)
 
         await queryRunner.commitTransaction();
-        return {  idx: savedUser.idx, accessToken, refreshToken };
-      });
+        return { accessToken, refreshToken };
+        // catch문 에러 로그
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(`회원가입 중 오류 발생: ${error.message}`);
@@ -119,7 +118,7 @@ export class AuthService {
     }
   }
 
-  // 3. 로그인 (ID, PW)
+  // 3. 로그인 (E-mail, PassWword)
   async login(loginDto: LoginReqDto): Promise<AuthTokenResDto> {
     const { email, password } = loginDto;
   
@@ -135,40 +134,52 @@ export class AuthService {
   
     const accessToken = this.generateAccessToken(user.idx);
     const refreshToken = this.generateRefreshToken(user.idx);
+    await this.createRefreshTokenUsingUser(user.idx, refreshToken);
   
-    // 기존 리프레시 토큰이 있다면 갱신
-    try {
-      if (user.refreshToken) {
-        user.refreshToken.token = refreshToken;
-        await this.refreshTokenRepository.save(user.refreshToken);
-      } else {
-        const newToken = this.refreshTokenRepository.create({
-          token: refreshToken,
-          user_idx: user.idx,
-        });
-        await this.refreshTokenRepository.save(newToken);
-      }
-      return { accessToken, refreshToken };
-    } catch (error) {
-      console.error(`리프레시 토큰 갱신 중 중 오류 발생: ${error.message}`);
-      throw new HttpException(`리프레시 토큰 저장 중 오류 발생: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return { accessToken, refreshToken };
   }
 
-  // * 액세스 토큰 생성
-  private generateAccessToken(idx: number) {
-    const secret = process.env.JWT_SECRET!;
-    if (!secret) throw new Error('JWT_SECRET 환경변수가 설정되지 않았습니다.');
-    const payload = { sub: idx, tokenType: 'access' };
-    return jwt.sign(payload, secret, { expiresIn: '1d' });
+  // 매서드 정리
+  // *** 액세스 토큰 생성
+  private generateAccessToken(user_idx: number) {
+    const payload = { sub: user_idx, tokenType: 'access' };
+    return this.jwtService.sign(payload); // JwtModule에서 secret, expiresIn 설정됨
   }
     
   
-  // * 리프레시 토큰 생성
-  private generateRefreshToken(idx: number) {
-    const secret = process.env.JWT_SECRET!;
-    if (!secret) throw new Error('JWT_SECRET 환경변수가 설정되지 않았습니다.');
-    const payload = { sub: idx, tokenType: 'refresh' };
-    return jwt.sign(payload, secret, { expiresIn: '30d' });
+  // *** 리프레시 토큰 생성
+  private generateRefreshToken(user_idx: number) {
+    const payload = { sub: user_idx, tokenType: 'refresh' };
+    return this.jwtService.sign(payload, { expiresIn: '30d' }); // 기간만 명시
   }
+
+    /***
+   * 사용자 ID와 리프레시 토큰을 사용하여 RefreshToken 엔티티를 생성하거나 업데이트함.
+   * 만약 사용자에 대한 RefreshToken 엔티티가 이미 존재하면 토큰 값을 업데이트하고,
+   * 존재하지 않으면 새로운 RefreshToken 엔티티를 생성함.
+   *
+   * @param user_idx - 사용자 ID
+   * @param refreshToken - 새로 생성된 리프레시 토큰
+   */
+
+    private async createRefreshTokenUsingUser(
+      user_idx: number,
+      refreshToken: string,
+    ) {
+      // 기존 리프레시 토큰 존재 여부 조회
+      let refreshTokenEntity = await this.refreshTokenRepository.findOneBy({
+        user: { idx: user_idx },
+      });
+      // 이미 존재할 경우 → 토큰 갱신
+      if (refreshTokenEntity) {
+        refreshTokenEntity.token = refreshToken;
+      // 존재하지 않을 경우 → 새 엔티티 생성
+      } else {
+        refreshTokenEntity = this.refreshTokenRepository.create({
+          user: { idx: user_idx },
+          token: refreshToken,
+        });
+      }
+      await this.refreshTokenRepository.save(refreshTokenEntity);
+    }
 }

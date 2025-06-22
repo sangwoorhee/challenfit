@@ -7,17 +7,27 @@ import { UserProfile } from 'src/common/entities/user_profile.entity';
 import { UserSetting } from 'src/common/entities/user_setting.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { RefreshToken } from 'src/common/entities/refresh_token.entity';
+import { ConfigService } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt/jwt.strategy';
 
 @Module({
   imports: [
+    PassportModule,
     TypeOrmModule.forFeature([User, UserProfile, UserSetting, RefreshToken]),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '6h' },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        return {
+          global: true,
+          secret: configService.get('jwt.secret'),
+          signOptions: { expiresIn: '1d' },
+        };
+      },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

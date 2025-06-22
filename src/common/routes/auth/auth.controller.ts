@@ -19,7 +19,7 @@ export class AuthController {
     return this.authService.signup(signupDto);
   }
 
-  // 3. 로그인 (ID, PW)
+  // 3. 로그인 (E-mail, PassWword)
   @Post('login')
   async login(@Body() loginDto: LoginReqDto): Promise<AuthTokenResDto> {
     return this.authService.login(loginDto);

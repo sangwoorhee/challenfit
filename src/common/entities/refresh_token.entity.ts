@@ -16,11 +16,8 @@ export class RefreshToken {
   @ApiProperty({ description: '토큰 생성일' })
   created_at: Date;
 
-  @OneToOne(() => User, { onDelete: 'CASCADE' })
+  @ApiProperty({ description: '회원' })
+  @OneToOne(() => User, (user) => user.refreshToken, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_idx' })
   user: User;
-
-  @Column({ type: 'int' })
-  @ApiProperty({ description: 'FK - User ID' })
-  user_idx: number;
 }
