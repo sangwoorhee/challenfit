@@ -11,6 +11,7 @@ export const User = createParamDecorator(
 
 // 인증되고 난 후의 유저 정보
 export interface UserAfterAuth {
-  member_seq: number;
-  member_id: string;
+  idx: number;
+  email: string;
+  name: string;
 }

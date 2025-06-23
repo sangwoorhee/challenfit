@@ -2,7 +2,7 @@ import {
   Controller, UseGuards, Get, Patch, Body, Req, Delete
 } from '@nestjs/common';
 import { UserService } from './user.service';
-// import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
+import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
 import {
   UpdateUserSettingReqDto,
   UpdateUserProfileReqDto,
@@ -13,45 +13,56 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('User')
 @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  // 1. 회원 환경설정 수정
+  // 1. 내 정보 환경설정 수정
   @Patch('setting')
-  @ApiOperation({ summary: '회원 환경설정 수정' })
+  @ApiOperation({ 
+    summary: '내 정보 환경설정 수정',
+    description: 'PATCH : http://localhost:3000/user/setting',
+  })
   async updateSetting(
-    @Req() req,
+    @User() user: UserAfterAuth,
     @Body() dto: UpdateUserSettingReqDto,
   ): Promise<CommonResDto> {
-    return this.userService.updateSetting(req.user.id, dto);
+    return this.userService.updateSetting(user.idx, dto);
   }
 
-  // 2. 마이프로필 수정
+  // 2. 내 마이프로필 수정
   @Patch('profile')
-  @ApiOperation({ summary: '마이프로필 수정' })
+  @ApiOperation({ 
+    summary: '내 마이프로필 수정', 
+    description: 'PATCH : http://localhost:3000/user/profile',
+  })
   async updateProfile(
-    @Req() req,
+    @User() user: UserAfterAuth,
     @Body() dto: UpdateUserProfileReqDto,
   ): Promise<CommonResDto> {
-    return this.userService.updateProfile(req.user.id, dto);
+    return this.userService.updateProfile(user.idx, dto);
   }
 
-  // 3. 비밀번호 변경
+  // 3. 내 비밀번호 변경
   @Patch('password')
-  @ApiOperation({ summary: '비밀번호 변경' })
+  @ApiOperation({ 
+    summary: '내 비밀번호 변경', 
+    description: 'PATCH : http://localhost:3000/user/password',
+  })
   async changePassword(
-    @Req() req,
+    @User() user: UserAfterAuth,
     @Body() dto: ChangePasswordReqDto,
   ): Promise<CommonResDto> {
-    return this.userService.changePassword(req.user.id, dto);
+    return this.userService.changePassword(user.idx, dto);
   }
 
   // 4. 회원탈퇴
   @Delete()
-  @ApiOperation({ summary: '회원탈퇴' })
-  async deleteAccount(@Req() req): Promise<CommonResDto> {
-    return this.userService.deleteAccount(req.user.id);
+  @ApiOperation({ 
+    summary: '회원탈퇴',
+    description: 'DELETE : http://localhost:3000/user'
+  })
+  async deleteAccount(@User() user: UserAfterAuth,): Promise<CommonResDto> {
+    return this.userService.deleteAccount(user.idx,);
   }
 }

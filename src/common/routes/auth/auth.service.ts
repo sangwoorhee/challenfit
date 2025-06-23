@@ -1,4 +1,4 @@
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Inject, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { LoginReqDto, SignupReqDto } from './dto/req.dto';
@@ -166,9 +166,14 @@ export class AuthService {
       user_idx: number,
       refreshToken: string,
     ) {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
       // 기존 리프레시 토큰 존재 여부 조회
-      let refreshTokenEntity = await this.refreshTokenRepository.findOneBy({
-        user: { idx: user_idx },
+      let refreshTokenEntity = await queryRunner.manager.findOne(this.refreshTokenRepository.target, {
+        where: { user: { idx: user_idx } },
       });
       // 이미 존재할 경우 → 토큰 갱신
       if (refreshTokenEntity) {
@@ -180,6 +185,14 @@ export class AuthService {
           token: refreshToken,
         });
       }
-      await this.refreshTokenRepository.save(refreshTokenEntity);
+      await queryRunner.manager.save(refreshTokenEntity);
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error(`error: ${error}`)
+      throw new InternalServerErrorException(`리프레시 토큰 저장 실패: ${error.message}`);
+    } finally {
+      await queryRunner.release();
     }
+  }
 }
