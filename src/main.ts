@@ -23,6 +23,7 @@ async function bootstrap() {
   // CORS 설정 추가
   const allowedOrigins = [
     configService.get<string>('FRONTEND_ORIGIN'), 
+    'http://localhost:3000',
     'http://localhost:3001', // 허용하는 도메인 이런식으로 콤마구분해서 추가
   ];
   app.enableCors({
@@ -49,7 +50,7 @@ async function bootstrap() {
   // Swagger 설정
   const config = new DocumentBuilder()
     .setTitle('백엔드 API')
-    .setDescription('온라인성경찬송, 바이블애플 등 백엔드 API description')
+    .setDescription('챌린핏 백엔드 API description')
     .setVersion('1.0')
     .addTag('backend')
     .build();

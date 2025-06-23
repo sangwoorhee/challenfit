@@ -18,7 +18,7 @@ export class AuthController {
     return this.authService.sendVerificationCode(phone);
   }
 
-  // 2. 회원가입 (E-mail, PassWword)
+  // 2. 회원가입 (E-mail, PassWord)
   @Post('signup')
   @ApiOperation({
     summary: '회원가입 (E-mail, PassWword)',
@@ -28,7 +28,7 @@ export class AuthController {
     return this.authService.signup(signupDto);
   }
 
-  // 3. 로그인 (E-mail, PassWword)
+  // 3. 로그인 (E-mail, PassWord)
   @Post('login')
   @ApiOperation({
     summary: '로그인 (E-mail, PassWword)',
