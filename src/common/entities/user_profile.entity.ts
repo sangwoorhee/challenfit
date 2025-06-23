@@ -8,10 +8,6 @@ export class UserProfile {
   @ApiProperty({ description: 'PK' })
   idx: number;
 
-  @Column()
-  @ApiProperty({ description: 'FK - User ID' })
-  user_id: number;
-
   @Column({ type: 'date', nullable: true })
   @ApiProperty({ description: '생년월일', required: false })
   birth_date?: Date;
@@ -28,7 +24,7 @@ export class UserProfile {
   @ApiProperty({ description: '관심 운동', required: false })
   interest_exercises?: string;
 
-  @Column({ type: 'char', nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   @ApiProperty({ description: '운동 목적', required: false })
   exercise_purpose?: string;
 
@@ -41,6 +37,6 @@ export class UserProfile {
   profile_image_url?: string;
 
   @OneToOne(() => User, (user) => user.profile, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_idx' })
   user: User;
 }

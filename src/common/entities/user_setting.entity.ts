@@ -8,10 +8,6 @@ export class UserSetting {
   @ApiProperty({ description: 'PK' })
   idx: string;
 
-  @Column({ type: 'uuid' })
-  @ApiProperty({ description: 'FK - User ID' })
-  user_id: string;
-
   @Column({ type: 'boolean', default: false })
   @ApiProperty({ description: '마케팅 수신 동의' })
   marketing_opt_in: boolean;
@@ -21,6 +17,6 @@ export class UserSetting {
   no_push_alert: boolean;
 
   @OneToOne(() => User, (user) => user.setting, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_idx' })
   user: User;
 }

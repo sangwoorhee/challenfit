@@ -74,7 +74,7 @@ export class AuthService {
 
         // (2). DB에 UserProfile 저장
         const profile = queryRunner.manager.create(UserProfile, {
-          user_idx: savedUser.idx,
+          user: savedUser,
           birth_date: signupDto.birth_date,
           height: signupDto.height,
           weight: signupDto.weight,
@@ -88,7 +88,7 @@ export class AuthService {
 
         // (3). DB에 UserSetting 저장
         const setting = queryRunner.manager.create(UserSetting, {
-          user_idx: savedUser.idx,
+          user: savedUser,
           marketing_opt_in: signupDto.marketing_opt_in ?? false,
           no_push_alert: signupDto.no_push_alert ?? false,
         });
@@ -101,7 +101,7 @@ export class AuthService {
         // (4). DB에 refreshToken 저장
         const refreshEntity = queryRunner.manager.create(RefreshToken, {
           token: refreshToken,
-          user_idx: savedUser.idx,
+          user: savedUser,
         });
         const savedRefreshToken = await queryRunner.manager.save(refreshEntity);
         console.log('savedRefreshToken', savedRefreshToken)
