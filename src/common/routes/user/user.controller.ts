@@ -10,6 +10,7 @@ import {
 } from './dto/req.dto';
 import { CommonResDto } from './dto/res.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 
 @ApiTags('User')
 @ApiBearerAuth()
@@ -18,7 +19,9 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   // 1. 내 정보 환경설정 수정
+  // http://localhost:3000/user/setting
   @Patch('setting')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: '내 정보 환경설정 수정',
     description: 'PATCH : http://localhost:3000/user/setting',
@@ -31,7 +34,9 @@ export class UserController {
   }
 
   // 2. 내 마이프로필 수정
+  // http://localhost:3000/user/profile
   @Patch('profile')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: '내 마이프로필 수정', 
     description: 'PATCH : http://localhost:3000/user/profile',
@@ -44,7 +49,9 @@ export class UserController {
   }
 
   // 3. 내 비밀번호 변경
+  // http://localhost:3000/user/password
   @Patch('password')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: '내 비밀번호 변경', 
     description: 'PATCH : http://localhost:3000/user/password',
@@ -57,7 +64,9 @@ export class UserController {
   }
 
   // 4. 회원탈퇴
+  // http://localhost:3000/user
   @Delete()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: '회원탈퇴',
     description: 'DELETE : http://localhost:3000/user'

@@ -12,7 +12,7 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<CustomRequest>();
     console.log('AuthGuard - req.user:', request.user);
 
-    if (request.user && request.user.member_seq) {
+    if (request.user && request.user.idx) {
       return true; // 인증 성공
     }
     console.log('AuthGuard - No user found');
