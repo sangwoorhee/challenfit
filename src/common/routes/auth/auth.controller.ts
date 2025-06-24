@@ -1,8 +1,10 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginReqDto, SignupReqDto } from './dto/req.dto';
 import { AuthTokenResDto } from './dto/res.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { User } from 'src/common/decorators/user.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -40,5 +42,93 @@ export class AuthController {
   })
   async login(@Body() loginDto: LoginReqDto): Promise<AuthTokenResDto> {
     return this.authService.login(loginDto);
+  }
+
+  // 4. 카카오 로그인
+  // http://localhost:3000/auth/kakao
+  @Get('kakao')
+  @UseGuards(AuthGuard('kakao'))
+  @ApiOperation({
+    summary: '카카오 로그인',
+    description: 'GET : http://localhost:3000/auth/kakao',
+  })
+  kakaoLogin() {
+    // Passport가 자동으로 처리
+  }
+
+  @Get('kakao/callback')
+  @UseGuards(AuthGuard('kakao'))
+  @ApiOperation({
+    summary: '카카오 로그인 콜백',
+    description: 'GET : http://localhost:3000/auth/kakao/callback',
+  })
+  async kakaoCallback(@User() user) {
+    return this.authService.oauthLogin(user);
+  }
+
+  // 5. 네이버 로그인
+  // http://localhost:3000/auth/naver
+  @Get('naver')
+  @UseGuards(AuthGuard('naver'))
+  @ApiOperation({
+    summary: '네이버 로그인',
+    description: 'GET : http://localhost:3000/auth/naver',
+  })
+  naverLogin() {
+    // Passport가 자동으로 처리
+  }
+
+  @Get('naver/callback')
+  @UseGuards(AuthGuard('naver'))
+  @ApiOperation({
+    summary: '네이버 로그인 콜백',
+    description: 'GET : http://localhost:3000/auth/naver/callback',
+  })
+  async naverCallback(@User() user) {
+    return this.authService.oauthLogin(user);
+  }
+
+  // 6. 구글 로그인
+  // http://localhost:3000/auth/google
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({
+    summary: '구글 로그인',
+    description: 'GET : http://localhost:3000/auth/google',
+  })
+  googleLogin() {
+    // Passport가 자동으로 처리
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({
+    summary: '구글 로그인 콜백',
+    description: 'GET : http://localhost:3000/auth/google/callback',
+  })
+  async googleCallback(@User() user) {
+    return this.authService.oauthLogin(user);
+  }
+
+  // 7. 애플 로그인
+  // http://localhost:3000/auth/apple
+  @Get('apple')
+  @UseGuards(AuthGuard('apple'))
+  @ApiOperation({
+    summary: '애플 로그인',
+    description: 'GET : http://localhost:3000/auth/apple',
+  })
+  appleLogin() {
+    // Passport가 자동으로 처리
+  }
+
+  @Get('apple/callback')
+  @UseGuards(AuthGuard('apple'))
+  @ApiOperation({
+    summary: '애플 로그인 콜백',
+    description: 'GET : http://localhost:3000/auth/apple/callback',
+  })
+  async appleCallback(@User() user) {
+    return this.authService.oauthLogin(user);
   }
 }

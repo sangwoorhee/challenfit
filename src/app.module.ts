@@ -14,6 +14,7 @@ import { ChallengeModule } from './common/routes/challenge/challenge.module';
     // 환경변수 로딩
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     // Redis 캐시 설정 (경로 : sudo vi /etc/redis/redis.conf)
     CacheModule.registerAsync({

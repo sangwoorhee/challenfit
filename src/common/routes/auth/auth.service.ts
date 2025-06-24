@@ -139,6 +139,50 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  // 4. OAuth 로그인 처리
+  async oauthLogin(oauthUser: any): Promise<AuthTokenResDto> {
+    let user = await this.userRepoRepository.findOne({
+      where: { provider: oauthUser.provider, provider_uid: oauthUser.providerId },
+    });
+
+    if (!user) {
+      user = this.userRepoRepository.create({
+        email: oauthUser.email,
+        name: oauthUser.name,
+        provider: oauthUser.provider,
+        provider_uid: oauthUser.providerId,
+        status: UserStatus.ACTIVE,
+      });
+      await this.userRepoRepository.save(user);
+
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        const profile = queryRunner.manager.create(UserProfile, { user });
+        await queryRunner.manager.save(profile);
+
+        const setting = queryRunner.manager.create(UserSetting, { user });
+        await queryRunner.manager.save(setting);
+
+        await queryRunner.commitTransaction();
+      } catch (error) {
+        console.error(`OAuth 사용자 초기화 중 오류 발생: ${error.message}`);
+        await queryRunner.rollbackTransaction();
+        throw new InternalServerErrorException(`OAuth 사용자 초기화 실패: ${error.message}`);
+      } finally {
+        await queryRunner.release();
+      }
+    }
+
+    const accessToken = this.generateAccessToken(user.idx);
+    const refreshToken = this.generateRefreshToken(user.idx);
+    await this.createRefreshTokenUsingUser(user.idx, refreshToken);
+
+    return { accessToken, refreshToken };
+  }
+
   // 매서드 정리
   // *** 액세스 토큰 생성 *** 
   private generateAccessToken(user_idx: string) {
