@@ -73,7 +73,7 @@ export class UserService {
   }
 
   // 3. 비밀번호 변경
-async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
+  async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
   
   const queryRunner = this.dataSource.createQueryRunner();
   await queryRunner.connect();

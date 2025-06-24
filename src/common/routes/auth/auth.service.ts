@@ -1,4 +1,4 @@
-import { Injectable, Inject, HttpException, HttpStatus, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Inject, HttpException, HttpStatus, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { LoginReqDto, SignupReqDto } from './dto/req.dto';
@@ -14,6 +14,7 @@ import { RefreshToken } from 'src/common/entities/refresh_token.entity';
 import { AuthTokenResDto } from './dto/res.dto';
 import { validateOrReject } from 'class-validator';
 import * as jwt from 'jsonwebtoken';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
@@ -40,7 +41,7 @@ export class AuthService {
     };
   }
 
-  // 2. 회원가입
+  // 2. 회원가입 (E-mail, PassWord)
   async signup(signupDto: SignupReqDto): Promise<AuthTokenResDto> {
     const { email, password, name, nickname, phone } = signupDto;
 
@@ -126,6 +127,10 @@ export class AuthService {
     if (!user) {
       throw new HttpException('존재하지 않는 사용자입니다.', HttpStatus.NOT_FOUND);
     }
+
+    if (user.status === UserStatus.BANNED) {
+    throw new ForbiddenException('차단된 사용자입니다.');
+    }
   
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
@@ -139,17 +144,32 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // 4. OAuth 로그인 처리
+  // 4. OAuth 소셜 로그인 처리 (카카오, 네이버, 구글, 애플)
   async oauthLogin(oauthUser: any): Promise<AuthTokenResDto> {
+    
+    // provider 값 검증 및 enum 캐스팅
+    const rawProvider = oauthUser.provider as string;
+    if (!Object.values(UserProvider).includes(rawProvider as UserProvider)) {
+      throw new BadRequestException('지원하지 않는 로그인 제공자입니다.');
+    }
+    const provider = rawProvider as UserProvider;
+
     let user = await this.userRepoRepository.findOne({
       where: { provider: oauthUser.provider, provider_uid: oauthUser.providerId },
     });
 
-    if (!user) {
+    // 소셜 로그인 유저가 존재하는지 확인
+    if (user) {
+    // 이미 가입된 소셜 유저가 차단 상태인지 확인
+    if (user.status === UserStatus.BANNED) {
+      throw new ForbiddenException('차단된 사용자입니다.');
+      }
+    } else {
+      // 신규 소셜 가입 유저 생성
       user = this.userRepoRepository.create({
         email: oauthUser.email,
         name: oauthUser.name,
-        provider: oauthUser.provider,
+        provider: provider,
         provider_uid: oauthUser.providerId,
         status: UserStatus.ACTIVE,
       });
@@ -183,7 +203,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // 매서드 정리
+  // ------------------------------ 공용 모듈 ------------------------------
   // *** 액세스 토큰 생성 *** 
   private generateAccessToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'access' };
@@ -232,8 +252,8 @@ export class AuthService {
       await queryRunner.manager.save(refreshTokenEntity);
       await queryRunner.commitTransaction();
     } catch (error) {
-      await queryRunner.rollbackTransaction();
       console.error(`error: ${error}`)
+      await queryRunner.rollbackTransaction();
       throw new InternalServerErrorException(`리프레시 토큰 저장 실패: ${error.message}`);
     } finally {
       await queryRunner.release();

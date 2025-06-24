@@ -19,7 +19,7 @@ export class AuthController {
     description: 'POST : http://localhost:3000/auth/verify-sms',
   })
   async verifySms(@Body('phone') phone: string) {
-    return this.authService.sendVerificationCode(phone);
+    return await this.authService.sendVerificationCode(phone);
   }
 
   // 2. 회원가입 (E-mail, PassWord)
@@ -30,7 +30,7 @@ export class AuthController {
     description: 'POST : http://localhost:3000/auth/signup',
   })
   async signup(@Body() signupDto: SignupReqDto) {
-    return this.authService.signup(signupDto);
+    return await this.authService.signup(signupDto);
   }
 
   // 3. 로그인 (E-mail, PassWord)
@@ -41,7 +41,7 @@ export class AuthController {
     description: 'POST : http://localhost:3000/auth/login',
   })
   async login(@Body() loginDto: LoginReqDto): Promise<AuthTokenResDto> {
-    return this.authService.login(loginDto);
+    return await this.authService.login(loginDto);
   }
 
   // 4. 카카오 로그인
@@ -63,7 +63,7 @@ export class AuthController {
     description: 'GET : http://localhost:3000/auth/kakao/callback',
   })
   async kakaoCallback(@User() user) {
-    return this.authService.oauthLogin(user);
+    return await this.authService.oauthLogin(user);
   }
 
   // 5. 네이버 로그인
@@ -85,7 +85,7 @@ export class AuthController {
     description: 'GET : http://localhost:3000/auth/naver/callback',
   })
   async naverCallback(@User() user) {
-    return this.authService.oauthLogin(user);
+    return await this.authService.oauthLogin(user);
   }
 
   // 6. 구글 로그인
@@ -107,7 +107,7 @@ export class AuthController {
     description: 'GET : http://localhost:3000/auth/google/callback',
   })
   async googleCallback(@User() user) {
-    return this.authService.oauthLogin(user);
+    return await this.authService.oauthLogin(user);
   }
 
   // 7. 애플 로그인
@@ -129,6 +129,6 @@ export class AuthController {
     description: 'GET : http://localhost:3000/auth/apple/callback',
   })
   async appleCallback(@User() user) {
-    return this.authService.oauthLogin(user);
+    return await this.authService.oauthLogin(user);
   }
 }

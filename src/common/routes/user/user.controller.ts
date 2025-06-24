@@ -31,7 +31,7 @@ export class UserController {
     @User() user: UserAfterAuth,
     @Body() dto: UpdateUserSettingReqDto,
   ): Promise<CommonResDto> {
-    return this.userService.updateSetting(user.idx, dto);
+    return await this.userService.updateSetting(user.idx, dto);
   }
 
   // 2. 내 마이프로필 수정
@@ -46,7 +46,7 @@ export class UserController {
     @User() user: UserAfterAuth,
     @Body() dto: UpdateUserProfileReqDto,
   ): Promise<CommonResDto> {
-    return this.userService.updateProfile(user.idx, dto);
+    return await this.userService.updateProfile(user.idx, dto);
   }
 
   // 3. 내 비밀번호 변경
@@ -61,7 +61,7 @@ export class UserController {
     @User() user: UserAfterAuth,
     @Body() dto: ChangePasswordReqDto,
   ): Promise<CommonResDto> {
-    return this.userService.changePassword(user.idx, dto);
+    return await this.userService.changePassword(user.idx, dto);
   }
 
   // 4. 회원탈퇴
@@ -73,7 +73,7 @@ export class UserController {
     description: 'DELETE : http://localhost:3000/user'
   })
   async deleteAccount(@User() user: UserAfterAuth,): Promise<CommonResDto> {
-    return this.userService.deleteAccount(user.idx,);
+    return await this.userService.deleteAccount(user.idx,);
   }
 
   // 5. 다른 유저의 마이프로필 정보 조회
@@ -85,7 +85,7 @@ export class UserController {
     description: 'GET : http://localhost:3000/user/profile/:user_idx',
   })
   async getOtherUserProfile(@Param('user_idx') user_idx: string) {
-    return this.userService.getUserProfile(user_idx);
+    return await this.userService.getUserProfile(user_idx);
   }
 
   // 6. 내 마이프로필 정보 조회
@@ -97,6 +97,6 @@ export class UserController {
     description: 'GET : http://localhost:3000/user/profile',
   })
   async getMyProfile(@User() user: UserAfterAuth) {
-    return this.userService.getUserProfile(user.idx);
+    return await this.userService.getUserProfile(user.idx);
   }
 }
