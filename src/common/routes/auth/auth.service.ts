@@ -140,20 +140,20 @@ export class AuthService {
   }
 
   // 매서드 정리
-  // *** 액세스 토큰 생성
+  // *** 액세스 토큰 생성 *** 
   private generateAccessToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'access' };
     return this.jwtService.sign(payload); // JwtModule에서 secret, expiresIn 설정됨
   }
     
   
-  // *** 리프레시 토큰 생성
+  // *** 리프레시 토큰 생성 *** 
   private generateRefreshToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'refresh' };
     return this.jwtService.sign(payload, { expiresIn: '30d' }); // 기간만 명시
   }
 
-    /***
+  /***
    * 사용자 ID와 리프레시 토큰을 사용하여 RefreshToken 엔티티를 생성하거나 업데이트함.
    * 만약 사용자에 대한 RefreshToken 엔티티가 이미 존재하면 토큰 값을 업데이트하고,
    * 존재하지 않으면 새로운 RefreshToken 엔티티를 생성함.

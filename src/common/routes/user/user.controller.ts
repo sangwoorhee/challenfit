@@ -1,5 +1,6 @@
 import {
-  Controller, UseGuards, Get, Patch, Body, Req, Delete
+  Controller, UseGuards, Get, Patch, Body, Req, Delete,
+  Param
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
@@ -73,5 +74,29 @@ export class UserController {
   })
   async deleteAccount(@User() user: UserAfterAuth,): Promise<CommonResDto> {
     return this.userService.deleteAccount(user.idx,);
+  }
+
+  // 5. 다른 유저의 마이프로필 정보 조회
+  // http://localhost:3000/user/profile/:user_idx
+  @Get('profile/:user_idx')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ 
+    summary: '다른 유저의 마이프로필 정보 조회',
+    description: 'GET : http://localhost:3000/user/profile/:user_idx',
+  })
+  async getOtherUserProfile(@Param('user_idx') user_idx: string) {
+    return this.userService.getUserProfile(user_idx);
+  }
+
+  // 6. 내 마이프로필 정보 조회
+  // http://localhost:3000/user/profile
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '본인의 마이프로필 정보 조회',
+    description: 'GET : http://localhost:3000/user/profile',
+  })
+  async getMyProfile(@User() user: UserAfterAuth) {
+    return this.userService.getUserProfile(user.idx);
   }
 }
