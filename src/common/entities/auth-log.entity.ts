@@ -13,9 +13,9 @@ import { User } from './user.entity';
 // 인증 로그 엔티티
 @Entity({ name: 'auth_log' })
 export class AuthLog {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK(UUID)', format: 'uuid' })
+  idx: string;
 
   @CreateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: '로그인 시간' })

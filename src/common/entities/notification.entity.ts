@@ -13,9 +13,9 @@ import { User } from './user.entity';
 // 알림 엔티티
 @Entity({ name: 'notification' })
 export class Notification {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({
     type: 'enum',

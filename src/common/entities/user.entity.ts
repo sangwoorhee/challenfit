@@ -27,9 +27,9 @@ import { RefreshToken } from './refresh_token.entity';
 // User 엔티티
 @Entity({ name: 'user' })
 export class User {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({ type: 'varchar', length: 255 })
   @ApiProperty({ description: '이메일' })
@@ -112,7 +112,7 @@ export class User {
   @ApiProperty({ type: () => [Ranking], description: '랭킹 목록' })
   ranking: Ranking;
 
-  @OneToMany(() => Challenge, (challenge) => challenge.user_idx)
+  @OneToMany(() => Challenge, (challenge) => challenge.user)
   @ApiProperty({ type: () => [Challenge], description: '챌린지 목록' })
   challenges: Challenge[];
 

@@ -5,21 +5,20 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ChallengeStatus } from '../enum/enum';
 import { CertPhoto } from './cert_photo.entity';
 import { ChallengeParticipant } from './challenge_participant.entity';
+import { User } from './user.entity';
 
 // 도전방 엔티티
 @Entity({ name: 'challenge' })
 export class Challenge {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
-
-  @Column({ type: 'int', nullable: false })
-  @ApiProperty({ description: '방장 사용자idx (FK)' })
-  user_idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({ type: 'varchar', length: 255, nullable: false })
   @ApiProperty({ description: '도전방 제목' })
@@ -71,8 +70,15 @@ export class Challenge {
 
   // 관계 설정
   @OneToMany(() => CertPhoto, (certPhoto) => certPhoto.challenge)
+  @ApiProperty({ type: () => [CertPhoto], description: '인증사진 엔티티' })
   cert_photos: CertPhoto[];
 
   @OneToMany(() => ChallengeParticipant, (participant) => participant.challenge)
+  @ApiProperty({ type: () => [ChallengeParticipant], description: '도전자 엔티티' })
   challenge_participants: ChallengeParticipant[];
+
+  @ManyToOne(() => User, (user) => user.challenges, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_idx' })
+  @ApiProperty({ description: '유저 정보 (FK)' })
+  user: User;
 }

@@ -13,9 +13,9 @@ import { Challenge } from './challenge.entity';
 // 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
 export class ChallengeParticipant {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @CreateDateColumn({
     type: 'timestamp',

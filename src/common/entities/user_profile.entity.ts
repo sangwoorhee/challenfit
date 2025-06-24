@@ -4,9 +4,9 @@ import { User } from './user.entity';
 
 @Entity({ name: 'user_profile' })
 export class UserProfile {
-  @PrimaryGeneratedColumn()
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({ type: 'date', nullable: true })
   @ApiProperty({ description: '생년월일', required: false })

@@ -13,9 +13,9 @@ import { Challenge } from './challenge.entity';
 // 인증사진 엔티티
 @Entity({ name: 'cert_photo' })
 export class CertPhoto {
-  @PrimaryGeneratedColumn({ type: 'int' })
+  @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'PK' })
-  idx: number;
+  idx: string;
 
   @Column({ type: 'varchar', length: 255, nullable: false })
   @ApiProperty({ description: '이미지 URL' })

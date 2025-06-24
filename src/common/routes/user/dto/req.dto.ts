@@ -2,6 +2,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
+// 사용자 환경설정 업데이트 요청 DTO
 export class UpdateUserSettingReqDto {
   @ApiProperty({ description: '마케팅 수신 동의 여부' })
   @IsBoolean()
@@ -12,6 +13,7 @@ export class UpdateUserSettingReqDto {
   no_push_alert: boolean;
 }
 
+// 사용자 프로필 업데이트 요청 DTO
 export class UpdateUserProfileReqDto {
   @ApiProperty({ description: '키(cm)' })
   @IsOptional()
@@ -38,6 +40,7 @@ export class UpdateUserProfileReqDto {
   profile_image_url?: string;
 }
 
+// 비밀번호 변경 요청 DTO
 export class ChangePasswordReqDto {
   @ApiProperty({ description: '기존 비밀번호' })
   @IsString()

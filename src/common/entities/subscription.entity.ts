@@ -15,9 +15,9 @@ import { SubscriptionPayment } from './subscription_payment.entity';
 // 구독 엔티티
 @Entity({ name: 'subscription' })
 export class Subscription {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({
     type: 'enum',

@@ -4,9 +4,9 @@ import { User } from './user.entity';
 
 @Entity({ name: 'refresh_token' })
 export class RefreshToken {
-  @PrimaryGeneratedColumn()
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({ type: 'text' })
   @ApiProperty({ description: 'Refresh Token 값' })

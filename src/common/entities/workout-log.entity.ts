@@ -13,9 +13,9 @@ import { User } from './user.entity';
 // 운동 일지 엔티티
 @Entity({ name: 'workout_log' })
 export class WorkoutLog {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @Column({ type: 'date' })
   @ApiProperty({ description: '운동 일지 작성 날짜' })

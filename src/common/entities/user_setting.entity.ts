@@ -5,7 +5,7 @@ import { User } from './user.entity';
 @Entity({ name: 'user_setting' })
 export class UserSetting {
   @PrimaryGeneratedColumn('uuid')
-  @ApiProperty({ description: 'PK' })
+  @ApiProperty({ description: 'PK', format: 'uuid' })
   idx: string;
 
   @Column({ type: 'boolean', default: false })

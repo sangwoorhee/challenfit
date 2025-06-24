@@ -12,8 +12,9 @@ import { User } from './user.entity';
 
 @Entity({ name: 'ranking' })
 export class Ranking {
-  @PrimaryColumn({ type: 'int' })
-  user_idx: number;
+  @PrimaryColumn({ type: 'uuid' })
+  @ApiProperty({ description: '유저 PK (FK와 동일)' })
+  user_idx: string;
 
   @Column({ type: 'int', default: 0 })
   @ApiProperty({ description: '누적 점수', default: 0 })

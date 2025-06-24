@@ -13,9 +13,9 @@ import { Subscription } from './subscription.entity';
 
 @Entity({ name: 'subscription_payment' })
 export class SubscriptionPayment {
-  @PrimaryGeneratedColumn({ type: 'int' })
-  @ApiProperty({ description: 'PK' })
-  idx: number;
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
 
   @CreateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: '결제 일시' })

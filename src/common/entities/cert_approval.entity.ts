@@ -1,11 +1,11 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
 // 인증사진 승인 엔티티
 @Entity({ name: 'cert_approval' })
 export class CertApproval {
-  @PrimaryColumn({ type: 'uuid' })
-  @ApiProperty({ description: 'PK - 고유 식별자' })
+  @PrimaryGeneratedColumn('uuid')
+  @ApiProperty({ description: 'PK - 고유 식별자', format: 'uuid' })
   idx: string;
 
   @Column({ type: 'uuid', nullable: false })
@@ -20,7 +20,7 @@ export class CertApproval {
   @ApiProperty({ description: '도장 이미지 URL' })
   stamp_img: string;
 
-  @Column({ type: 'char', nullable: false })
+  @Column({ type: 'varchar', nullable: false })
   @ApiProperty({ description: '코멘트' })
   comment: string;
 

@@ -141,14 +141,14 @@ export class AuthService {
 
   // 매서드 정리
   // *** 액세스 토큰 생성
-  private generateAccessToken(user_idx: number) {
+  private generateAccessToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'access' };
     return this.jwtService.sign(payload); // JwtModule에서 secret, expiresIn 설정됨
   }
     
   
   // *** 리프레시 토큰 생성
-  private generateRefreshToken(user_idx: number) {
+  private generateRefreshToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'refresh' };
     return this.jwtService.sign(payload, { expiresIn: '30d' }); // 기간만 명시
   }
@@ -163,7 +163,7 @@ export class AuthService {
    */
 
     private async createRefreshTokenUsingUser(
-      user_idx: number,
+      user_idx: string,
       refreshToken: string,
     ) {
       const queryRunner = this.dataSource.createQueryRunner();

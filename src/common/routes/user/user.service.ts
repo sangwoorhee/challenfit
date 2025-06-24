@@ -25,7 +25,7 @@ export class UserService {
   ) {}
 
   // 1. 회원 환경설정 수정
-  async updateSetting(user_idx: number, dto: UpdateUserSettingReqDto): Promise<CommonResDto> {
+  async updateSetting(user_idx: string, dto: UpdateUserSettingReqDto): Promise<CommonResDto> {
    
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -49,7 +49,7 @@ export class UserService {
   }
 
   // 2. 마이프로필 수정
-  async updateProfile(user_idx: number, dto: UpdateUserProfileReqDto): Promise<CommonResDto> {
+  async updateProfile(user_idx: string, dto: UpdateUserProfileReqDto): Promise<CommonResDto> {
     
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -73,7 +73,7 @@ export class UserService {
   }
 
   // 3. 비밀번호 변경
-async changePassword(user_idx: number, dto: ChangePasswordReqDto): Promise<CommonResDto> {
+async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
   
   const queryRunner = this.dataSource.createQueryRunner();
   await queryRunner.connect();
@@ -103,7 +103,7 @@ async changePassword(user_idx: number, dto: ChangePasswordReqDto): Promise<Commo
 }
 
 // 4. 회원탈퇴
-  async deleteAccount(user_idx: number): Promise<CommonResDto> {
+  async deleteAccount(user_idx: string): Promise<CommonResDto> {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
