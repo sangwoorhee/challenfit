@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
+import { MailerModule } from '@nestjs-modules/mailer';
 import { UserModule } from './common/routes/user/user.module';
 import { AuthModule } from './common/routes/auth/auth.module';
 import { ChallengeModule } from './common/routes/challenge/challenge.module';
@@ -35,6 +36,25 @@ import { ChallengeModule } from './common/routes/challenge/challenge.module';
           ttl: 0, // 캐시 만료 직접 제어(서비스 코드에서 ttl 지정)
         };
       },
+    }),
+
+     // 이메일 전송 설정
+     MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cs: ConfigService) => ({
+        transport: {
+          host: cs.get('MAIL_HOST'),
+          port: cs.get<number>('MAIL_PORT'),
+          secure: cs.get('MAIL_SECURE') === 'true',
+          auth: {
+            user: cs.get('MAIL_USER'),
+            pass: cs.get('MAIL_PASS'),
+          },
+        },
+        defaults: {
+          from: cs.get('MAIL_FROM'),
+        },
+      }),
     }),
 
     // TypeORM 연결 설정

@@ -1,4 +1,4 @@
-import { Injectable, Inject, HttpException, HttpStatus, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, HttpException, HttpStatus, InternalServerErrorException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { LoginReqDto, SignupReqDto } from './dto/req.dto';
@@ -15,17 +15,22 @@ import { AuthTokenResDto } from './dto/res.dto';
 import { validateOrReject } from 'class-validator';
 import * as jwt from 'jsonwebtoken';
 import { ForbiddenException } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
+import { v4 as uuidv4 } from 'uuid';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    @InjectRepository(User) private readonly userRepoRepository: Repository<User>,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(UserProfile) private readonly profileRepository: Repository<UserProfile>,
     @InjectRepository(UserSetting) private readonly settingRepository: Repository<UserSetting>,
     @InjectRepository(RefreshToken) private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+    private readonly mailerService: MailerService,
   ) {}
 
   // 1. 휴대폰 SMS 인증 코드 전송
@@ -45,7 +50,7 @@ export class AuthService {
   async signup(signupDto: SignupReqDto): Promise<AuthTokenResDto> {
     const { email, password, name, nickname, phone } = signupDto;
 
-    const existing = await this.userRepoRepository.findOne({ where: { email } });
+    const existing = await this.userRepository.findOne({ where: { email } });
     if (existing) {
       throw new HttpException('이미 가입된 이메일입니다.', HttpStatus.CONFLICT);
     }
@@ -108,6 +113,9 @@ export class AuthService {
         console.log('savedRefreshToken', savedRefreshToken)
 
         await queryRunner.commitTransaction();
+
+         // 이메일 인증 메일 발송
+        await this.sendEmailVerification(savedUser);
         return { accessToken, refreshToken };
         // catch문 에러 로그
     } catch (error) {
@@ -123,7 +131,7 @@ export class AuthService {
   async login(loginDto: LoginReqDto): Promise<AuthTokenResDto> {
     const { email, password } = loginDto;
   
-    const user = await this.userRepoRepository.findOne({ where: { email }, relations: ['refreshToken'] });
+    const user = await this.userRepository.findOne({ where: { email }, relations: ['refreshToken'] });
     if (!user) {
       throw new HttpException('존재하지 않는 사용자입니다.', HttpStatus.NOT_FOUND);
     }
@@ -154,7 +162,7 @@ export class AuthService {
     }
     const provider = rawProvider as UserProvider;
 
-    let user = await this.userRepoRepository.findOne({
+    let user = await this.userRepository.findOne({
       where: { provider: oauthUser.provider, provider_uid: oauthUser.providerId },
     });
 
@@ -166,14 +174,14 @@ export class AuthService {
       }
     } else {
       // 신규 소셜 가입 유저 생성
-      user = this.userRepoRepository.create({
+      user = this.userRepository.create({
         email: oauthUser.email,
         name: oauthUser.name,
         provider: provider,
         provider_uid: oauthUser.providerId,
         status: UserStatus.ACTIVE,
       });
-      await this.userRepoRepository.save(user);
+      await this.userRepository.save(user);
 
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
@@ -258,5 +266,31 @@ export class AuthService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // *** 이메일 인증 토큰 생성 및 메일 전송 ***
+  async sendEmailVerification(user: User): Promise<void> {
+    const token = uuidv4();
+    await this.cacheManager.set(`email_verification:${token}`, user.idx, 3600); // 1시간 유효
+    const verifyUrl = `${this.configService.get('FRONTEND_ORIGIN')}/auth/verify-email?token=${token}`;
+    await this.mailerService.sendMail({
+      to: user.email,
+      from: this.configService.get('MAIL_FROM'),
+      subject: '이메일 인증 요청',
+      html: `<p>다음 링크를 클릭하여 이메일 인증을 완료하세요:</p><a href="${verifyUrl}">${verifyUrl}</a>`,
+    });
+  }
+
+  // *** 인증 토큰 검증 및 상태 업데이트 ***
+  async verifyEmail(token: string): Promise<void> {
+    const userIdx = await this.cacheManager.get<string>(`email_verification:${token}`);
+    if (!userIdx) throw new BadRequestException('유효하지 않거나 만료된 토큰입니다.');
+    
+    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    
+    user.status = UserStatus.ACTIVE;
+    await this.userRepository.save(user);
+    await this.cacheManager.del(`email_verification:${token}`);
   }
 }

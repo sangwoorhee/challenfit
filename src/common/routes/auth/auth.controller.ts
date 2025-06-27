@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginReqDto, SignupReqDto } from './dto/req.dto';
 import { AuthTokenResDto } from './dto/res.dto';
@@ -44,7 +44,19 @@ export class AuthController {
     return await this.authService.login(loginDto);
   }
 
-  // 4. 카카오 로그인
+  // 4. 회원가입 시 이메일 인증
+  // http://localhost:3000/auth/verify-email
+  @Get('verify-email')
+  @ApiOperation({ 
+    summary: '이메일 인증', 
+    description: 'http://localhost:3000/auth/verify-email' 
+  })
+  async verifyEmail(@Query('token') token: string) {
+    await this.authService.verifyEmail(token);
+    return { message: '이메일 인증이 완료되었습니다.' };
+  }
+
+  // 5. 카카오 로그인
   // http://localhost:3000/auth/kakao
   @Get('kakao')
   @UseGuards(AuthGuard('kakao'))
@@ -66,7 +78,7 @@ export class AuthController {
     return await this.authService.oauthLogin(user);
   }
 
-  // 5. 네이버 로그인
+  // 6. 네이버 로그인
   // http://localhost:3000/auth/naver
   @Get('naver')
   @UseGuards(AuthGuard('naver'))
@@ -88,7 +100,7 @@ export class AuthController {
     return await this.authService.oauthLogin(user);
   }
 
-  // 6. 구글 로그인
+  // 7. 구글 로그인
   // http://localhost:3000/auth/google
   @Get('google')
   @UseGuards(AuthGuard('google'))
@@ -110,7 +122,7 @@ export class AuthController {
     return await this.authService.oauthLogin(user);
   }
 
-  // 7. 애플 로그인
+  // 8. 애플 로그인
   // http://localhost:3000/auth/apple
   @Get('apple')
   @UseGuards(AuthGuard('apple'))
