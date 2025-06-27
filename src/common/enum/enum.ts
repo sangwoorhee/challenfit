@@ -10,6 +10,7 @@ export enum UserProvider {
   LOCAL = 'local',
   KAKAO = 'kakao',
   NAVER = 'naver',
+  APPLE = 'apple',
   GOOGLE = 'google',
 }
 

@@ -17,5 +17,5 @@ export class PageReqDto {
   @IsInt()
   @Min(1)
   @Max(50)
-  size: number = 15;
+  size: number = 10;
 }

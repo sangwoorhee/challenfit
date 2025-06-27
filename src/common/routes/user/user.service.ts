@@ -73,7 +73,7 @@ export class UserService {
   }
 
   // 3. 비밀번호 변경
-async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
+  async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
   
   const queryRunner = this.dataSource.createQueryRunner();
   await queryRunner.connect();
@@ -122,6 +122,22 @@ async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<Commo
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // 5,6. 다른 유저 및 나의 마이프로필 정보 조회
+    async getUserProfile(user_idx: string) {
+    const user = await this.userRepository.findOne({
+      where: { idx: user_idx },
+      relations: ['profile'],
+    });
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+    return {
+      name: user.name,
+      nickname: user.nickname,
+      profile: user.profile,
+    };
   }
 }
 
