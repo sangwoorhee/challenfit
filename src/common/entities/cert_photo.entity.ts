@@ -8,7 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
-import { Challenge } from './challenge.entity';
+// import { ChallengeRoom } from './challenge_room.entity';
 
 // 인증사진 엔티티
 @Entity({ name: 'cert_photo' })
@@ -43,9 +43,8 @@ export class CertPhoto {
   @JoinColumn({ name: 'user_idx' })
   user: User;
 
-  @ManyToOne(() => Challenge, (challenge) => challenge.cert_photos, { onDelete: 'CASCADE' })
-  @ApiProperty({ description: 'FK (챌린지 idx)' })
-  @JoinColumn({ name: 'challenge_idx' })
-  challenge: Challenge;
-
+  // @ManyToOne(() => ChallengeRoom, (challenge) => challenge.cert_photos, { onDelete: 'CASCADE' })
+  // @ApiProperty({ description: 'FK (챌린지 idx)' })
+  // @JoinColumn({ name: 'challenge_room_idx' })
+  // challenge: ChallengeRoom;
 }

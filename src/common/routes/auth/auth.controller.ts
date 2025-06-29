@@ -6,7 +6,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from 'src/common/decorators/user.decorator';
 
-@ApiTags('Auth')
+@ApiTags('인증/인가')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

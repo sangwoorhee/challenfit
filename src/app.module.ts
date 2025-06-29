@@ -8,10 +8,13 @@ import * as redisStore from 'cache-manager-redis-store';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { UserModule } from './common/routes/user/user.module';
 import { AuthModule } from './common/routes/auth/auth.module';
-import { ChallengeModule } from './common/routes/challenge/challenge.module';
+import { ChallengeroomModule } from './common/routes/challengeroom/challengeroom.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    // 스케쥴러 크론 탭
+    ScheduleModule.forRoot(),
     // 환경변수 로딩
     ConfigModule.forRoot({
       isGlobal: true,
@@ -75,7 +78,7 @@ import { ChallengeModule } from './common/routes/challenge/challenge.module';
     // 모듈 임포트
     AuthModule,
     UserModule,
-    ChallengeModule,
+    ChallengeroomModule,
   ],
   controllers: [AppController],
   providers: [AppService],

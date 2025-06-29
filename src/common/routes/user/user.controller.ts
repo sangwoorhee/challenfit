@@ -13,7 +13,7 @@ import { CommonResDto } from './dto/res.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 
-@ApiTags('User')
+@ApiTags('유저')
 @ApiBearerAuth()
 @Controller('user')
 export class UserController {

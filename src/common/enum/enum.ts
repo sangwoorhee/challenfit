@@ -5,6 +5,12 @@ export enum ChallengeStatus {
   COMPLETED = 'completed',
 }
 
+// 도전 유저 상태
+export enum ChallengerStatus {
+  PENDING = 'pending',
+  PARTICIPATING = 'participating',
+}
+
 // 유저
 export enum UserProvider {
   LOCAL = 'local',

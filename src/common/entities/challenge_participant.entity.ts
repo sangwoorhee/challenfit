@@ -8,7 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
-import { Challenge } from './challenge.entity';
+import { ChallengeRoom } from './challenge_room.entity';
 
 // 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
@@ -43,8 +43,8 @@ export class ChallengeParticipant {
   @JoinColumn({ name: 'user_idx' })
   user: User;
 
-  @ManyToOne(() => Challenge, (challenge) => challenge.challenge_participants, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ChallengeRoom, (challenge) => challenge.challenge_participants, { onDelete: 'CASCADE' })
   @ApiProperty({ description: 'FK (챌린지 idx)' })
-  @JoinColumn({ name: 'challenge_idx' })
-  challenge: Challenge;
+  @JoinColumn({ name: 'challenge_room_idx' })
+  challenge: ChallengeRoom;
 }
