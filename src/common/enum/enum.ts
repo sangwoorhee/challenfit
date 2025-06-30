@@ -5,6 +5,12 @@ export enum ChallengeStatus {
   COMPLETED = 'completed',
 }
 
+// 도전 유저 상태
+export enum ChallengerStatus {
+  PENDING = 'pending',
+  PARTICIPATING = 'participating',
+}
+
 // 유저
 export enum UserProvider {
   LOCAL = 'local',
@@ -59,4 +65,10 @@ export enum NotificationType {
   PAYMENT = 'payment',
   MESSAGE = 'message',
   ETC = 'etc',
+}
+
+export enum DurationUnit {
+  DAY = 'day',
+  WEEK = 'week',
+  MONTH = 'month',
 }

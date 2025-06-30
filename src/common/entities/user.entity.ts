@@ -18,7 +18,7 @@ import { Subscription } from './subscription.entity';
 import { SubscriptionPayment } from './subscription_payment.entity';
 import { WorkoutLog } from './workout-log.entity';
 import { Ranking } from './ranking.entity';
-import { Challenge } from './challenge.entity';
+import { ChallengeRoom } from './challenge_room.entity';
 import { Notification } from './notification.entity';
 import { UserProfile } from './user_profile.entity';
 import { UserSetting } from './user_setting.entity';
@@ -112,9 +112,9 @@ export class User {
   @ApiProperty({ type: () => [Ranking], description: '랭킹 목록' })
   ranking: Ranking;
 
-  @OneToMany(() => Challenge, (challenge) => challenge.user)
-  @ApiProperty({ type: () => [Challenge], description: '챌린지 목록' })
-  challenges: Challenge[];
+  @OneToMany(() => ChallengeRoom, (challenge) => challenge.user)
+  @ApiProperty({ type: () => [ChallengeRoom], description: '챌린지 목록' })
+  challenges: ChallengeRoom[];
 
   @OneToOne(() => UserSetting, (setting) => setting.user, { cascade: true })
   @ApiProperty({ type: () => [UserSetting], description: '유저 셋팅' })

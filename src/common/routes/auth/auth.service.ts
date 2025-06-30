@@ -62,6 +62,8 @@ export class AuthService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
+
+    let savedUser: User; 
     try {
       await validateOrReject(signupDto); // 유효성 검사
       
@@ -75,7 +77,7 @@ export class AuthService {
           provider: UserProvider.LOCAL,
           status: UserStatus.ACTIVE,
         });
-        const savedUser = await queryRunner.manager.save(user);
+        savedUser = await queryRunner.manager.save(user);
         console.log('savedUser', savedUser)
 
         // (2). DB에 UserProfile 저장
@@ -115,7 +117,11 @@ export class AuthService {
         await queryRunner.commitTransaction();
 
          // 이메일 인증 메일 발송
+         try{
         await this.sendEmailVerification(savedUser);
+         }catch (emailError){
+          console.error(`이메일 인증 메일 발송 실패: ${emailError.message}`);
+         }
         return { accessToken, refreshToken };
         // catch문 에러 로그
     } catch (error) {
