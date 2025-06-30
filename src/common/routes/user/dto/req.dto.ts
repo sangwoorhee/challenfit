@@ -49,4 +49,8 @@ export class ChangePasswordReqDto {
   @ApiProperty({ description: '새 비밀번호' })
   @IsString()
   newPassword: string;
+
+  @ApiProperty({ description: '새 비밀번호 확인' })
+  @IsString()
+  newPasswordConfirm: string;
 }

@@ -73,29 +73,43 @@ export class UserService {
   }
 
   // 3. 비밀번호 변경
-  async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
-  
+ async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
+  const { currentPassword, newPassword, newPasswordConfirm } = dto;
+
+  if (newPassword !== newPasswordConfirm) {
+    throw new BadRequestException('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+  }
+
   const queryRunner = this.dataSource.createQueryRunner();
   await queryRunner.connect();
   await queryRunner.startTransaction();
-  
+
   try {
-  const user = await this.userRepository.findOne({ where: { idx: user_idx } });
-  if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    const user = await this.userRepository.findOne({ where: { idx: user_idx } });
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-  const isMatch = await bcrypt.compare(dto.currentPassword, user.password); 
-  if (!isMatch) {
-    throw new BadRequestException('기존 비밀번호가 일치하지 않습니다.');
-  }
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('기존 비밀번호가 일치하지 않습니다.');
+    }
 
-  const salt = await bcrypt.genSalt();
-  user.password = await bcrypt.hash(dto.newPassword, salt);
-  await this.userRepository.save(user);
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    console.log('[새 비밀번호 해시]', hashedPassword); // 확인용
+    user.password = hashedPassword;
 
-  return { message: '비밀번호가 성공적으로 변경되었습니다.' };
+    await this.userRepository.save(user);
+    await queryRunner.commitTransaction(); // ✅ 커밋 필수
+
+    return { message: '비밀번호가 성공적으로 변경되었습니다.' };
   } catch (error) {
-    console.error(`error: ${error}`)
+    console.error(`[비밀번호 변경 에러]: ${error}`);
     await queryRunner.rollbackTransaction();
+
+    if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      throw error;
+    }
+
     throw new InternalServerErrorException(`비밀번호 변경 실패: ${error.message}`);
   } finally {
     await queryRunner.release();

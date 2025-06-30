@@ -1,5 +1,5 @@
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ChallengeStatus } from 'src/common/enum/enum';
+import { ChallengeStatus, DurationUnit } from 'src/common/enum/enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
@@ -32,7 +32,15 @@ export class ChallengeroomService {
 
     const startDate = new Date(createChallengeRoomDto.start_date);
     const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + createChallengeRoomDto.duration_weeks * 7);
+
+    const unitToDays = {
+      [DurationUnit.DAY]: 1,
+      [DurationUnit.WEEK]: 7,
+      [DurationUnit.MONTH]: 30,
+    };
+
+    const durationDays = createChallengeRoomDto.duration_value * unitToDays[createChallengeRoomDto.duration_unit];
+    endDate.setDate(endDate.getDate() + durationDays);
 
     const challengeRoom = this.challengeRepository.create({
       ...createChallengeRoomDto,

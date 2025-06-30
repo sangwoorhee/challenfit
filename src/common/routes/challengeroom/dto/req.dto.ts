@@ -1,29 +1,34 @@
-import { IsBoolean, IsDateString, IsInt, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString } from "class-validator";
+import { DurationUnit } from "src/common/enum/enum";
 
 // 챌린지방 생성 요청 DTO
-export class CreateChallengeRoomReqDto {
+  export class CreateChallengeRoomReqDto {
     @IsString()
     title: string;
-  
+
     @IsOptional()
     @IsString()
     description?: string;
-  
+
     @IsString()
     goal: string;
-  
+
     @IsDateString()
-    start_date: string; // yyyy-mm-dd
-  
+    start_date: string;
+
     @IsInt()
-    duration_weeks: number; // 1, 2, 3...
-  
+    duration_value: number;
+
+    @IsEnum(DurationUnit)
+    duration_unit: DurationUnit;
+
     @IsInt()
     max_participants: number;
-  
+
     @IsBoolean()
     is_public: boolean;
   }
+
   
   // 도전방 참가 요청
   export class JoinChallengeRoomReqDto {

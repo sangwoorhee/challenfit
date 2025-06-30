@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { ChallengeStatus } from '../enum/enum';
+import { ChallengeStatus, DurationUnit } from '../enum/enum';
 // import { CertPhoto } from './cert_photo.entity';
 import { ChallengeParticipant } from './challenge_participant.entity';
 import { User } from './user.entity';
@@ -40,9 +40,18 @@ export class ChallengeRoom {
   @ApiProperty({ description: '종료일' })
   end_date: Date;
 
-  @Column({ type: 'smallint', nullable: false })
-  @ApiProperty({ description: '도전 기간(주 단위)' })
-  duration_weeks: number;
+  @Column({ type: 'smallint', nullable: true })
+  @ApiProperty({ description: '도전 기간(일,주,월 단위)' })
+  duration_value: number;
+
+  @Column({ 
+    type: 'enum', 
+    enum: DurationUnit, 
+    default: DurationUnit.DAY, 
+    nullable: true
+  })
+  @ApiProperty({ description: '도전 기간 단위(일,주,월 단위)' })
+  duration_unit: DurationUnit;
 
   @Column({ type: 'smallint', nullable: false })
   @ApiProperty({ description: '최대 참가 인원' })

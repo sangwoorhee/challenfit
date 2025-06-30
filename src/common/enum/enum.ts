@@ -66,3 +66,9 @@ export enum NotificationType {
   MESSAGE = 'message',
   ETC = 'etc',
 }
+
+export enum DurationUnit {
+  DAY = 'day',
+  WEEK = 'week',
+  MONTH = 'month',
+}

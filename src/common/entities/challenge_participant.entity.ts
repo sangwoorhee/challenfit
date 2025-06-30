@@ -6,9 +6,11 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from './user.entity';
 import { ChallengeRoom } from './challenge_room.entity';
+import { WorkoutCert } from './workout-cert.entity';
 
 // 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
@@ -47,4 +49,8 @@ export class ChallengeParticipant {
   @ApiProperty({ description: 'FK (챌린지 idx)' })
   @JoinColumn({ name: 'challenge_room_idx' })
   challenge: ChallengeRoom;
+
+  @OneToMany(() => WorkoutCert, (workout_cert) => workout_cert.challenge_participant, { cascade: true })
+  @ApiProperty({ type: () => [WorkoutCert], description: '운동 인증' })
+  workout_cert: WorkoutCert[];
 }

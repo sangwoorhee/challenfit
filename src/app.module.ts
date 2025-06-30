@@ -10,6 +10,7 @@ import { UserModule } from './common/routes/user/user.module';
 import { AuthModule } from './common/routes/auth/auth.module';
 import { ChallengeroomModule } from './common/routes/challengeroom/challengeroom.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     UserModule,
     ChallengeroomModule,
+    WorkoutcertModule,
   ],
   controllers: [AppController],
   providers: [AppService],
