@@ -9,13 +9,13 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { ChallengeStatus } from '../enum/enum';
-import { CertPhoto } from './cert_photo.entity';
+// import { CertPhoto } from './cert_photo.entity';
 import { ChallengeParticipant } from './challenge_participant.entity';
 import { User } from './user.entity';
 
 // 도전방 엔티티
-@Entity({ name: 'challenge' })
-export class Challenge {
+@Entity({ name: 'challenge_room' })
+export class ChallengeRoom {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'PK', format: 'uuid' })
   idx: string;
@@ -69,9 +69,9 @@ export class Challenge {
   created_at: Date;
 
   // 관계 설정
-  @OneToMany(() => CertPhoto, (certPhoto) => certPhoto.challenge)
-  @ApiProperty({ type: () => [CertPhoto], description: '인증사진 엔티티' })
-  cert_photos: CertPhoto[];
+  // @OneToMany(() => CertPhoto, (certPhoto) => certPhoto.challenge)
+  // @ApiProperty({ type: () => [CertPhoto], description: '인증사진 엔티티' })
+  // cert_photos: CertPhoto[];
 
   @OneToMany(() => ChallengeParticipant, (participant) => participant.challenge)
   @ApiProperty({ type: () => [ChallengeParticipant], description: '도전자 엔티티' })
