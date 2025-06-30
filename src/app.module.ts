@@ -5,15 +5,21 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
+import { MailerModule } from '@nestjs-modules/mailer';
 import { UserModule } from './common/routes/user/user.module';
 import { AuthModule } from './common/routes/auth/auth.module';
-import { ChallengeModule } from './common/routes/challenge/challenge.module';
+import { ChallengeroomModule } from './common/routes/challengeroom/challengeroom.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 
 @Module({
   imports: [
+    // 스케쥴러 크론 탭
+    ScheduleModule.forRoot(),
     // 환경변수 로딩
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     // Redis 캐시 설정 (경로 : sudo vi /etc/redis/redis.conf)
     CacheModule.registerAsync({
@@ -36,6 +42,25 @@ import { ChallengeModule } from './common/routes/challenge/challenge.module';
       },
     }),
 
+     // 이메일 전송 설정
+     MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cs: ConfigService) => ({
+        transport: {
+          host: cs.get('MAIL_HOST'),
+          port: cs.get<number>('MAIL_PORT'),
+          secure: cs.get('MAIL_SECURE') === 'true',
+          auth: {
+            user: cs.get('MAIL_USER'),
+            pass: cs.get('MAIL_PASS'),
+          },
+        },
+        defaults: {
+          from: cs.get('MAIL_FROM'),
+        },
+      }),
+    }),
+
     // TypeORM 연결 설정
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -54,7 +79,8 @@ import { ChallengeModule } from './common/routes/challenge/challenge.module';
     // 모듈 임포트
     AuthModule,
     UserModule,
-    ChallengeModule,
+    ChallengeroomModule,
+    WorkoutcertModule,
   ],
   controllers: [AppController],
   providers: [AppService],

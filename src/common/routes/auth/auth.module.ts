@@ -10,6 +10,10 @@ import { RefreshToken } from 'src/common/entities/refresh_token.entity';
 import { ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt/jwt.strategy';
+import { KakaoStrategy } from './social-login/kakao.strategy';
+import { NaverStrategy } from './social-login/naver.strategy';
+import { GoogleStrategy } from './social-login/google.strategy';
+import { AppleStrategy } from './social-login/apple.strategy';
 
 @Module({
   imports: [
@@ -27,7 +31,7 @@ import { JwtStrategy } from './jwt/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, KakaoStrategy, NaverStrategy, GoogleStrategy, AppleStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
