@@ -11,7 +11,7 @@ import { AuthModule } from './common/routes/auth/auth.module';
 import { ChallengeroomModule } from './common/routes/challengeroom/challengeroom.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
-import { CommentModule } from './comment/comment.module';
+import { CommentModule } from './common/routes/comment/comment.module';
 
 @Module({
   imports: [
