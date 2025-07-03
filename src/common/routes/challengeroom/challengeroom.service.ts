@@ -30,22 +30,10 @@ export class ChallengeroomService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    const startDate = new Date(createChallengeRoomDto.start_date);
-    const endDate = new Date(startDate);
-
-    const unitToDays = {
-      [DurationUnit.DAY]: 1,
-      [DurationUnit.WEEK]: 7,
-      [DurationUnit.MONTH]: 30,
-    };
-
-    const durationDays = createChallengeRoomDto.duration_value * unitToDays[createChallengeRoomDto.duration_unit];
-    endDate.setDate(endDate.getDate() + durationDays);
-
     const challengeRoom = this.challengeRepository.create({
       ...createChallengeRoomDto,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: null,
+      end_date: null,
       status: ChallengeStatus.PENDING,
       user,
     });

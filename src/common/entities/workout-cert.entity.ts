@@ -31,12 +31,16 @@ export class WorkoutCert {
   is_rest: boolean;
 
   @Column({ type: 'int' })
-  @ApiProperty({ description: 'target_approval_count' })
+  @ApiProperty({ description: '목표 승인 수' })
   target_approval_count: number;
 
+  @Column({ type: 'boolean', default: false })
+  @ApiProperty({ description: '인증 완료 여부' })
+  is_completed: boolean;
+
   @CreateDateColumn({ type: 'timestamp' })
-  @ApiProperty({ description: '인증 시간' })
-  is_completed: Date;
+  @ApiProperty({ description: '생성 시간' })
+  created_at: Date;
 
   // 관계 설정
   @ManyToOne(() => User, (user) => user.subscriptions, { onDelete: 'CASCADE' })
