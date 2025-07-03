@@ -17,7 +17,7 @@ export class ChallengeScheduler {
     const now = new Date();
     const pendingRooms = await this.challengeRoomRepository.find({ where: { status: ChallengeStatus.PENDING } });
     for (const room of pendingRooms) {
-      if (new Date(room.start_date) <= now) {
+      if (room.start_date && new Date(room.start_date) <= now) {
         room.status = ChallengeStatus.ONGOING;
         await this.challengeRoomRepository.save(room);
       }
@@ -25,7 +25,7 @@ export class ChallengeScheduler {
 
     const ongoingRooms = await this.challengeRoomRepository.find({ where: { status: ChallengeStatus.ONGOING } });
     for (const room of ongoingRooms) {
-      if (new Date(room.end_date) < now) {
+      if (room.end_date && new Date(room.end_date) < now) {
         room.status = ChallengeStatus.COMPLETED;
         await this.challengeRoomRepository.save(room);
       }

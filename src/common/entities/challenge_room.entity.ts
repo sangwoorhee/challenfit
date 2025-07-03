@@ -28,17 +28,17 @@ export class ChallengeRoom {
   @ApiProperty({ description: '도전방 설명', required: false })
   description?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: false })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   @ApiProperty({ description: '도전 목표' })
   goal: string;
 
-  @Column({ type: 'date', nullable: false })
-  @ApiProperty({ description: '시작일' })
-  start_date: Date;
+  @Column({ type: 'date', nullable: true }) 
+  @ApiProperty({ description: '시작일', nullable: true })
+  start_date: Date | null;
 
-  @Column({ type: 'date', nullable: false })
-  @ApiProperty({ description: '종료일' })
-  end_date: Date;
+  @Column({ type: 'date', nullable: true }) 
+  @ApiProperty({ description: '종료일', nullable: true })
+  end_date: Date | null;
 
   @Column({ type: 'smallint', nullable: true })
   @ApiProperty({ description: '도전 기간(일,주,월 단위)' })
@@ -85,7 +85,7 @@ export class ChallengeRoom {
   @OneToMany(() => ChallengeParticipant, (participant) => participant.challenge)
   @ApiProperty({ type: () => [ChallengeParticipant], description: '도전자 엔티티' })
   challenge_participants: ChallengeParticipant[];
-
+  
   @ManyToOne(() => User, (user) => user.challenges, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_idx' })
   @ApiProperty({ description: '유저 정보 (FK)' })

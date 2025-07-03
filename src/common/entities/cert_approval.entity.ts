@@ -1,7 +1,9 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { User } from './user.entity';
+import { WorkoutCert } from './workout-cert.entity';
 
-// 인증사진 승인 엔티티
+// 인증 승인 엔티티
 @Entity({ name: 'cert_approval' })
 export class CertApproval {
   @PrimaryGeneratedColumn('uuid')
@@ -27,4 +29,15 @@ export class CertApproval {
   @CreateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: '승인 생성일시', required: false })
   created_at: Date;
+
+  // 관계설정
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  @ApiProperty({ description: 'FK - 사용자 ID' })
+  user: User;
+
+  @ManyToOne(() => WorkoutCert, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'workout_cert_id' })
+  @ApiProperty({ description: 'FK - 운동 인증 ID' })
+  workout_cert: WorkoutCert;
 }
