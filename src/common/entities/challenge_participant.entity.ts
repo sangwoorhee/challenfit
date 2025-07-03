@@ -33,11 +33,11 @@ export class ChallengeParticipant {
 
   @Column({
     type: 'timestamp',
-    nullable: false,
+    nullable: true,
     default: () => 'CURRENT_TIMESTAMP',
   })
   @ApiProperty({ description: '챌린지 완료 일시' })
-  completed_at: Date;
+  completed_at: Date | null;
 
   // 관계 설정
   @ManyToOne(() => User, (user) => user.challenge_participants, { onDelete: 'CASCADE' })

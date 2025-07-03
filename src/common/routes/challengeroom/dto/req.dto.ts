@@ -10,11 +10,9 @@ import { DurationUnit } from "src/common/enum/enum";
     @IsString()
     description?: string;
 
+    @IsOptional()
     @IsString()
     goal: string;
-
-    @IsDateString()
-    start_date: string;
 
     @IsInt()
     duration_value: number;

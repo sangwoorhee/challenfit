@@ -67,6 +67,7 @@ export enum NotificationType {
   ETC = 'etc',
 }
 
+// 도전 기간 단위
 export enum DurationUnit {
   DAY = 'day',
   WEEK = 'week',

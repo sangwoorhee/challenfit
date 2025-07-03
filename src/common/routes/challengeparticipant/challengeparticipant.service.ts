@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 import { User } from 'src/common/entities/user.entity';
-import { ChallengeStatus } from 'src/common/enum/enum';
+import { ChallengeStatus, DurationUnit } from 'src/common/enum/enum';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -17,9 +17,8 @@ export class ChallengeparticipantService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-    // 1. 도전방 참가
-    async joinChallengeRoom(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
-    // 도전방 조회 및 공개 여부 확인
+   // 1. 도전방 입장
+  async enterChallengeRoom(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
     const challengeRoom = await this.challengeRoomRepository.findOne({
       where: { idx: challengeRoomIdx },
       relations: ['challenge_participants'],
@@ -29,40 +28,82 @@ export class ChallengeparticipantService {
       throw new NotFoundException('도전방을 찾을 수 없거나 비공개 방입니다.');
     }
 
-    // 유저 조회
     const user = await this.userRepository.findOne({ where: { idx: userIdx } });
     if (!user) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    // 이미 참가한 경우 중복 방지 (선택 사항)
     const existingParticipant = await this.participantRepository.findOne({
       where: { user: { idx: userIdx }, challenge: { idx: challengeRoomIdx } },
     });
 
     if (existingParticipant) {
-      throw new ConflictException('이미 참가한 도전방입니다.');
+      return existingParticipant; // 이미 입장한 경우 기존 참가자 정보 반환
     }
 
-    // 도전자 엔티티 생성
     const participant = this.participantRepository.create({
       user,
       challenge: challengeRoom,
-      status: 'active',
+      status: 'pending', // 입장만 한 상태
       joined_at: new Date(),
-      completed_at: challengeRoom.end_date,
+      completed_at: null,
     });
 
-    // 저장
-    const savedParticipant = await this.participantRepository.save(participant);
+    return await this.participantRepository.save(participant);
+  }
 
-    // 현재 참가자 수 확인
+  // 2. 도전 참가
+  async participateChallengeRoom(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
+    const challengeRoom = await this.challengeRoomRepository.findOne({
+      where: { idx: challengeRoomIdx },
+      relations: ['challenge_participants'],
+    });
+
+    if (!challengeRoom || !challengeRoom.is_public) {
+      throw new NotFoundException('도전방을 찾을 수 없거나 비공개 방입니다.');
+    }
+
+    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    const existingParticipant = await this.participantRepository.findOne({
+      where: { user: { idx: userIdx }, challenge: { idx: challengeRoomIdx } },
+    });
+
+    if (!existingParticipant) {
+      throw new NotFoundException('먼저 도전방에 입장해야 합니다.');
+    }
+
+    if (existingParticipant.status === 'active') {
+      throw new ConflictException('이미 도전에 참가했습니다.');
+    }
+
+    existingParticipant.status = 'active';
+    existingParticipant.completed_at = challengeRoom.end_date;
+
+    const savedParticipant = await this.participantRepository.save(existingParticipant);
+
     const currentCount = await this.participantRepository.count({
-      where: { challenge: { idx: challengeRoomIdx } },
+      where: { challenge: { idx: challengeRoomIdx }, status: 'active' },
     });
 
-    // 참가자 수가 정원에 도달하면 도전방 상태를 자동으로 '진행중'으로 변경
-    if (currentCount >= challengeRoom.max_participants) {
+    if (currentCount >= challengeRoom.max_participants && challengeRoom.status === ChallengeStatus.PENDING) {
+      const now = new Date();
+      challengeRoom.start_date = now;
+
+      const unitToDays = {
+        [DurationUnit.DAY]: 1,
+        [DurationUnit.WEEK]: 7,
+        [DurationUnit.MONTH]: 30,
+      };
+
+      const durationDays = challengeRoom.duration_value * unitToDays[challengeRoom.duration_unit];
+      const endDate = new Date(now);
+      endDate.setDate(now.getDate() + durationDays);
+
+      challengeRoom.end_date = endDate;
       challengeRoom.status = ChallengeStatus.ONGOING;
       await this.challengeRoomRepository.save(challengeRoom);
     }
