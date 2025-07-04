@@ -18,9 +18,12 @@ import { CommonResDto } from './dto/res.dto';
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
-    @InjectRepository(UserSetting) private settingRepository: Repository<UserSetting>,
-    @InjectRepository(UserProfile) private profileRepository: Repository<UserProfile>,
+    @InjectRepository(User) 
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(UserSetting) 
+    private readonly settingRepository: Repository<UserSetting>,
+    @InjectRepository(UserProfile) 
+    private readonly profileRepository: Repository<UserProfile>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -38,6 +41,7 @@ export class UserService {
     this.settingRepository.merge(setting, dto);
     await this.settingRepository.save(setting);
 
+    await queryRunner.commitTransaction();
     return { message: '환경설정이 수정되었습니다.' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -62,6 +66,7 @@ export class UserService {
     this.profileRepository.merge(profile, dto);
     await this.profileRepository.save(profile);
 
+    await queryRunner.commitTransaction();
     return { message: '프로필이 수정되었습니다.' };
     } catch (error) {
       console.error(`error: ${error}`)
@@ -128,6 +133,7 @@ export class UserService {
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
     await this.userRepository.remove(user);
+    await queryRunner.commitTransaction();
     return { message: '회원탈퇴가 완료되었습니다.' };
     } catch (error) {
       console.error(`error: ${error}`)

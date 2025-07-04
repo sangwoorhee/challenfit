@@ -12,7 +12,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // 1. 휴대폰 SMS 인증 코드 전송
-  // http://localhost:3000/auth/verify-sms
+  // POST : http://localhost:3000/auth/verify-sms
   @Post('verify-sms')
   @ApiOperation({
     summary: '휴대폰 SMS 인증 코드 전송',
@@ -23,7 +23,7 @@ export class AuthController {
   }
 
   // 2. 회원가입 (E-mail, PassWord)
-  // http://localhost:3000/auth/signup
+  // POST : http://localhost:3000/auth/signup
   @Post('signup')
   @ApiOperation({
     summary: '회원가입 (E-mail, PassWword)',
@@ -34,7 +34,7 @@ export class AuthController {
   }
 
   // 3. 로그인 (E-mail, PassWord)
-  // http://localhost:3000/auth/login
+  // POST : http://localhost:3000/auth/login
   @Post('login')
   @ApiOperation({
     summary: '로그인 (E-mail, PassWword)',
@@ -45,11 +45,11 @@ export class AuthController {
   }
 
   // 4. 회원가입 시 이메일 인증
-  // http://localhost:3000/auth/verify-email
+  // GET : http://localhost:3000/auth/verify-email
   @Get('verify-email')
   @ApiOperation({ 
     summary: '이메일 인증', 
-    description: 'http://localhost:3000/auth/verify-email' 
+    description: 'GET : http://localhost:3000/auth/verify-email' 
   })
   async verifyEmail(@Query('token') token: string) {
     await this.authService.verifyEmail(token);
@@ -57,7 +57,8 @@ export class AuthController {
   }
 
   // 5. 카카오 로그인
-  // http://localhost:3000/auth/kakao
+  // GET : http://localhost:3000/auth/kakao
+  // GET : http://localhost:3000/auth/kakao/callback
   @Get('kakao')
   @UseGuards(AuthGuard('kakao'))
   @ApiOperation({
@@ -79,7 +80,8 @@ export class AuthController {
   }
 
   // 6. 네이버 로그인
-  // http://localhost:3000/auth/naver
+  // GET : http://localhost:3000/auth/naver
+  // GET : http://localhost:3000/auth/naver/callback
   @Get('naver')
   @UseGuards(AuthGuard('naver'))
   @ApiOperation({
@@ -101,7 +103,8 @@ export class AuthController {
   }
 
   // 7. 구글 로그인
-  // http://localhost:3000/auth/google
+  // GET : http://localhost:3000/auth/google
+  // GET : http://localhost:3000/auth/google/callback
   @Get('google')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({
@@ -123,7 +126,8 @@ export class AuthController {
   }
 
   // 8. 애플 로그인
-  // http://localhost:3000/auth/apple
+  // GET : http://localhost:3000/auth/apple
+  // GET : http://localhost:3000/auth/apple/callback
   @Get('apple')
   @UseGuards(AuthGuard('apple'))
   @ApiOperation({

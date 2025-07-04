@@ -9,6 +9,7 @@ export enum ChallengeStatus {
 export enum ChallengerStatus {
   PENDING = 'pending',
   PARTICIPATING = 'participating',
+  COMPLETED = 'completed',
 }
 
 // 유저
