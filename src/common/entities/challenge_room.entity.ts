@@ -57,6 +57,10 @@ export class ChallengeRoom {
   @ApiProperty({ description: '최대 참가 인원' })
   max_participants: number;
 
+  @Column({ type: 'smallint', nullable: false })
+  @ApiProperty({ description: '현재 참가 인원' })
+  current_participants: number;
+
   @Column({ type: 'boolean', default: true })
   @ApiProperty({ description: '공개 여부', default: true })
   is_public: boolean;

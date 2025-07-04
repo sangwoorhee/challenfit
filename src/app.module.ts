@@ -13,6 +13,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 import { CommentModule } from './common/routes/comment/comment.module';
 import { LikeModule } from './common/routes/like/like.module';
+import { ChallengeparticipantModule } from './common/routes/challengeparticipant/challengeparticipant.module';
+import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/workoutcertapproval.module';
 
 @Module({
   imports: [
@@ -82,7 +84,9 @@ import { LikeModule } from './common/routes/like/like.module';
     AuthModule,
     UserModule,
     ChallengeroomModule,
+    ChallengeparticipantModule,
     WorkoutcertModule,
+    WorkoutcertapprovalModule,
     CommentModule,
     LikeModule,
   ],
