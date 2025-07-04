@@ -23,6 +23,8 @@ import { Notification } from './notification.entity';
 import { UserProfile } from './user_profile.entity';
 import { UserSetting } from './user_setting.entity';
 import { RefreshToken } from './refresh_token.entity';
+import { Comment } from './comment.entity';
+import { Like } from './like.entity';
 
 // User 엔티티
 @Entity({ name: 'user' })
@@ -115,6 +117,14 @@ export class User {
   @OneToMany(() => ChallengeRoom, (challenge) => challenge.user)
   @ApiProperty({ type: () => [ChallengeRoom], description: '챌린지 목록' })
   challenges: ChallengeRoom[];
+
+  @OneToMany(() => Comment, (comment) => comment.user)
+  @ApiProperty({ type: () => [Comment], description: '댓글 목록' })
+  comments: Comment[];
+
+  @OneToMany(() => Like, (like) => like.user)
+  @ApiProperty({ type: () => [Like], description: '좋아요 목록' })
+  likes: Like[];
 
   @OneToOne(() => UserSetting, (setting) => setting.user, { cascade: true })
   @ApiProperty({ type: () => [UserSetting], description: '유저 셋팅' })

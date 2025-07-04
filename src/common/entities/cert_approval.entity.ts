@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { User } from './user.entity';
 import { WorkoutCert } from './workout-cert.entity';
 
-// 인증 승인 엔티티
+// 운동 인증 승인 엔티티
 @Entity({ name: 'cert_approval' })
 export class CertApproval {
   @PrimaryGeneratedColumn('uuid')
@@ -32,12 +32,12 @@ export class CertApproval {
 
   // 관계설정
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_idx' })
   @ApiProperty({ description: 'FK - 사용자 ID' })
   user: User;
 
   @ManyToOne(() => WorkoutCert, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'workout_cert_id' })
+  @JoinColumn({ name: 'workout_cert_idx' })
   @ApiProperty({ description: 'FK - 운동 인증 ID' })
   workout_cert: WorkoutCert;
 }

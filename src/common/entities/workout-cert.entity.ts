@@ -7,9 +7,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from './user.entity';
 import { ChallengeParticipant } from './challenge_participant.entity';
+import { Comment } from './comment.entity';
+import { Like } from './like.entity';
 
 // 운동 인증 엔티티
 @Entity({ name: 'workout_cert' })
@@ -52,4 +55,12 @@ export class WorkoutCert {
   @ApiProperty({ description: 'FK (도전자 idx)' })
   @JoinColumn({ name: 'challenge_participant_idx' })
   challenge_participant: ChallengeParticipant;
+
+  @OneToMany(() => Comment, (comment) => comment.workout_cert, { cascade: true })
+  @ApiProperty({ type: () => [Comment], description: '이 인증에 달린 댓글들' })
+  comments: Comment[];
+
+  @OneToMany(() => Like, (like) => like.workout_cert, { cascade: true })
+  @ApiProperty({ type: () => [Like], description: '이 인증에 달린 좋아요들' })
+  likes: Like[];
 }

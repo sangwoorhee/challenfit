@@ -69,18 +69,20 @@ export class WorkoutcertService {
     });
     if (!participant) throw new ForbiddenException('도전 참가자가 아닙니다.');
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+    // 현재 날짜의 자정과 다음 날 자정 계산 (한국 시간 기준)
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0); // 현재 날짜의 자정
+    const nextDayMidnight = new Date(todayMidnight);
+    nextDayMidnight.setDate(todayMidnight.getDate() + 1); // 다음 날 자정
 
+    // 오늘 자정부터 다음 날 자정까지의 인증글 체크
     const existingCert = await this.workoutCertRepository.findOne({
       where: {
         challenge_participant: { idx: participant.idx },
-        created_at: Between(today, tomorrow),
+        created_at: Between(todayMidnight, nextDayMidnight),
       },
     });
-    if (existingCert) throw new ConflictException('오늘 이미 인증글을 올렸습니다.');
+    if (existingCert) throw new ConflictException('오늘 자정 이후 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.');
 
     const workoutCert = this.workoutCertRepository.create({
       user,
