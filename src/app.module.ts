@@ -12,6 +12,7 @@ import { ChallengeroomModule } from './common/routes/challengeroom/challengeroom
 import { ScheduleModule } from '@nestjs/schedule';
 import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 import { CommentModule } from './common/routes/comment/comment.module';
+import { LikeModule } from './common/routes/like/like.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { CommentModule } from './common/routes/comment/comment.module';
     ChallengeroomModule,
     WorkoutcertModule,
     CommentModule,
+    LikeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
