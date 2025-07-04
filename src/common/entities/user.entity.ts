@@ -11,12 +11,12 @@ import {
   OneToOne,
 } from 'typeorm';
 import { UserProvider, UserStatus } from '../enum/enum';
-import { AuthLog } from './auth-log.entity';
+import { AuthLog } from './auth_log.entity';
 import { CertPhoto } from './cert_photo.entity';
 import { ChallengeParticipant } from './challenge_participant.entity';
 import { Subscription } from './subscription.entity';
 import { SubscriptionPayment } from './subscription_payment.entity';
-import { WorkoutLog } from './workout-log.entity';
+import { WorkoutLog } from './workout_log.entity';
 import { Ranking } from './ranking.entity';
 import { ChallengeRoom } from './challenge_room.entity';
 import { Notification } from './notification.entity';

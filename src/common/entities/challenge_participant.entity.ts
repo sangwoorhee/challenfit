@@ -10,8 +10,9 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { ChallengeRoom } from './challenge_room.entity';
-import { WorkoutCert } from './workout-cert.entity';
+import { WorkoutCert } from './workout_cert.entity';
 import { ChallengerStatus } from '../enum/enum';
+import { CertApproval } from './cert_approval.entity';
 
 // 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
@@ -59,4 +60,8 @@ export class ChallengeParticipant {
   @OneToMany(() => WorkoutCert, (workout_cert) => workout_cert.challenge_participant, { cascade: true })
   @ApiProperty({ type: () => [WorkoutCert], description: '운동 인증' })
   workout_cert: WorkoutCert[];
+
+  @OneToMany(() => CertApproval, (cert_approval) => cert_approval.challenge_participant, { cascade: true })
+  @ApiProperty({ type: () => [CertApproval], description: '운동 인증' })
+  cert_approval: CertApproval[];
 }

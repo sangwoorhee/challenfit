@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Like } from 'src/common/entities/like.entity';
-import { WorkoutCert } from 'src/common/entities/workout-cert.entity';
+import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 import { Comment } from 'src/common/entities/comment.entity';
 import { LikeResDto } from './dto/res.dto';

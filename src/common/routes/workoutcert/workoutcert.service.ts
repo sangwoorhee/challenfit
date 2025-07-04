@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Between } from 'typeorm';
-import { WorkoutCert } from 'src/common/entities/workout-cert.entity';
+import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 import { ChallengerStatus, ChallengeStatus } from 'src/common/enum/enum';
 import { CreateWorkoutCertReqDto, UpdateWorkoutCertReqDto } from './dto/req.dto';
+import { CertApproval } from 'src/common/entities/cert_approval.entity';
 
 @Injectable()
 export class WorkoutcertService {
@@ -19,6 +20,8 @@ export class WorkoutcertService {
     private participantRepository: Repository<ChallengeParticipant>,
     @InjectRepository(ChallengeRoom)
     private challengeRoomRepository: Repository<ChallengeRoom>,
+    @InjectRepository(CertApproval)
+    private certApprovalRepository: Repository<CertApproval>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -30,7 +33,7 @@ export class WorkoutcertService {
     const certs = await this.workoutCertRepository.find({
       where: { user: { idx: userIdx } },
       order: { created_at: 'DESC' },
-      relations: ['challenge_participant', 'challenge_participant.challenge'],
+      relations: ['challenge_participant', 'challenge_participant.challenge', 'cert_approval'],
     });
 
     return certs;
@@ -112,7 +115,7 @@ export class WorkoutcertService {
 
     return await this.workoutCertRepository.find({
       where: { challenge_participant: { challenge: { idx: challengeRoomIdx } } },
-      relations: ['user', 'challenge_participant'],
+      relations: ['user', 'challenge_participant', 'cert_approval'],
       order: { created_at: 'DESC' },
     });
   }
@@ -121,7 +124,7 @@ export class WorkoutcertService {
   async getWorkoutCertDetail(idx: string): Promise<WorkoutCert> {
     const cert = await this.workoutCertRepository.findOne({
       where: { idx },
-      relations: ['user', 'challenge_participant'],
+      relations: ['user', 'challenge_participant', 'cert_approval'],
     });
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
     return cert;

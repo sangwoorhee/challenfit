@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { User } from './user.entity';
-import { WorkoutCert } from './workout-cert.entity';
+import { WorkoutCert } from './workout_cert.entity';
 import { Comment } from './comment.entity';
 
 // 좋아요 엔티티: 운동 인증 & 댓글에 대한 좋아요 정보를 저장

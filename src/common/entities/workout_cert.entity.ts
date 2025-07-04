@@ -13,6 +13,7 @@ import { User } from './user.entity';
 import { ChallengeParticipant } from './challenge_participant.entity';
 import { Comment } from './comment.entity';
 import { Like } from './like.entity';
+import { CertApproval } from './cert_approval.entity';
 
 // 운동 인증 엔티티
 @Entity({ name: 'workout_cert' })
@@ -63,4 +64,8 @@ export class WorkoutCert {
   @OneToMany(() => Like, (like) => like.workout_cert, { cascade: true })
   @ApiProperty({ type: () => [Like], description: '이 인증에 달린 좋아요들' })
   likes: Like[];
+
+  @OneToMany(() => CertApproval, (cert_approval) => cert_approval.workout_cert, { cascade: true })
+  @ApiProperty({ type: () => [CertApproval], description: '이 인증에 달린 인증 승인들' })
+  cert_approval: CertApproval[];
 }

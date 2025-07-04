@@ -1,34 +1,13 @@
-import { IsString, IsBoolean, IsInt, IsOptional } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
-// 인증글 생성 요청 DTO
-export class CreateWorkoutCertReqDto {
-  @IsString()
-  challenge_room_idx: string;
-
-  @IsString()
-  image_url: string;
+// 운동 인증 승인 요청 DTO
+export class CreateCertApprovalReqDto {
+  @IsUUID()
+  workout_cert_idx: string;
 
   @IsString()
-  caption: string;
+  stamp_img: string;
 
-  @IsBoolean()
-  is_rest: boolean;
-
-  @IsInt()
-  target_approval_count: number;
-}
-
-// 인증글 수정 요청 DTO
-export class UpdateWorkoutCertReqDto {
-  @IsOptional()
   @IsString()
-  image_url?: string;
-
-  @IsOptional()
-  @IsString()
-  caption?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  is_rest?: boolean;
+  comment: string;
 }

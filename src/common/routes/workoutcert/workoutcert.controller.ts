@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, NotFoundE
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
-import { WorkoutCert } from 'src/common/entities/workout-cert.entity';
+import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { CreateWorkoutCertReqDto, UpdateWorkoutCertReqDto } from './dto/req.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 

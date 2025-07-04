@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { User } from './user.entity';
-import { WorkoutCert } from './workout-cert.entity';
+import { WorkoutCert } from './workout_cert.entity';
 import { Like } from './like.entity';
 
 // 댓글 엔티티: 운동 인증에 대한 댓글 정보를 저장

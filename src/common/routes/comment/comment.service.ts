@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from 'src/common/entities/comment.entity';
-import { WorkoutCert } from 'src/common/entities/workout-cert.entity';
+import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 import { CreateCommentReqDto, UpdateCommentReqDto } from './dto/req.dto';
 
