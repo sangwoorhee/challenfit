@@ -11,6 +11,7 @@ import {
 import { User } from './user.entity';
 import { ChallengeRoom } from './challenge_room.entity';
 import { WorkoutCert } from './workout-cert.entity';
+import { ChallengerStatus } from '../enum/enum';
 
 // 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
@@ -27,9 +28,14 @@ export class ChallengeParticipant {
   @ApiProperty({ description: '참가 신청일시' })
   joined_at: Date;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  @ApiProperty({ description: '참여 상태' })
-  status: string;
+    @Column({
+    type: 'enum',
+    enum: ChallengerStatus,
+    default: ChallengerStatus.PENDING,
+    nullable: false,
+  })
+  @ApiProperty({ description: '참여 상태', enum: ChallengerStatus, default: ChallengerStatus.PENDING })
+  status: ChallengerStatus;
 
   @Column({
     type: 'timestamp',

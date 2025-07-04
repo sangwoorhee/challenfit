@@ -49,7 +49,10 @@ export class ChallengeroomService {
 
   // 3. 도전 방 상세조회
   async getChallengeRoomDetail(idx: string): Promise<ChallengeRoom> {
-    const challengeRoom = await this.challengeRepository.findOne({ where: { idx }, relations: ['user', 'challenge_participants'] });
+    const challengeRoom = await this.challengeRepository.findOne({ 
+      where: { idx }, 
+      relations: ['user', 'challenge_participants', 'challenge_participants.user'] 
+    });
     if (!challengeRoom) {
       throw new NotFoundException('도전방을 찾을 수 없습니다.');
     }
