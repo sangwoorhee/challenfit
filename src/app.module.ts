@@ -10,10 +10,11 @@ import { UserModule } from './common/routes/user/user.module';
 import { AuthModule } from './common/routes/auth/auth.module';
 import { ChallengeroomModule } from './common/routes/challengeroom/challengeroom.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
+import { ChallengeScheduler } from './common/routes/challengeroom/challengeroom.scheduler';
+import { ChallengeparticipantModule } from './common/routes/challengeparticipant/challengeparticipant.module';
 import { CommentModule } from './common/routes/comment/comment.module';
 import { LikeModule } from './common/routes/like/like.module';
-import { ChallengeparticipantModule } from './common/routes/challengeparticipant/challengeparticipant.module';
+import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/workoutcertapproval.module';
 
 @Module({
@@ -85,10 +86,10 @@ import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/w
     UserModule,
     ChallengeroomModule,
     ChallengeparticipantModule,
-    WorkoutcertModule,
-    WorkoutcertapprovalModule,
     CommentModule,
     LikeModule,
+    WorkoutcertModule,
+    WorkoutcertapprovalModule,
   ],
   controllers: [AppController],
   providers: [AppService],
