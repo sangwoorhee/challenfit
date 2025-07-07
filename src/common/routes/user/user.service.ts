@@ -1,6 +1,9 @@
 import {
-  Injectable, NotFoundException, BadRequestException, Inject,
-  InternalServerErrorException
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import {
   UpdateUserSettingReqDto,
@@ -18,125 +21,152 @@ import { CommonResDto } from './dto/res.dto';
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User) 
+    @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(UserSetting) 
+    @InjectRepository(UserSetting)
     private readonly settingRepository: Repository<UserSetting>,
-    @InjectRepository(UserProfile) 
+    @InjectRepository(UserProfile)
     private readonly profileRepository: Repository<UserProfile>,
     private readonly dataSource: DataSource,
   ) {}
 
   // 1. 회원 환경설정 수정
-  async updateSetting(user_idx: string, dto: UpdateUserSettingReqDto): Promise<CommonResDto> {
-   
+  async updateSetting(
+    user_idx: string,
+    dto: UpdateUserSettingReqDto,
+  ): Promise<CommonResDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-   
+
     try {
-    const setting = await this.settingRepository.findOne({ where: { user: { idx: user_idx } } });
-    if (!setting) throw new NotFoundException('설정 정보를 찾을 수 없습니다.');
+      const setting = await this.settingRepository.findOne({
+        where: { user: { idx: user_idx } },
+      });
+      if (!setting)
+        throw new NotFoundException('설정 정보를 찾을 수 없습니다.');
 
-    this.settingRepository.merge(setting, dto);
-    await this.settingRepository.save(setting);
+      this.settingRepository.merge(setting, dto);
+      await this.settingRepository.save(setting);
 
-    await queryRunner.commitTransaction();
-    return { message: '환경설정이 수정되었습니다.' };
+      await queryRunner.commitTransaction();
+      return { message: '환경설정이 수정되었습니다.' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error(`error: ${error}`)
-      throw new InternalServerErrorException(`환경설정 수정 실패: ${error.message}`);
+      console.error(`error: ${error}`);
+      throw new InternalServerErrorException(
+        `환경설정 수정 실패: ${error.message}`,
+      );
     } finally {
       await queryRunner.release();
     }
   }
 
   // 2. 마이프로필 수정
-  async updateProfile(user_idx: string, dto: UpdateUserProfileReqDto): Promise<CommonResDto> {
-    
+  async updateProfile(
+    user_idx: string,
+    dto: UpdateUserProfileReqDto,
+  ): Promise<CommonResDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    
+
     try {
-    const profile = await this.profileRepository.findOne({ where: { user: { idx: user_idx } } });
-    if (!profile) throw new NotFoundException('프로필 정보를 찾을 수 없습니다.');
+      const profile = await this.profileRepository.findOne({
+        where: { user: { idx: user_idx } },
+      });
+      if (!profile)
+        throw new NotFoundException('프로필 정보를 찾을 수 없습니다.');
 
-    this.profileRepository.merge(profile, dto);
-    await this.profileRepository.save(profile);
+      this.profileRepository.merge(profile, dto);
+      await this.profileRepository.save(profile);
 
-    await queryRunner.commitTransaction();
-    return { message: '프로필이 수정되었습니다.' };
+      await queryRunner.commitTransaction();
+      return { message: '프로필이 수정되었습니다.' };
     } catch (error) {
-      console.error(`error: ${error}`)
+      console.error(`error: ${error}`);
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(`프로필 수정 실패: ${error.message}`);
+      throw new InternalServerErrorException(
+        `프로필 수정 실패: ${error.message}`,
+      );
     } finally {
       await queryRunner.release();
     }
   }
 
   // 3. 비밀번호 변경
- async changePassword(user_idx: string, dto: ChangePasswordReqDto): Promise<CommonResDto> {
-  const { currentPassword, newPassword, newPasswordConfirm } = dto;
+  async changePassword(
+    user_idx: string,
+    dto: ChangePasswordReqDto,
+  ): Promise<CommonResDto> {
+    const { currentPassword, newPassword, newPasswordConfirm } = dto;
 
-  if (newPassword !== newPasswordConfirm) {
-    throw new BadRequestException('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.');
-  }
-
-  const queryRunner = this.dataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-
-  try {
-    const user = await this.userRepository.findOne({ where: { idx: user_idx } });
-    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
-
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) {
-      throw new BadRequestException('기존 비밀번호가 일치하지 않습니다.');
+    if (newPassword !== newPasswordConfirm) {
+      throw new BadRequestException(
+        '새 비밀번호와 비밀번호 확인이 일치하지 않습니다.',
+      );
     }
-
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-    console.log('[새 비밀번호 해시]', hashedPassword); // 확인용
-    user.password = hashedPassword;
-
-    await this.userRepository.save(user);
-    await queryRunner.commitTransaction(); // ✅ 커밋 필수
-
-    return { message: '비밀번호가 성공적으로 변경되었습니다.' };
-  } catch (error) {
-    console.error(`[비밀번호 변경 에러]: ${error}`);
-    await queryRunner.rollbackTransaction();
-
-    if (error instanceof BadRequestException || error instanceof NotFoundException) {
-      throw error;
-    }
-
-    throw new InternalServerErrorException(`비밀번호 변경 실패: ${error.message}`);
-  } finally {
-    await queryRunner.release();
-  }
-}
-
-// 4. 회원탈퇴
-  async deleteAccount(user_idx: string): Promise<CommonResDto> {
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-    const user = await this.userRepository.findOne({ where: { idx: user_idx } });
-    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      const user = await this.userRepository.findOne({
+        where: { idx: user_idx },
+      });
+      if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-    await this.userRepository.remove(user);
-    await queryRunner.commitTransaction();
-    return { message: '회원탈퇴가 완료되었습니다.' };
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        throw new BadRequestException('기존 비밀번호가 일치하지 않습니다.');
+      }
+
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      console.log('[새 비밀번호 해시]', hashedPassword); // 확인용
+      user.password = hashedPassword;
+
+      await this.userRepository.save(user);
+      await queryRunner.commitTransaction(); // ✅ 커밋 필수
+
+      return { message: '비밀번호가 성공적으로 변경되었습니다.' };
     } catch (error) {
-      console.error(`error: ${error}`)
+      console.error(`[비밀번호 변경 에러]: ${error}`);
+      await queryRunner.rollbackTransaction();
+
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        `비밀번호 변경 실패: ${error.message}`,
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // 4. 회원탈퇴
+  async deleteAccount(user_idx: string): Promise<CommonResDto> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await this.userRepository.findOne({
+        where: { idx: user_idx },
+      });
+      if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+
+      await this.userRepository.remove(user);
+      await queryRunner.commitTransaction();
+      return { message: '회원탈퇴가 완료되었습니다.' };
+    } catch (error) {
+      console.error(`error: ${error}`);
       await queryRunner.rollbackTransaction();
       throw new InternalServerErrorException(`회원탈퇴 실패: ${error.message}`);
     } finally {
@@ -145,7 +175,7 @@ export class UserService {
   }
 
   // 5,6. 다른 유저 및 나의 마이프로필 정보 조회
-    async getUserProfile(user_idx: string) {
+  async getUserProfile(user_idx: string) {
     const user = await this.userRepository.findOne({
       where: { idx: user_idx },
       relations: ['profile'],
@@ -154,10 +184,8 @@ export class UserService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
     return {
-      name: user.name,
       nickname: user.nickname,
       profile: user.profile,
     };
   }
 }
-

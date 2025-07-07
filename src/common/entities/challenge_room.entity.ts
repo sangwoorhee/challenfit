@@ -24,19 +24,19 @@ export class ChallengeRoom {
   @ApiProperty({ description: '도전방 제목' })
   title: string;
 
-  @Column({ type: 'text', nullable: true })
-  @ApiProperty({ description: '도전방 설명', required: false })
-  description?: string;
+  // @Column({ type: 'text', nullable: true })
+  // @ApiProperty({ description: '도전방 설명', required: false })
+  // description?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   @ApiProperty({ description: '도전 목표' })
   goal: string;
 
-  @Column({ type: 'date', nullable: true }) 
+  @Column({ type: 'timestamp', nullable: true })
   @ApiProperty({ description: '시작일', nullable: true })
   start_date: Date | null;
 
-  @Column({ type: 'date', nullable: true }) 
+  @Column({ type: 'timestamp', nullable: true })
   @ApiProperty({ description: '종료일', nullable: true })
   end_date: Date | null;
 
@@ -44,11 +44,11 @@ export class ChallengeRoom {
   @ApiProperty({ description: '도전 기간(일,주,월 단위)' })
   duration_value: number;
 
-  @Column({ 
-    type: 'enum', 
-    enum: DurationUnit, 
-    default: DurationUnit.DAY, 
-    nullable: true
+  @Column({
+    type: 'enum',
+    enum: DurationUnit,
+    default: DurationUnit.DAY,
+    nullable: true,
   })
   @ApiProperty({ description: '도전 기간 단위(일,주,월 단위)' })
   duration_unit: DurationUnit;
@@ -57,7 +57,7 @@ export class ChallengeRoom {
   @ApiProperty({ description: '최대 참가 인원' })
   max_participants: number;
 
-  @Column({ type: 'smallint', nullable: false })
+  @Column({ type: 'smallint', nullable: false, default: 0 })
   @ApiProperty({ description: '현재 참가 인원' })
   current_participants: number;
 
@@ -87,9 +87,12 @@ export class ChallengeRoom {
   // cert_photos: CertPhoto[];
 
   @OneToMany(() => ChallengeParticipant, (participant) => participant.challenge)
-  @ApiProperty({ type: () => [ChallengeParticipant], description: '도전자 엔티티' })
+  @ApiProperty({
+    type: () => [ChallengeParticipant],
+    description: '도전자 엔티티',
+  })
   challenge_participants: ChallengeParticipant[];
-  
+
   @ManyToOne(() => User, (user) => user.challenges, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_idx' })
   @ApiProperty({ description: '유저 정보 (FK)' })

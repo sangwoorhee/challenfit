@@ -1,4 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
 import {
   Entity,
   Column,
@@ -8,60 +7,54 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { ApiProperty } from '@nestjs/swagger';
 import { User } from './user.entity';
 import { ChallengeRoom } from './challenge_room.entity';
 import { WorkoutCert } from './workout_cert.entity';
-import { ChallengerStatus } from '../enum/enum';
 import { CertApproval } from './cert_approval.entity';
+import { ChallengerStatus } from '../enum/enum';
 
-// 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
 export class ChallengeParticipant {
   @PrimaryGeneratedColumn('uuid')
   @ApiProperty({ description: 'PK', format: 'uuid' })
   idx: string;
 
-  @CreateDateColumn({
-    type: 'timestamp',
-    nullable: false,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @CreateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: '참가 신청일시' })
   joined_at: Date;
 
-    @Column({
+  @Column({
     type: 'enum',
     enum: ChallengerStatus,
     default: ChallengerStatus.PENDING,
-    nullable: false,
   })
-  @ApiProperty({ description: '참여 상태', enum: ChallengerStatus, default: ChallengerStatus.PENDING })
+  @ApiProperty({ description: '참여 상태', enum: ChallengerStatus })
   status: ChallengerStatus;
 
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @Column({ type: 'timestamp', nullable: true })
   @ApiProperty({ description: '챌린지 완료 일시' })
   completed_at: Date | null;
 
-  // 관계 설정
-  @ManyToOne(() => User, (user) => user.challenge_participants, { onDelete: 'CASCADE' })
-  @ApiProperty({ description: 'FK (유저 idx)' })
+  @ManyToOne(() => User, (user) => user.challenge_participants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_idx' })
   user: User;
 
-  @ManyToOne(() => ChallengeRoom, (challenge) => challenge.challenge_participants, { onDelete: 'CASCADE' })
-  @ApiProperty({ description: 'FK (챌린지 idx)' })
+  @ManyToOne(() => ChallengeRoom, (room) => room.challenge_participants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'challenge_room_idx' })
   challenge: ChallengeRoom;
 
-  @OneToMany(() => WorkoutCert, (workout_cert) => workout_cert.challenge_participant, { cascade: true })
-  @ApiProperty({ type: () => [WorkoutCert], description: '운동 인증' })
+  @OneToMany(() => WorkoutCert, (cert) => cert.challenge_participant, {
+    cascade: true,
+  })
   workout_cert: WorkoutCert[];
 
-  @OneToMany(() => CertApproval, (cert_approval) => cert_approval.challenge_participant, { cascade: true })
-  @ApiProperty({ type: () => [CertApproval], description: '운동 인증' })
+  @OneToMany(() => CertApproval, (approval) => approval.challenge_participant, {
+    cascade: true,
+  })
   cert_approval: CertApproval[];
 }

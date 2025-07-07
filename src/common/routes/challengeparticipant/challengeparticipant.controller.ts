@@ -10,37 +10,27 @@ import { JoinChallengeRoomResDto } from './dto/res.dto';
 @ApiTags('도전 방 참가자')
 @Controller('challengeparticipant')
 export class ChallengeparticipantController {
-  constructor(private readonly challengeparticipantService: ChallengeparticipantService) {}
-
-  // 1. 도전방 입장 (사용자가 도전방에 입장하여 상태를 PENDING으로 설정)
-  // POST : http://localhost:3000/challengeparticipant/enter
-  @Post('enter')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
-      summary: '도전방 입장', 
-      description: 'POST : http://localhost:3000/challengeparticipant/enter' 
-    })
-  async enterChallengeRoom(
-    @Body() enterChallengeRoomDto: JoinChallengeRoomReqDto,
-    @User() user: UserAfterAuth,
-  ): Promise<JoinChallengeRoomResDto> {
-    const participant = await this.challengeparticipantService.enterChallengeRoom(enterChallengeRoomDto.challenge_room_idx, user.idx);
-    return { idx: participant.idx };
-  }
-
+  constructor(
+    private readonly challengeparticipantService: ChallengeparticipantService,
+  ) {}
   // 2. 도전 참가 (입장한 사용자가 PARTICIPATING 상태로 전환)
   // POST : http://localhost:3000/challengeparticipant/participate
   @Post('participate')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
-      summary: '도전 참가', 
-      description: 'POST : http://localhost:3000/challengeparticipant/participate' 
-    })
+  @ApiOperation({
+    summary: '도전 참가',
+    description:
+      'POST : http://localhost:3000/challengeparticipant/participate',
+  })
   async participateChallengeRoom(
     @Body() participateChallengeRoomDto: JoinChallengeRoomReqDto,
     @User() user: UserAfterAuth,
   ): Promise<JoinChallengeRoomResDto> {
-    const participant = await this.challengeparticipantService.participateChallengeRoom(participateChallengeRoomDto.challenge_room_idx, user.idx);
+    const participant =
+      await this.challengeparticipantService.participateChallengeRoom(
+        participateChallengeRoomDto.challenge_room_idx,
+        user.idx,
+      );
     return { idx: participant.idx };
   }
 
@@ -48,15 +38,19 @@ export class ChallengeparticipantController {
   // POST : http://localhost:3000/challengeparticipant/cancel
   @Post('cancel')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
-      summary: '도전 참가', 
-      description: 'POST : http://localhost:3000/challengeparticipant/cancel' 
-    })
+  @ApiOperation({
+    summary: '도전 참가',
+    description: 'POST : http://localhost:3000/challengeparticipant/cancel',
+  })
   async cancelParticipation(
     @Body() cancelDto: JoinChallengeRoomReqDto,
     @User() user: UserAfterAuth,
   ): Promise<JoinChallengeRoomResDto> {
-    const participant = await this.challengeparticipantService.cancelParticipation(cancelDto.challenge_room_idx, user.idx);
+    const participant =
+      await this.challengeparticipantService.cancelParticipation(
+        cancelDto.challenge_room_idx,
+        user.idx,
+      );
     return { idx: participant.idx };
   }
 }
