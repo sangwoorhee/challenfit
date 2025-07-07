@@ -1,9 +1,18 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 import { User } from 'src/common/entities/user.entity';
-import { ChallengerStatus, ChallengeStatus, DurationUnit } from 'src/common/enum/enum';
+import {
+  ChallengerStatus,
+  ChallengeStatus,
+  DurationUnit,
+} from 'src/common/enum/enum';
 import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
@@ -18,154 +27,111 @@ export class ChallengeparticipantService {
     private readonly dataSource: DataSource,
   ) {}
 
-   // 1. 도전방 입장
-  async enterChallengeRoom(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
-    
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-    const challengeRoom = await this.challengeRoomRepository.findOne({
-      where: { idx: challengeRoomIdx },
-      relations: ['challenge_participants'],
-    });
-
-    console.log('challengeRoom', challengeRoom)
-    if (!challengeRoom || !challengeRoom.is_public) {
-      throw new NotFoundException('도전방을 찾을 수 없거나 비공개 방입니다.');
-    }
-
-    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-
-    const existingParticipant = await this.participantRepository.findOne({
-      where: { user: { idx: userIdx }, challenge: { idx: challengeRoomIdx } },
-    });
-
-    if (existingParticipant) {
-      return existingParticipant; // 이미 입장한 경우 기존 참가자 정보 반환
-    }
-
-    const participant = this.participantRepository.create({
-      user,
-      challenge: challengeRoom,
-      status: ChallengerStatus.PENDING, // 입장만 한 상태
-      joined_at: new Date(),
-      completed_at: null,
-    });
-
-    await queryRunner.commitTransaction();
-    return await this.participantRepository.save(participant);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      console.error(`error: ${error}`)
-      throw new InternalServerErrorException(`도전 방 입장 실패: ${error.message}`);
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
   // 2. 도전 참가
-  async participateChallengeRoom(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
-    
+  async participateChallengeRoom(
+    challengeRoomIdx: string,
+    userIdx: string,
+  ): Promise<ChallengeParticipant> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    
+
     try {
-    const challengeRoom = await this.challengeRoomRepository.findOne({
-      where: { idx: challengeRoomIdx },
-      relations: ['challenge_participants'],
-    });
+      const challengeRoom = await queryRunner.manager.findOne(ChallengeRoom, {
+        where: { idx: challengeRoomIdx },
+      });
 
-    if (!challengeRoom || !challengeRoom.is_public) {
-      throw new NotFoundException('도전방을 찾을 수 없거나 비공개 방입니다.');
-    }
+      if (!challengeRoom || !challengeRoom.is_public) {
+        throw new NotFoundException('도전방을 찾을 수 없거나 비공개 방입니다.');
+      }
 
-    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
+      const user = await queryRunner.manager.findOne(User, {
+        where: { idx: userIdx },
+      });
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
 
-    const existingParticipant = await this.participantRepository.findOne({
-      where: { user: { idx: userIdx }, challenge: { idx: challengeRoomIdx } },
-    });
+      // 현재 참여자 수 증가
+      challengeRoom.current_participants += 1;
 
-    if (!existingParticipant) {
-      throw new NotFoundException('먼저 도전방에 입장해야 합니다.');
-    }
+      const participant = this.participantRepository.create({
+        user,
+        challenge: challengeRoom,
+        status: ChallengerStatus.PARTICIPATING,
+        joined_at: new Date(),
+        completed_at: null,
+      });
 
-    if (existingParticipant.status === ChallengerStatus.PARTICIPATING) {
-      throw new ConflictException('이미 도전에 참가했습니다.');
-    }
+      const savedParticipant = await queryRunner.manager.save(participant);
 
-    // 현재 참가자 상태를 PARTICIPATING으로 변경
-    existingParticipant.status = ChallengerStatus.PARTICIPATING;
-    // completed_at은 나중에 스케줄러에서 실제 완료될 때 설정
-    existingParticipant.completed_at = null;
-
-    // current_participants 증가
-    challengeRoom.current_participants += 1;
-
-    const savedParticipant = await this.participantRepository.save(existingParticipant);
-
-    // 최대 참가 인원에 도달했는지 확인
-      if (challengeRoom.current_participants >= challengeRoom.max_participants && challengeRoom.status === ChallengeStatus.PENDING) {
+      // 최대 인원 도달 시 챌린지 시작 처리
+      if (
+        challengeRoom.current_participants >= challengeRoom.max_participants &&
+        challengeRoom.status === ChallengeStatus.PENDING
+      ) {
         const now = new Date();
-        challengeRoom.start_date = now;
-
-        // 기간 단위에 따른 일수 계산
         const unitToDays = {
           [DurationUnit.DAY]: 1,
           [DurationUnit.WEEK]: 7,
           [DurationUnit.MONTH]: 30,
         };
-
-        const durationDays = challengeRoom.duration_value * unitToDays[challengeRoom.duration_unit || DurationUnit.DAY];
-        const endDate = new Date(now);
-        endDate.setDate(now.getDate() + durationDays);
-
-        challengeRoom.end_date = endDate;
+        const days =
+          challengeRoom.duration_value *
+          unitToDays[challengeRoom.duration_unit];
+        challengeRoom.start_date = now;
+        challengeRoom.end_date = new Date(now.getTime() + days * 86400000);
         challengeRoom.status = ChallengeStatus.ONGOING;
       }
 
       await queryRunner.manager.save(challengeRoom);
+      await queryRunner.commitTransaction();
 
-    await queryRunner.commitTransaction();
-    return savedParticipant;
+      return savedParticipant;
     } catch (error) {
+      console.log(error);
       await queryRunner.rollbackTransaction();
-      console.error(`error: ${error}`)
-      throw new InternalServerErrorException(`도전 방 입장 실패: ${error.message}`);
+      throw new InternalServerErrorException(
+        `도전 방 입장 실패: ${error.message}`,
+      );
     } finally {
       await queryRunner.release();
     }
   }
 
   // 3. 도전 참가 취소
-  async cancelParticipation(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
-    
+  async cancelParticipation(
+    challengeRoomIdx: string,
+    userIdx: string,
+  ): Promise<ChallengeParticipant> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    
+
     try {
-    const challengeRoom = await queryRunner.manager.findOne(ChallengeRoom, { where: { idx: challengeRoomIdx } });
+      const challengeRoom = await queryRunner.manager.findOne(ChallengeRoom, {
+        where: { idx: challengeRoomIdx },
+      });
       if (!challengeRoom || !challengeRoom.is_public) {
         throw new NotFoundException('도전방을 찾을 수 없거나 비공개 방입니다.');
       }
 
-      const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+      const user = await this.userRepository.findOne({
+        where: { idx: userIdx },
+      });
       if (!user) {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
-      const existingParticipant = await queryRunner.manager.findOne(ChallengeParticipant, {
-        where: { user: { idx: userIdx }, challenge: { idx: challengeRoomIdx } },
-      });
+      const existingParticipant = await queryRunner.manager.findOne(
+        ChallengeParticipant,
+        {
+          where: {
+            user: { idx: userIdx },
+            challenge: { idx: challengeRoomIdx },
+          },
+        },
+      );
 
       if (!existingParticipant) {
         throw new NotFoundException('도전방에 입장하지 않았습니다.');
@@ -187,8 +153,10 @@ export class ChallengeparticipantService {
       return existingParticipant;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error(`error: ${error}`)
-      throw new InternalServerErrorException(`도전 방 입장 실패: ${error.message}`);
+      console.error(`error: ${error}`);
+      throw new InternalServerErrorException(
+        `도전 방 입장 실패: ${error.message}`,
+      );
     } finally {
       await queryRunner.release();
     }

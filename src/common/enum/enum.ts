@@ -1,15 +1,15 @@
 // 도전방 상태
 export enum ChallengeStatus {
-  PENDING = 'pending',
-  ONGOING = 'ongoing',
-  COMPLETED = 'completed',
+  PENDING = '대기중',
+  ONGOING = '진행중',
+  COMPLETED = '종료',
 }
 
 // 도전 유저 상태
 export enum ChallengerStatus {
-  PENDING = 'pending',
-  PARTICIPATING = 'participating',
-  COMPLETED = 'completed',
+  PENDING = '대기중',
+  PARTICIPATING = '진행중',
+  COMPLETED = '종료',
 }
 
 // 유저
