@@ -16,6 +16,17 @@ import {
   UpdateWorkoutCertReqDto,
 } from './dto/req.dto';
 import { CertApproval } from 'src/common/entities/cert_approval.entity';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// 확장된 DTO 타입 (내부에서만 사용)
+interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
+  image_url: string;
+}
+
+interface UpdateWorkoutCertWithImageDto extends UpdateWorkoutCertReqDto {
+  image_url?: string;
+}
 
 @Injectable()
 export class WorkoutcertService {
@@ -54,7 +65,7 @@ export class WorkoutcertService {
   // 2. 인증글 생성
   async createWorkoutCert(
     userIdx: string,
-    dto: CreateWorkoutCertReqDto,
+    dto: CreateWorkoutCertWithImageDto,
   ): Promise<WorkoutCert> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -97,9 +108,9 @@ export class WorkoutcertService {
 
       // 현재 날짜의 자정과 다음 날 자정 계산 (한국 시간 기준)
       const todayMidnight = new Date(now);
-      todayMidnight.setHours(0, 0, 0, 0); // 현재 날짜의 자정
+      todayMidnight.setHours(0, 0, 0, 0);
       const nextDayMidnight = new Date(todayMidnight);
-      nextDayMidnight.setDate(todayMidnight.getDate() + 1); // 다음 날 자정
+      nextDayMidnight.setDate(todayMidnight.getDate() + 1);
 
       // 오늘 자정부터 다음 날 자정까지의 인증글 체크
       const existingCert = await this.workoutCertRepository.findOne({
@@ -163,10 +174,10 @@ export class WorkoutcertService {
     return cert;
   }
 
-  // 5. 인증글 수정
+  // 5. 인증글 수정 (이미지 파일 처리 포함)
   async updateWorkoutCert(
     idx: string,
-    dto: UpdateWorkoutCertReqDto,
+    dto: UpdateWorkoutCertWithImageDto,
     user_idx: any,
   ): Promise<WorkoutCert> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -178,12 +189,18 @@ export class WorkoutcertService {
       if (cert.user.idx !== user_idx)
         throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
 
-      if (dto.image_url) cert.image_url = dto.image_url;
+      // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
+      if (dto.image_url && cert.image_url !== dto.image_url) {
+        this.deleteImageFile(cert.image_url);
+        cert.image_url = dto.image_url;
+      }
+      
       if (dto.caption) cert.caption = dto.caption;
       if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
 
+      const updatedCert = await this.workoutCertRepository.save(cert);
       await queryRunner.commitTransaction();
-      return await this.workoutCertRepository.save(cert);
+      return updatedCert;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -197,6 +214,29 @@ export class WorkoutcertService {
     const cert = await this.getWorkoutCertDetail(idx);
     if (cert.user.idx !== user_idx)
       throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
+    
+    // 이미지 파일 삭제
+    this.deleteImageFile(cert.image_url);
+    
     await this.workoutCertRepository.remove(cert);
+  }
+
+  // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
+  private deleteImageFile(imageUrl: string): void {
+    try {
+      if (imageUrl && imageUrl.startsWith('/uploads/workout-images/')) {
+        const filename = imageUrl.split('/').pop();
+        if (!filename) return;
+        const filePath = path.join(process.cwd(), 'uploads', 'workout-images', filename);
+
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+      }
+     catch (error) {
+      console.error('이미지 파일 삭제 중 오류:', error);
+      // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
+  }
   }
 }

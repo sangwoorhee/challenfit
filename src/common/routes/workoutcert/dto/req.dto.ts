@@ -5,8 +5,8 @@ export class CreateWorkoutCertReqDto {
   @IsString()
   challenge_room_idx: string;
 
-  @IsString()
-  image_url: string;
+  // @IsString()
+  // image_url: string;
 
   @IsString()
   caption: string;
@@ -20,9 +20,9 @@ export class CreateWorkoutCertReqDto {
 
 // 인증글 수정 요청 DTO
 export class UpdateWorkoutCertReqDto {
-  @IsOptional()
-  @IsString()
-  image_url?: string;
+  // @IsOptional()
+  // @IsString()
+  // image_url?: string;
 
   @IsOptional()
   @IsString()

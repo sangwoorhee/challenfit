@@ -55,7 +55,7 @@ export class ChallengeroomController {
   })
   async getChallengeRoomDetail(
     @Param('idx') idx: string,
-  ): Promise<{result: string, data: ChallengeRoom}> {
+  ): Promise<{result: string, challengeRoom: ChallengeRoom}> {
     return await this.challengeroomService.getChallengeRoomDetail(idx);
   }
 }

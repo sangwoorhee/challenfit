@@ -11,12 +11,25 @@ import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptor/transform.interceptor'
 import * as dotenv from 'dotenv';
+import { join } from 'path';
+import * as fs from 'fs';
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
+    // uploads 폴더 생성
+    const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+  
+    // 정적 파일 서빙 설정
+    app.useStaticAssets(join(process.cwd(), 'uploads'), {
+      prefix: '/uploads/',
+    });
+  
   // cookie-parser 추가
   app.use(cookieParser());
 
