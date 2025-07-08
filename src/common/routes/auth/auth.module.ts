@@ -24,14 +24,21 @@ import { AppleStrategy } from './social-login/apple.strategy';
       useFactory: async (configService: ConfigService) => {
         return {
           global: true,
-          secret: configService.get<string>('JWT_SECRET'), 
+          secret: configService.get<string>('JWT_SECRET'),
           signOptions: { expiresIn: '1d' },
         };
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, KakaoStrategy, NaverStrategy, GoogleStrategy, AppleStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    KakaoStrategy,
+    NaverStrategy,
+    GoogleStrategy,
+    AppleStrategy,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

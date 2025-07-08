@@ -47,8 +47,8 @@ import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/w
       },
     }),
 
-     // 이메일 전송 설정
-     MailerModule.forRootAsync({
+    // 이메일 전송 설정
+    MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cs: ConfigService) => ({
         transport: {

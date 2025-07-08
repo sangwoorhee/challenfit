@@ -52,12 +52,18 @@ export class WorkoutCert {
   @JoinColumn({ name: 'user_idx' })
   user: User;
 
-  @ManyToOne(() => ChallengeParticipant, (challenge_participant) => challenge_participant.workout_cert, { onDelete: 'CASCADE' })
+  @ManyToOne(
+    () => ChallengeParticipant,
+    (challenge_participant) => challenge_participant.workout_cert,
+    { onDelete: 'CASCADE' },
+  )
   @ApiProperty({ description: 'FK (도전자 idx)' })
   @JoinColumn({ name: 'challenge_participant_idx' })
   challenge_participant: ChallengeParticipant;
 
-  @OneToMany(() => Comment, (comment) => comment.workout_cert, { cascade: true })
+  @OneToMany(() => Comment, (comment) => comment.workout_cert, {
+    cascade: true,
+  })
   @ApiProperty({ type: () => [Comment], description: '이 인증에 달린 댓글들' })
   comments: Comment[];
 
@@ -65,7 +71,14 @@ export class WorkoutCert {
   @ApiProperty({ type: () => [Like], description: '이 인증에 달린 좋아요들' })
   likes: Like[];
 
-  @OneToMany(() => CertApproval, (cert_approval) => cert_approval.workout_cert, { cascade: true })
-  @ApiProperty({ type: () => [CertApproval], description: '이 인증에 달린 인증 승인들' })
+  @OneToMany(
+    () => CertApproval,
+    (cert_approval) => cert_approval.workout_cert,
+    { cascade: true },
+  )
+  @ApiProperty({
+    type: () => [CertApproval],
+    description: '이 인증에 달린 인증 승인들',
+  })
   cert_approval: CertApproval[];
 }
