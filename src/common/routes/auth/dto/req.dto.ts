@@ -72,3 +72,9 @@ export class LoginReqDto {
   @IsNotEmpty()
   password: string;
 }
+
+// 휴대폰 SMS 인증 코드 검증
+export class VerifySmsCodeReqDto {
+  phone: string;
+  code: string;
+}

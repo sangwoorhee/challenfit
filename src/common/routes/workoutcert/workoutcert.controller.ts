@@ -1,10 +1,15 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, NotFoundException, ForbiddenException, UseInterceptors, UploadedFile, BadRequestException, Res } from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { CreateWorkoutCertReqDto, UpdateWorkoutCertReqDto } from './dto/req.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { multerConfig } from 'src/common/config/multer-config';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as path from 'path';
+import * as fs from 'fs';
+import { Response } from 'express';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
@@ -23,19 +28,32 @@ export class WorkoutcertController {
     return await this.workoutcertService.getWorkoutCertsByUser(user.idx);
   }
 
-  // 2. 인증글 생성
+  // 2. 인증글 생성 (이미지 업로드 포함)
   // POST : http://localhost:3000/workoutcert
   @Post()
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('image', multerConfig))
   @ApiOperation({
       summary: '인증글 생성',
-      description: 'POST : http://localhost:3000/workoutcert',
+      description: 'POST : http://localhost:3000/workoutcert (multipart/form-data)',
     })
+  @ApiConsumes('multipart/form-data')
   async createWorkoutCert(
+    @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
   ): Promise<WorkoutCert> {
-    return await this.workoutcertService.createWorkoutCert(user.idx, dto);
+    if (!file) {
+      throw new BadRequestException('이미지 파일이 필요합니다.');
+    }
+
+    // 파일 경로를 image_url로 설정
+    const imageUrl = `/uploads/workout-images/${file.filename}`;
+    
+    return await this.workoutcertService.createWorkoutCert(user.idx, {
+      ...dto,
+      image_url: imageUrl,
+    });
   }
 
   // 3. 도전방의 인증글 목록 조회
@@ -62,16 +80,19 @@ export class WorkoutcertController {
     return await this.workoutcertService.getWorkoutCertDetail(idx);
   }
 
-  // 5. 인증글 수정
+  // 5. 인증글 수정 (이미지 업로드 포함)
   // PATCH : http://localhost:3000/workoutcert/:workoutcert_idx
   @Patch(':idx')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('image', multerConfig))
   @ApiOperation({
       summary: '인증글 수정',
       description: 'PATCH : http://localhost:3000/workoutcert/:workoutcert_idx',
     })
+  @ApiConsumes('multipart/form-data')
   async updateWorkoutCert(
     @Param('idx') idx: string,
+    @UploadedFile() file: Express.Multer.File,
     @Body() dto: UpdateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
   ): Promise<WorkoutCert> {
@@ -79,7 +100,15 @@ export class WorkoutcertController {
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
 
     const user_idx = user.idx;
-    return await this.workoutcertService.updateWorkoutCert(idx, dto, user_idx);
+    // 새로운 이미지가 업로드된 경우
+    let updateData = { ...dto };
+    if (file) {
+      const imageUrl = `/uploads/workout-images/${file.filename}`;
+      // UpdateWorkoutCertReqDto 타입에 image_url이 없으므로 any로 우회
+      (updateData as any).image_url = imageUrl;
+    }
+
+    return await this.workoutcertService.updateWorkoutCert(idx, updateData, user_idx);
   }
 
   // 6. 인증글 삭제
@@ -96,5 +125,22 @@ export class WorkoutcertController {
     
     const user_idx = user.idx;
     await this.workoutcertService.deleteWorkoutCert(idx, user_idx);
+  }
+
+  // 7. 이미지 파일 서빙
+  @Get('image/:filename')
+  @ApiOperation({
+    summary: '업로드된 이미지 파일 조회',
+    description: 'GET : http://localhost:3000/workoutcert/image/:filename',
+  })
+  async getImage(@Param('filename') filename: string, @Res() res: Response): Promise<void> {
+    const imagePath = path.join(process.cwd(), 'uploads', 'workout-images', filename);
+    
+    // 파일 존재 확인
+    if (!fs.existsSync(imagePath)) {
+      throw new NotFoundException('이미지를 찾을 수 없습니다.');
+    }
+
+    res.sendFile(imagePath);
   }
 }

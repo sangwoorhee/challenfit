@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, UseGuards, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginReqDto, SignupReqDto } from './dto/req.dto';
+import { LoginReqDto, SignupReqDto, VerifySmsCodeReqDto } from './dto/req.dto';
 import { AuthTokenResDto } from './dto/res.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -20,6 +20,17 @@ export class AuthController {
   })
   async verifySms(@Body('phone') phone: string) {
     return await this.authService.sendVerificationCode(phone);
+  }
+
+  // 1-2. 휴대폰 SMS 인증 코드 검증
+  // POST : http://localhost:3000/auth/verify-sms-code
+  @Post('verify-sms-code')
+  @ApiOperation({
+    summary: '휴대폰 SMS 인증 코드 검증',
+    description: 'POST : http://localhost:3000/auth/verify-sms-code',
+  })
+  async verifySmsCode(@Body() dto: VerifySmsCodeReqDto) {
+    return await this.authService.verifySmsCode(dto.phone, dto.code);
   }
 
   // 2. 회원가입 (E-mail, PassWord)
