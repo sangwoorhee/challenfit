@@ -133,7 +133,7 @@ export class ChallengeroomService {
     };
   }
 
-  // 3. 도전 방 상세조회
+  /// 3. 도전 방 상세조회
   async getChallengeRoomDetail(idx: string): Promise<{result: string, challengeRoom: ChallengeRoom}> {
     const challengeRoom = await this.challengeRepository.findOne({
       where: { idx },
