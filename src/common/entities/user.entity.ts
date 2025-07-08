@@ -91,7 +91,10 @@ export class User {
   cert_photos: CertPhoto[];
 
   @OneToMany(() => ChallengeParticipant, (participant) => participant.user)
-  @ApiProperty({ type: () => [ChallengeParticipant], description: '참가자 목록' })
+  @ApiProperty({
+    type: () => [ChallengeParticipant],
+    description: '참가자 목록',
+  })
   challenge_participants: ChallengeParticipant[];
 
   @OneToMany(() => Notification, (notification) => notification.user)
@@ -103,7 +106,10 @@ export class User {
   subscriptions: Subscription[];
 
   @OneToMany(() => SubscriptionPayment, (payment) => payment.user)
-  @ApiProperty({ type: () => [SubscriptionPayment], description: '구독 결제기록 목록' })
+  @ApiProperty({
+    type: () => [SubscriptionPayment],
+    description: '구독 결제기록 목록',
+  })
   subscription_payments: SubscriptionPayment[];
 
   @OneToMany(() => WorkoutLog, (log) => log.user)
