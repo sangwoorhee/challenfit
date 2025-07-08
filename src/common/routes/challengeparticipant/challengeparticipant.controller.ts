@@ -13,6 +13,7 @@ export class ChallengeparticipantController {
   constructor(
     private readonly challengeparticipantService: ChallengeparticipantService,
   ) {}
+
   // 2. 도전 참가 (입장한 사용자가 PARTICIPATING 상태로 전환)
   // POST : http://localhost:3000/challengeparticipant/participate
   @Post('participate')
@@ -31,7 +32,7 @@ export class ChallengeparticipantController {
         participateChallengeRoomDto.challenge_room_idx,
         user.idx,
       );
-    return { idx: participant.idx };
+    return { result: 'ok', idx: participant.idx };
   }
 
   // 3. 도전 참가 취소 (PARTICIPATING 상태를 PENDING으로 변경)
@@ -51,6 +52,6 @@ export class ChallengeparticipantController {
         cancelDto.challenge_room_idx,
         user.idx,
       );
-    return { idx: participant.idx };
+    return { result: 'ok', idx: participant.idx };
   }
 }

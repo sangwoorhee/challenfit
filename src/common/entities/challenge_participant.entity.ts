@@ -14,6 +14,7 @@ import { WorkoutCert } from './workout_cert.entity';
 import { CertApproval } from './cert_approval.entity';
 import { ChallengerStatus } from '../enum/enum';
 
+// 도전자 엔티티
 @Entity({ name: 'challenge_participant' })
 export class ChallengeParticipant {
   @PrimaryGeneratedColumn('uuid')
