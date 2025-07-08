@@ -33,6 +33,17 @@ export class ChallengeScheduler {
         if (room.start_date && new Date(room.start_date) <= now) {
           room.status = ChallengeStatus.ONGOING;
           await this.challengeRoomRepository.save(room);
+          
+          // 해당 도전방의 모든 참가자 상태를 PARTICIPATING으로 변경
+          await this.participantRepository.update(
+            {
+              challenge: { idx: room.idx },
+              status: ChallengerStatus.PENDING,
+            },
+            {
+              status: ChallengerStatus.PARTICIPATING,
+            },
+          );
         }
       }
 
@@ -60,8 +71,9 @@ export class ChallengeScheduler {
             },
           );
         }
-        await queryRunner.commitTransaction();
       }
+      
+      await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(`error: ${error}`);

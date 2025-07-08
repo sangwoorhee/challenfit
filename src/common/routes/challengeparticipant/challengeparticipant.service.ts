@@ -70,6 +70,10 @@ export class ChallengeparticipantService {
         challengeRoom.current_participants >= challengeRoom.max_participants &&
         challengeRoom.status === ChallengeStatus.PENDING
       ) {
+        // 도전방 상태를 ONGOING으로 변경
+        challengeRoom.status = ChallengeStatus.ONGOING;
+
+        // 도전방 시작일시 및 종료일시 설정
         const now = new Date();
         const unitToDays = {
           [DurationUnit.DAY]: 1,
@@ -81,7 +85,18 @@ export class ChallengeparticipantService {
           unitToDays[challengeRoom.duration_unit];
         challengeRoom.start_date = now;
         challengeRoom.end_date = new Date(now.getTime() + days * 86400000);
-        challengeRoom.status = ChallengeStatus.ONGOING;
+
+        // 해당 도전방의 모든 참가자 상태를 PARTICIPATING으로 변경
+        await queryRunner.manager.update(
+          ChallengeParticipant,
+          {
+            challenge: { idx: challengeRoomIdx },
+            status: ChallengerStatus.PENDING,
+          },
+          {
+            status: ChallengerStatus.PARTICIPATING,
+          },
+        );
       }
 
       await queryRunner.manager.save(challengeRoom);
@@ -141,6 +156,7 @@ export class ChallengeparticipantService {
         throw new ConflictException('취소할 수 있는 상태가 아닙니다.');
       }
 
+      // 참가 취소 시 상태 변경
       existingParticipant.status = ChallengerStatus.PENDING;
       existingParticipant.completed_at = null;
 

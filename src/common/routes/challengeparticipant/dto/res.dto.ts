@@ -3,6 +3,9 @@ import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 
 // 도전 방 참가
 export class JoinChallengeRoomResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '참가자 ID' })
   idx: string;
 }
