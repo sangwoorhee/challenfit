@@ -52,6 +52,7 @@ export class ChallengeroomService {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
+      // 도전방 중복 참여 방지
       const existRoom = await queryRunner.manager.findOne(ChallengeRoom, {
         where: { idx: user_idx },
       });
@@ -118,6 +119,7 @@ export class ChallengeroomService {
     });
 
     return {
+      result: 'ok',
       challengeRooms: challengeRooms.map((room) => ({
         roomId: room.idx,
         title: room.title,
@@ -132,7 +134,7 @@ export class ChallengeroomService {
   }
 
   // 3. 도전 방 상세조회
-  async getChallengeRoomDetail(idx: string): Promise<ChallengeRoom> {
+  async getChallengeRoomDetail(idx: string): Promise<{result: string, data: ChallengeRoom}> {
     const challengeRoom = await this.challengeRepository.findOne({
       where: { idx },
       relations: [
@@ -144,6 +146,9 @@ export class ChallengeroomService {
     if (!challengeRoom) {
       throw new NotFoundException('도전방을 찾을 수 없습니다.');
     }
-    return challengeRoom;
+    return {
+      result: 'ok',
+      data: challengeRoom,
+    };
   }
 }

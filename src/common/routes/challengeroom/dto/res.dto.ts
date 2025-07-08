@@ -36,6 +36,9 @@ export class CreateChallengeRoomResDto {
 
 // 도전 방 목록조회
 export class GetChallengeRoomsResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '도전방 목록' })
   challengeRooms: ChallengeRoomFeedDto[];
 }
