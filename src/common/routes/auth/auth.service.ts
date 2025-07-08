@@ -59,6 +59,20 @@ export class AuthService {
     };
   }
 
+  // 1-2. 휴대폰 SMS 인증 코드 검증
+  async verifySmsCode(phone: string, code: string): Promise<{ success: boolean; message: string }> {
+    const cachedCode = await this.cacheManager.get<string>(`sms:${phone}`);
+    if (!cachedCode) {
+      return { success: false, message: '인증 코드가 만료되었거나 존재하지 않습니다.' };
+    }
+    if (cachedCode !== code) {
+      return { success: false, message: '인증 코드가 일치하지 않습니다.' };
+    }
+    // 인증 성공 시 캐시에서 삭제(선택)
+    await this.cacheManager.del(`sms:${phone}`);
+    return { success: true, message: '인증이 완료되었습니다.' };
+  }
+
   // 2. 회원가입 (E-mail, PassWord)
   async signup(signupDto: SignupReqDto) {
     // const { email, password, name, nickname, phone } = signupDto;
