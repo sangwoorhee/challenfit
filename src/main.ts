@@ -28,6 +28,15 @@ async function bootstrap() {
     // 정적 파일 서빙 설정
     app.useStaticAssets(join(process.cwd(), 'uploads'), {
       prefix: '/uploads/',
+      index: false, // 디렉토리 인덱싱 비활성화
+      redirect: false, // 디렉토리 리다이렉션 비활성화
+      dotfiles: 'deny', // 숨김 파일 접근 차단
+      setHeaders: (res, path, stat) => {
+        // 캐시 설정
+        res.set('Cache-Control', 'public, max-age=3600'); // 1시간 캐시
+        // 보안 헤더 추가
+        res.set('X-Content-Type-Options', 'nosniff');
+      },
     });
   
   // cookie-parser 추가
