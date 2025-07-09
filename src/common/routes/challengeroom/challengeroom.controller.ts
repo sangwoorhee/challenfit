@@ -46,7 +46,7 @@ export class ChallengeroomController {
     return await this.challengeroomService.getChallengeRooms();
   }
 
-  // 3. 도전방 상세조회
+  /// 3. 도전방 상세조회
   // GET : http://localhost:3000/challengeroom/:challengeroom_idx
   @Get(':idx')
   @ApiOperation({

@@ -2,10 +2,19 @@
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const uploadPath = './uploads/workout-images';
+
+// 디렉토리가 없으면 생성
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
+}
 
 export const multerConfig = {
   storage: diskStorage({
-    destination: './uploads/workout-images', // 업로드될 폴더 경로
+    destination: uploadPath, // 업로드될 폴더 경로
     filename: (req, file, cb) => {
       // 파일명을 UUID + 확장자로 설정
       const uniqueName = uuidv4() + extname(file.originalname);

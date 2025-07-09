@@ -43,6 +43,7 @@ export class WorkoutcertController {
     @Body() dto: CreateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
   ): Promise<WorkoutCert> {
+    try {
     if (!file) {
       throw new BadRequestException('이미지 파일이 필요합니다.');
     }
@@ -54,7 +55,18 @@ export class WorkoutcertController {
       ...dto,
       image_url: imageUrl,
     });
+  } catch (error) {
+    // 업로드된 파일 삭제 (에러 발생 시)
+    if (file) {
+      const filePath = path.join(process.cwd(), 'uploads', 'workout-images', file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    throw error;
+    }
   }
+
 
   // 3. 도전방의 인증글 목록 조회
   // GET : http://localhost:3000/workoutcert/challenge/:challenge_room_idx
