@@ -21,7 +21,7 @@ import {
   JoinChallengeRoomReqDto,
   KickParticipantReqDto,
 } from './dto/req.dto';
-import { ChallengeRoomFeedDto, GetChallengeRoomsResDto } from './dto/res.dto';
+import { ChallengeRoomFeedDto, GetChallengeRoomDetailResDto, GetChallengeRoomsResDto } from './dto/res.dto';
 
 @Injectable()
 export class ChallengeroomService {
@@ -134,7 +134,7 @@ export class ChallengeroomService {
   }
 
   /// 3. 도전 방 상세조회
-  async getChallengeRoomDetail(idx: string): Promise<{result: string, challengeRoom: ChallengeRoom}> {
+  async getChallengeRoomDetail(idx: string): Promise<GetChallengeRoomDetailResDto> {
     const challengeRoom = await this.challengeRepository.findOne({
       where: { idx },
       relations: [

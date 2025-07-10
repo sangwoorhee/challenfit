@@ -45,6 +45,9 @@ export class GetChallengeRoomsResDto {
 
 // 도전 방 상세조회
 export class GetChallengeRoomDetailResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '도전방 상세 정보' })
   challengeRoom: ChallengeRoom;
 }
