@@ -46,8 +46,6 @@ export class WorkoutcertapprovalService {
 
       // 승인 생성
       const approval = this.approvalRepository.create({
-        stamp_img: dto.stamp_img,
-        comment: dto.comment,
         user: { idx: userIdx } as User,
         workout_cert: { idx: dto.workout_cert_idx } as WorkoutCert,
         challenge_participant: { idx: participant.idx } as ChallengeParticipant,

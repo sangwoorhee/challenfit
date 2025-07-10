@@ -77,11 +77,21 @@ export class WorkoutcertService {
       });
       if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
 
-      const challengeRoom = await this.challengeRoomRepository.findOne({
-        where: { idx: dto.challenge_room_idx, status: ChallengeStatus.ONGOING },
+      // challenge_participant를 직접 조회하고 관련 challenge도 함께 가져오기
+      const participant = await this.participantRepository.findOne({
+        where: { 
+          idx: dto.challenge_participant_idx,
+          user: { idx: userIdx },
+          status: ChallengerStatus.PARTICIPATING,
+        },
+        relations: ['challenge'],
       });
-      if (!challengeRoom)
-        throw new NotFoundException('진행 중인 도전방을 찾을 수 없습니다.');
+      if (!participant) throw new ForbiddenException('참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.');
+
+      const challengeRoom = participant.challenge;
+      if (challengeRoom.status !== ChallengeStatus.ONGOING) {
+        throw new NotFoundException('진행 중인 도전방이 아닙니다.');
+      }
 
       const now = new Date();
       const startDate = challengeRoom.start_date
@@ -96,15 +106,6 @@ export class WorkoutcertService {
           '도전 기간 중에만 인증글을 올릴 수 있습니다.',
         );
       }
-
-      const participant = await this.participantRepository.findOne({
-        where: {
-          user: { idx: userIdx },
-          challenge: { idx: dto.challenge_room_idx },
-          status: ChallengerStatus.PARTICIPATING,
-        },
-      });
-      if (!participant) throw new ForbiddenException('도전 참가자가 아닙니다.');
 
       // 현재 날짜의 자정과 다음 날 자정 계산 (한국 시간 기준)
       const todayMidnight = new Date(now);
@@ -145,19 +146,19 @@ export class WorkoutcertService {
     }
   }
 
-  // 3. 도전방의 인증글 목록 조회
+  // 3. 도전의 인증글 목록 조회
   async getChallengeRoomWorkoutCerts(
-    challengeRoomIdx: string,
+    challengeParticipantIdx: string,
   ): Promise<WorkoutCert[]> {
-    const challengeRoom = await this.challengeRoomRepository.findOne({
-      where: { idx: challengeRoomIdx },
+    const challengeRoom = await this.participantRepository.findOne({
+      where: { idx: challengeParticipantIdx },
     });
     if (!challengeRoom)
       throw new NotFoundException('도전방을 찾을 수 없습니다.');
 
     return await this.workoutCertRepository.find({
       where: {
-        challenge_participant: { challenge: { idx: challengeRoomIdx } },
+        challenge_participant: { idx: challengeParticipantIdx },
       },
       relations: ['user', 'challenge_participant', 'cert_approval'],
       order: { created_at: 'DESC' },
