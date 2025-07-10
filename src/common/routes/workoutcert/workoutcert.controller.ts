@@ -43,6 +43,7 @@ export class WorkoutcertController {
     @Body() dto: CreateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
   ): Promise<WorkoutCert> {
+    console.log('Received DTO:', dto);
     try {
     if (!file) {
       throw new BadRequestException('이미지 파일이 필요합니다.');
