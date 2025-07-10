@@ -69,16 +69,16 @@ export class WorkoutcertController {
   }
 
 
-  // 3. 도전방의 인증글 목록 조회
-  // GET : http://localhost:3000/workoutcert/challenge/:challenge_room_idx
-  @Get('challenge/:challenge_room_idx')
+  // 3. 도전의 인증글 목록 조회
+  // GET : http://localhost:3000/workoutcert/challenge/:challenge_participant_idx
+  @Get('challenge/:challenge_participant_idx')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
       summary: '도전방의 인증글 목록 조회',
       description: 'GET : http://localhost:3000/workoutcert/challenge/:challenge_room_idx',
     })
-  async getChallengeRoomWorkoutCerts(@Param('challenge_room_idx') challengeRoomIdx: string): Promise<WorkoutCert[]> {
-    return await this.workoutcertService.getChallengeRoomWorkoutCerts(challengeRoomIdx);
+  async getChallengeRoomWorkoutCerts(@Param('challenge_participant_idx') challengeParticipantIdx: string): Promise<WorkoutCert[]> {
+    return await this.workoutcertService.getChallengeRoomWorkoutCerts(challengeParticipantIdx);
   }
 
   // 4. 인증글 단일 조회
