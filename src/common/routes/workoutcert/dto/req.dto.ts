@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsString, IsBoolean, IsInt, IsOptional } from 'class-validator';
 
 // 인증글 생성 요청 DTO
@@ -13,9 +14,11 @@ export class CreateWorkoutCertReqDto {
   caption: string;
 
   @IsBoolean()
+  @Type(() => Boolean)
   is_rest: boolean;
 
   @IsInt()
+  @Type(() => Number)
   target_approval_count: number;
 }
 
@@ -31,5 +34,6 @@ export class UpdateWorkoutCertReqDto {
 
   @IsOptional()
   @IsBoolean()
+  @Type(() => Boolean)
   is_rest?: boolean;
 }

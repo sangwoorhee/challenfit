@@ -9,6 +9,7 @@ import {
 } from './dto/req.dto';
 import {
   CreateChallengeRoomResDto,
+  GetChallengeRoomDetailResDto,
   GetChallengeRoomsResDto,
 } from './dto/res.dto';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
@@ -49,13 +50,14 @@ export class ChallengeroomController {
   /// 3. 도전방 상세조회
   // GET : http://localhost:3000/challengeroom/:challengeroom_idx
   @Get(':idx')
+  // @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '도전방 상세조회',
     description: 'GET : http://localhost:3000/challengeroom/:challengeroom_idx',
   })
   async getChallengeRoomDetail(
     @Param('idx') idx: string,
-  ): Promise<{result: string, challengeRoom: ChallengeRoom}> {
+  ): Promise<GetChallengeRoomDetailResDto> {
     return await this.challengeroomService.getChallengeRoomDetail(idx);
   }
 }
