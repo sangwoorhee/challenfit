@@ -10,6 +10,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptor/transform.interceptor'
+import { RedisIoAdapter } from './common/config/redis.adapter';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
 import * as fs from 'fs';
@@ -19,7 +20,11 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-    // uploads 폴더 생성
+    // Redis Adapter 설정 (WebSocket 수평 확장용)
+    // const redisIoAdapter = await RedisIoAdapter.create(app);
+    // app.useWebSocketAdapter(redisIoAdapter);
+
+    // uploads 폴더 생성 (이미지 업로드용)
     const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
