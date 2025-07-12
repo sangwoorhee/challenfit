@@ -39,7 +39,7 @@ export class WorkoutcertapprovalService {
         where: {
           user: { idx: userIdx },
           challenge: { idx: cert.challenge_participant.challenge.idx },
-          status: ChallengerStatus.PARTICIPATING,
+          status: ChallengerStatus.ONGOING,
         },
       });
       if (!participant) throw new ForbiddenException('도전 참가자가 아닙니다.');

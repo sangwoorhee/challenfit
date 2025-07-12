@@ -35,9 +35,9 @@ export class UpdateUserProfileReqDto {
   @IsOptional()
   introduction?: string;
 
-  @ApiProperty({ description: '프로필 이미지 URL' })
+  @ApiProperty({ type: 'string', format: 'binary', description: '프로필 이미지 URL' })
   @IsOptional()
-  profile_image_url?: string;
+  profile_image_url: any; // Swagger 문서화용
 }
 
 // 비밀번호 변경 요청 DTO
