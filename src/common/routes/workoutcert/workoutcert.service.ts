@@ -79,14 +79,17 @@ export class WorkoutcertService {
 
       // challenge_participant를 직접 조회하고 관련 challenge도 함께 가져오기
       const participant = await this.participantRepository.findOne({
-        where: { 
+        where: {
           idx: dto.challenge_participant_idx,
           user: { idx: userIdx },
           status: ChallengerStatus.PARTICIPATING,
         },
         relations: ['challenge'],
       });
-      if (!participant) throw new ForbiddenException('참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.');
+      if (!participant)
+        throw new ForbiddenException(
+          '참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.',
+        );
 
       const challengeRoom = participant.challenge;
       if (challengeRoom.status !== ChallengeStatus.ONGOING) {
@@ -195,7 +198,7 @@ export class WorkoutcertService {
         this.deleteImageFile(cert.image_url);
         cert.image_url = dto.image_url;
       }
-      
+
       if (dto.caption) cert.caption = dto.caption;
       if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
 
@@ -215,10 +218,10 @@ export class WorkoutcertService {
     const cert = await this.getWorkoutCertDetail(idx);
     if (cert.user.idx !== user_idx)
       throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
-    
+
     // 이미지 파일 삭제
     this.deleteImageFile(cert.image_url);
-    
+
     await this.workoutCertRepository.remove(cert);
   }
 
@@ -228,16 +231,20 @@ export class WorkoutcertService {
       if (imageUrl && imageUrl.startsWith('/uploads/workout-images/')) {
         const filename = imageUrl.split('/').pop();
         if (!filename) return;
-        const filePath = path.join(process.cwd(), 'uploads', 'workout-images', filename);
+        const filePath = path.join(
+          process.cwd(),
+          'uploads',
+          'workout-images',
+          filename,
+        );
 
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       }
-      }
-     catch (error) {
+    } catch (error) {
       console.error('이미지 파일 삭제 중 오류:', error);
       // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
-  }
+    }
   }
 }

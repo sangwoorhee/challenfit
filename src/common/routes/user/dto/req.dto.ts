@@ -1,4 +1,3 @@
-
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
@@ -15,6 +14,10 @@ export class UpdateUserSettingReqDto {
 
 // 사용자 프로필 업데이트 요청 DTO
 export class UpdateUserProfileReqDto {
+  @ApiProperty({ description: '닉네임' })
+  @IsOptional()
+  nickname?: string;
+
   @ApiProperty({ description: '키(cm)' })
   @IsOptional()
   height?: number;

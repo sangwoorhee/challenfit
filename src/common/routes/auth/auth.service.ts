@@ -60,10 +60,16 @@ export class AuthService {
   }
 
   // 1-2. 휴대폰 SMS 인증 코드 검증
-  async verifySmsCode(phone: string, code: string): Promise<{ success: boolean; message: string }> {
+  async verifySmsCode(
+    phone: string,
+    code: string,
+  ): Promise<{ success: boolean; message: string }> {
     const cachedCode = await this.cacheManager.get<string>(`sms:${phone}`);
     if (!cachedCode) {
-      return { success: false, message: '인증 코드가 만료되었거나 존재하지 않습니다.' };
+      return {
+        success: false,
+        message: '인증 코드가 만료되었거나 존재하지 않습니다.',
+      };
     }
     if (cachedCode !== code) {
       return { success: false, message: '인증 코드가 일치하지 않습니다.' };
@@ -169,7 +175,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { email },
-      relations: ['refreshToken'],
+      relations: ['refreshToken', 'profile'],
     });
     if (!user) {
       throw new HttpException(
@@ -193,6 +199,8 @@ export class AuthService {
     const accessToken = this.generateAccessToken(user.idx);
     const refreshToken = this.generateRefreshToken(user.idx);
     await this.createRefreshTokenUsingUser(user.idx, refreshToken);
+
+    console.log(user);
 
     return { result: 'ok', accessToken, refreshToken, user };
   }
