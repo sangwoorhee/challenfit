@@ -14,7 +14,7 @@ export class ChallengeparticipantController {
     private readonly challengeparticipantService: ChallengeparticipantService,
   ) {}
 
-  // 2. 도전 참가 (입장한 사용자가 PARTICIPATING 상태로 전환)
+  // 2. 도전 참가 (입장한 사용자가 ONGOING 상태로 전환)
   // POST : http://localhost:3000/challengeparticipant/participate
   @Post('participate')
   @UseGuards(JwtAuthGuard)
@@ -35,7 +35,7 @@ export class ChallengeparticipantController {
     return { result: 'ok', idx: participant.idx };
   }
 
-  // 3. 도전 참가 취소 (PARTICIPATING 상태를 PENDING으로 변경)
+  // 3. 도전 참가 취소 (ONGOING 상태를 PENDING으로 변경)
   // POST : http://localhost:3000/challengeparticipant/cancel
   @Post('cancel')
   @UseGuards(JwtAuthGuard)

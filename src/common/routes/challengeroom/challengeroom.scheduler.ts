@@ -41,7 +41,7 @@ export class ChallengeScheduler {
               status: ChallengerStatus.PENDING,
             },
             {
-              status: ChallengerStatus.PARTICIPATING,
+              status: ChallengerStatus.ONGOING,
             },
           );
         }
@@ -63,7 +63,7 @@ export class ChallengeScheduler {
           await this.participantRepository.update(
             {
               challenge: { idx: room.idx },
-              status: ChallengerStatus.PARTICIPATING,
+              status: ChallengerStatus.ONGOING,
             },
             {
               status: ChallengerStatus.COMPLETED,

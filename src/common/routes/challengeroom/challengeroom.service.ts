@@ -81,7 +81,7 @@ export class ChallengeroomService {
       const participant = this.participantRepository.create({
         user, // User 엔티티 전체
         challenge: savedRoom, // ChallengeRoom 엔티티
-        status: ChallengerStatus.PARTICIPATING,
+        status: ChallengerStatus.ONGOING,
         joined_at: new Date(),
         completed_at: null,
       });

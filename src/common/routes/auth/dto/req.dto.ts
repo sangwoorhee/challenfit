@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
@@ -10,54 +11,68 @@ import {
 
 // 회원가입 요청 DTO
 export class SignupReqDto {
+  @ApiProperty({ description: '이메일' })
   @IsEmail()
   email: string;
 
+  @ApiProperty({ description: '비밀번호' })
   @IsString()
   @IsNotEmpty()
   password: string;
 
+  @ApiProperty({ description: '이름' })
   @IsString()
   name: string;
 
+  @ApiProperty({ description: '닉네임' })
   @IsString()
   nickname: string;
 
+  @ApiProperty({ description: '핸드폰' })
   @IsString()
   phone: string;
 
+  @ApiProperty({ description: '생년월일' })
   @IsOptional()
   @IsDateString()
   birth_date?: string;
 
+  @ApiProperty({ description: '키' })
   @IsOptional()
   @IsInt()
   height?: number;
 
+  @ApiProperty({ description: '몸무게' })
   @IsOptional()
   @IsInt()
   weight?: number;
 
+  @ApiProperty({ description: '관심 운동' })
   @IsOptional()
   @IsString()
   interest_exercises?: string;
 
+  @ApiProperty({ description: '운동 목적' })
   @IsOptional()
   @IsString()
   exercise_purpose?: string;
 
+  @ApiProperty({ description: '자기 소개' })
   @IsOptional()
   @IsString()
   introduction?: string;
 
+  @ApiProperty({ description: '프로필 이미지 URL' })
   @IsOptional()
   @IsString()
   profile_image_url?: string;
 
+  @ApiProperty({ description: '마케팅 수신 동의' })
   @IsOptional()
   @IsBoolean()
   marketing_opt_in?: boolean;
 
+  @ApiProperty({ description: '푸시 알림 거부' })
   @IsOptional()
   @IsBoolean()
   no_push_alert?: boolean;
