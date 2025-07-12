@@ -58,7 +58,7 @@ export class ChallengeparticipantService {
       const participant = this.participantRepository.create({
         user,
         challenge: challengeRoom,
-        status: ChallengerStatus.PARTICIPATING,
+        status: ChallengerStatus.ONGOING,
         joined_at: new Date(),
         completed_at: null,
       });
@@ -86,7 +86,7 @@ export class ChallengeparticipantService {
         challengeRoom.start_date = now;
         challengeRoom.end_date = new Date(now.getTime() + days * 86400000);
 
-        // 해당 도전방의 모든 참가자 상태를 PARTICIPATING으로 변경
+        // 해당 도전방의 모든 도전 상태를 PARTICIPATING으로 변경
         await queryRunner.manager.update(
           ChallengeParticipant,
           {
@@ -94,7 +94,7 @@ export class ChallengeparticipantService {
             status: ChallengerStatus.PENDING,
           },
           {
-            status: ChallengerStatus.PARTICIPATING,
+            status: ChallengerStatus.ONGOING,
           },
         );
       }
@@ -152,7 +152,7 @@ export class ChallengeparticipantService {
         throw new NotFoundException('도전방에 입장하지 않았습니다.');
       }
 
-      if (existingParticipant.status !== ChallengerStatus.PARTICIPATING) {
+      if (existingParticipant.status !== ChallengerStatus.ONGOING) {
         throw new ConflictException('취소할 수 있는 상태가 아닙니다.');
       }
 

@@ -82,7 +82,7 @@ export class WorkoutcertService {
         where: { 
           idx: dto.challenge_participant_idx,
           user: { idx: userIdx },
-          status: ChallengerStatus.PARTICIPATING,
+          status: ChallengerStatus.ONGOING,
         },
         relations: ['challenge'],
       });
@@ -190,12 +190,6 @@ export class WorkoutcertService {
       if (cert.user.idx !== user_idx)
         throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
 
-      // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
-      if (dto.image_url && cert.image_url !== dto.image_url) {
-        this.deleteImageFile(cert.image_url);
-        cert.image_url = dto.image_url;
-      }
-      
       if (dto.caption) cert.caption = dto.caption;
       if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
 

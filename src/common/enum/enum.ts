@@ -8,7 +8,7 @@ export enum ChallengeStatus {
 // 도전 유저 상태
 export enum ChallengerStatus {
   PENDING = '대기중',
-  PARTICIPATING = '진행중',
+  ONGOING = '진행중',
   COMPLETED = '종료',
 }
 
