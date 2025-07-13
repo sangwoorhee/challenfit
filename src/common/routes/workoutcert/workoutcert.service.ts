@@ -74,7 +74,17 @@ export class WorkoutcertService {
     };
   }
 
-  // 2. 인증글 생성
+   // 2.모든 인증글을 최신순으로 조회
+   async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    const certs = await this.workoutCertRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user', 'user.profile'],
+    });
+
+    return certs;
+  }
+
+  // 3. 인증글 생성
   async createWorkoutCert(
     userIdx: string,
     dto: CreateWorkoutCertWithImageDto,
@@ -109,14 +119,17 @@ export class WorkoutcertService {
 
       // challenge_participant를 직접 조회하고 관련 challenge도 함께 가져오기
       const participant = await this.participantRepository.findOne({
-        where: { 
+        where: {
           idx: dto.challenge_participant_idx,
           user: { idx: userIdx },
           status: ChallengerStatus.ONGOING,
         },
         relations: ['challenge'],
       });
-      if (!participant) throw new ForbiddenException('참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.');
+      if (!participant)
+        throw new ForbiddenException(
+          '참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.',
+        );
 
       const challengeRoom = participant.challenge;
       if (challengeRoom.status !== ChallengeStatus.ONGOING) {
@@ -176,7 +189,7 @@ export class WorkoutcertService {
     }
   }
 
-  // 3. 도전의 인증글 목록 조회
+  // 4. 도전의 인증글 목록 조회
   async getChallengeRoomWorkoutCerts(
     challengeParticipantIdx: string,
   ): Promise<WorkoutCert[]> {
@@ -220,6 +233,12 @@ export class WorkoutcertService {
       if (cert.user.idx !== user_idx)
         throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
 
+      // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
+      if (dto.image_url && cert.image_url !== dto.image_url) {
+        this.deleteImageFile(cert.image_url);
+        cert.image_url = dto.image_url;
+      }
+
       if (dto.caption) cert.caption = dto.caption;
       if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
 
@@ -239,10 +258,10 @@ export class WorkoutcertService {
     const cert = await this.getWorkoutCertDetail(idx);
     if (cert.user.idx !== user_idx)
       throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
-    
+
     // 이미지 파일 삭제
     this.deleteImageFile(cert.image_url);
-    
+
     await this.workoutCertRepository.remove(cert);
   }
 
@@ -286,16 +305,20 @@ export class WorkoutcertService {
       if (imageUrl && imageUrl.startsWith('/uploads/workout-images/')) {
         const filename = imageUrl.split('/').pop();
         if (!filename) return;
-        const filePath = path.join(process.cwd(), 'uploads', 'workout-images', filename);
+        const filePath = path.join(
+          process.cwd(),
+          'uploads',
+          'workout-images',
+          filename,
+        );
 
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       }
-      }
-     catch (error) {
+    } catch (error) {
       console.error('이미지 파일 삭제 중 오류:', error);
       // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
-  }
+    }
   }
 }
