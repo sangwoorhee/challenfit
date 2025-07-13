@@ -1,6 +1,8 @@
 import {
   Controller, UseGuards, Get, Patch, Body, Req, Delete,
-  Param
+  Param,
+  UseInterceptors,
+  UploadedFile
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
@@ -10,8 +12,12 @@ import {
   ChangePasswordReqDto,
 } from './dto/req.dto';
 import { CommonResDto } from './dto/res.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createMulterConfig } from 'src/common/config/multer-config';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @ApiTags('유저')
 @ApiBearerAuth()
@@ -38,16 +44,38 @@ export class UserController {
   // http://localhost:3000/user/profile
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('profile_image_url', createMulterConfig('auth')))
   @ApiOperation({ 
     summary: '내 마이프로필 수정', 
     description: 'PATCH : http://localhost:3000/user/profile',
   })
+  @ApiConsumes('multipart/form-data')
   async updateProfile(
+    @UploadedFile() file: Express.Multer.File,
     @User() user: UserAfterAuth,
     @Body() dto: UpdateUserProfileReqDto,
   ): Promise<CommonResDto> {
-    return await this.userService.updateProfile(user.idx, dto);
+    try {
+    // 파일이 업로드된 경우에만 이미지 URL 설정
+    const updateData = { ...dto };
+      
+    if (file) {
+      const imageUrl = `/uploads/auth/${file.filename}`;
+      updateData.profile_image_url = imageUrl;
+    }
+
+    return await this.userService.updateProfile(user.idx, updateData);
+  } catch (error) {
+    // 업로드된 파일 삭제 (에러 발생 시)
+    if (file) {
+      const filePath = path.join(process.cwd(), 'uploads', 'auth', file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    throw error;
   }
+}
 
   // 3. 내 비밀번호 변경
   // http://localhost:3000/user/password

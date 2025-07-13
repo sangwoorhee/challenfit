@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   InternalServerErrorException,
+  ConflictException,
 } from '@nestjs/common';
 import {
   UpdateUserSettingReqDto,
@@ -72,14 +73,35 @@ export class UserService {
     await queryRunner.startTransaction();
 
     try {
-      const profile = await this.profileRepository.findOne({
-        where: { user: { idx: user_idx } },
+      const user = await this.userRepository.findOne({
+        where: { idx: user_idx },
+        relations: ['profile'],
       });
-      if (!profile)
-        throw new NotFoundException('프로필 정보를 찾을 수 없습니다.');
 
-      this.profileRepository.merge(profile, dto);
-      await this.profileRepository.save(profile);
+      if (!user || !user.profile) {
+        throw new NotFoundException(
+          '사용자 또는 프로필 정보를 찾을 수 없습니다.',
+        );
+      }
+
+      // 닉네임 중복 체크 및 업데이트
+      if (dto.nickname !== undefined && dto.nickname !== user.nickname) {
+        const existingUser = await this.userRepository.findOne({
+          where: { nickname: dto.nickname },
+        });
+
+        if (existingUser) {
+          throw new ConflictException('이미 사용 중인 닉네임입니다.');
+        }
+
+        user.nickname = dto.nickname;
+        await this.userRepository.save(user);
+      }
+
+      // 프로필 관련 정보 업데이트
+      const { nickname, ...profileFields } = dto;
+      this.profileRepository.merge(user.profile, profileFields);
+      await this.profileRepository.save(user.profile);
 
       await queryRunner.commitTransaction();
       return { message: '프로필이 수정되었습니다.' };
