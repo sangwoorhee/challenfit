@@ -15,6 +15,10 @@ export class UpdateUserSettingReqDto {
 
 // 사용자 프로필 업데이트 요청 DTO
 export class UpdateUserProfileReqDto {
+  @ApiProperty({ description: '닉네임' })
+  @IsOptional()
+  nickname?: string;
+
   @ApiProperty({ description: '키(cm)' })
   @IsOptional()
   height?: number;
@@ -37,7 +41,7 @@ export class UpdateUserProfileReqDto {
 
   @ApiProperty({ type: 'string', format: 'binary', description: '프로필 이미지 URL' })
   @IsOptional()
-  profile_image_url: any; // Swagger 문서화용
+  profile_image_url?: any;
 }
 
 // 비밀번호 변경 요청 DTO
