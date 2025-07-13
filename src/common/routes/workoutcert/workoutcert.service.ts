@@ -18,6 +18,7 @@ import {
 import { CertApproval } from 'src/common/entities/cert_approval.entity';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PageResDto } from 'src/common/dto/res.dto';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -45,11 +46,15 @@ export class WorkoutcertService {
   ) {}
 
   // 1. 내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회
-  async getWorkoutCertsByUser(userIdx: string): Promise<WorkoutCert[]> {
+  async getWorkoutCertsByUser(
+    userIdx: string,
+    page: number,
+    size: number,
+  ): Promise<PageResDto<WorkoutCert>> {
     const user = await this.userRepository.findOne({ where: { idx: userIdx } });
     if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
 
-    const certs = await this.workoutCertRepository.find({
+    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
       where: { user: { idx: userIdx } },
       order: { created_at: 'DESC' },
       relations: [
@@ -57,9 +62,16 @@ export class WorkoutcertService {
         'challenge_participant.challenge',
         'cert_approval',
       ],
+      skip: (page - 1) * size,
+      take: size,
     });
 
-    return certs;
+    return {
+      page,
+      size,
+      totalCount,
+      items: certs,
+    };
   }
 
   // 2. 인증글 생성
@@ -76,6 +88,24 @@ export class WorkoutcertService {
         where: { idx: userIdx },
       });
       if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
+
+      // 사용자의 참여 중인 도전 조회
+      const ongoingParticipants = await this.participantRepository.find({
+        where: {
+          user: { idx: userIdx },
+          status: ChallengerStatus.ONGOING,
+        },
+        relations: ['challenge'],
+      });
+
+      // 진행 중인 도전이 있는지 확인
+      const ongoingChallenges = ongoingParticipants.filter(
+        (participant) => participant.challenge.status === ChallengeStatus.ONGOING,
+      );
+
+      if (ongoingChallenges.length === 0) {
+        throw new ForbiddenException('진행 중인 도전이 없습니다. 인증글을 생성할 수 없습니다.');
+      }
 
       // challenge_participant를 직접 조회하고 관련 challenge도 함께 가져오기
       const participant = await this.participantRepository.findOne({
@@ -214,6 +244,40 @@ export class WorkoutcertService {
     this.deleteImageFile(cert.image_url);
     
     await this.workoutCertRepository.remove(cert);
+  }
+
+  // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
+  async getWorkoutCertsByUserAndChallengeParticipant(
+    userIdx: string,
+    challengeParticipantIdx: string,
+    page: number,
+    size: number,
+  ): Promise<PageResDto<WorkoutCert>> {
+    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+    if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
+
+    const participant = await this.participantRepository.findOne({
+      where: { idx: challengeParticipantIdx, user: { idx: userIdx } },
+    });
+    if (!participant) throw new NotFoundException('참가자 정보를 찾을 수 없습니다.');
+
+    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
+      where: {
+        user: { idx: userIdx },
+        challenge_participant: { idx: challengeParticipantIdx },
+      },
+      order: { created_at: 'DESC' },
+      relations: ['challenge_participant', 'challenge_participant.challenge', 'cert_approval'],
+      skip: (page - 1) * size,
+      take: size,
+    });
+
+    return {
+      page,
+      size,
+      totalCount,
+      items: certs,
+    };
   }
 
   // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, NotFoundException, ForbiddenException, UseInterceptors, UploadedFile, BadRequestException, Res } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, NotFoundException, ForbiddenException, UseInterceptors, UploadedFile, BadRequestException, Res, Query } from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
@@ -10,6 +10,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
+import { ApiGetItemsResponse } from 'src/common/decorators/swagger.decorator';
+import { PageReqDto } from 'src/common/dto/req.dto';
+import { PageResDto } from 'src/common/dto/res.dto';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
@@ -21,11 +24,16 @@ export class WorkoutcertController {
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-      summary: '내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회',
-      description: 'GET : http://localhost:3000/workoutcert/my',
-    })
-  async getMyWorkoutCerts(@User() user: UserAfterAuth): Promise<WorkoutCert[]> {
-    return await this.workoutcertService.getWorkoutCertsByUser(user.idx);
+    summary: '내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회 (페이지네이션)',
+    description: 'GET : http://localhost:3000/workoutcert/my?page=1&size=10',
+  })
+  @ApiGetItemsResponse(WorkoutCert)
+  async getMyWorkoutCerts(
+    @User() user: UserAfterAuth,
+    @Query() pageReqDto: PageReqDto,
+  ): Promise<PageResDto<WorkoutCert>> {
+    const { page, size } = pageReqDto;
+    return await this.workoutcertService.getWorkoutCertsByUser(user.idx, page, size);
   }
 
   // 2. 인증글 생성 (이미지 업로드 포함)
@@ -154,5 +162,23 @@ export class WorkoutcertController {
     }
 
     res.sendFile(imagePath);
+  }
+
+  // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
+  // GET : http://localhost:3000/workoutcert/user/:userIdx/challenge/:challengeParticipantIdx?page=1&size=10
+  @Get('user/:userIdx/challenge_participant/:challengeParticipantIdx')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '특정 유저의 특정 도전에서의 운동 인증 목록 조회 (페이지네이션)',
+    description: 'GET : http://localhost:3000/workoutcert/user/:userIdx/challenge/:challengeParticipantIdx?page=1&size=10',
+  })
+  @ApiGetItemsResponse(WorkoutCert)
+  async getWorkoutCertsByUserAndChallengeParticipant(
+    @Param('userIdx') userIdx: string,
+    @Param('challengeParticipantIdx') challengeParticipantIdx: string,
+    @Query() pageReqDto: PageReqDto,
+  ): Promise<PageResDto<WorkoutCert>> {
+    const { page, size } = pageReqDto;
+    return await this.workoutcertService.getWorkoutCertsByUserAndChallengeParticipant(userIdx, challengeParticipantIdx, page, size);
   }
 }
