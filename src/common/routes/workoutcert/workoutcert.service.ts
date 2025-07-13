@@ -62,7 +62,17 @@ export class WorkoutcertService {
     return certs;
   }
 
-  // 2. 인증글 생성
+  // 2.모든 인증글을 최신순으로 조회
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    const certs = await this.workoutCertRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user', 'user.profile'],
+    });
+
+    return certs;
+  }
+
+  // 3. 인증글 생성
   async createWorkoutCert(
     userIdx: string,
     dto: CreateWorkoutCertWithImageDto,
@@ -149,7 +159,7 @@ export class WorkoutcertService {
     }
   }
 
-  // 3. 도전의 인증글 목록 조회
+  // 4. 도전의 인증글 목록 조회
   async getChallengeRoomWorkoutCerts(
     challengeParticipantIdx: string,
   ): Promise<WorkoutCert[]> {

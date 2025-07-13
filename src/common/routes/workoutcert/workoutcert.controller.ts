@@ -46,7 +46,19 @@ export class WorkoutcertController {
     return await this.workoutcertService.getWorkoutCertsByUser(user.idx);
   }
 
-  // 2. 인증글 생성 (이미지 업로드 포함)
+  // 2. 모든 인증글을 최신순으로 조회
+  // GET : http://localhost:3000/workoutcert
+  @Get()
+  @ApiOperation({
+    summary: '모든 인증글을 최신순으로 조회',
+    description: 'GET : http://localhost:3000/workoutcert',
+  })
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    console.log('되고있나');
+    return await this.workoutcertService.getWorkoutCerts();
+  }
+
+  // 3. 인증글 생성 (이미지 업로드 포함)
   // POST : http://localhost:3000/workoutcert
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -92,7 +104,7 @@ export class WorkoutcertController {
     }
   }
 
-  // 3. 도전의 인증글 목록 조회
+  // 4. 도전의 인증글 목록 조회
   // GET : http://localhost:3000/workoutcert/challenge/:challenge_participant_idx
   @Get('challenge/:challenge_participant_idx')
   @UseGuards(JwtAuthGuard)
@@ -109,7 +121,7 @@ export class WorkoutcertController {
     );
   }
 
-  // 4. 인증글 단일 조회
+  // 5. 인증글 단일 조회
   // GET : http://localhost:3000/workoutcert/:workoutcert_idx
   @Get(':idx')
   @UseGuards(JwtAuthGuard)
@@ -121,7 +133,7 @@ export class WorkoutcertController {
     return await this.workoutcertService.getWorkoutCertDetail(idx);
   }
 
-  // 5. 인증글 수정 (이미지 업로드 포함)
+  // 6. 인증글 수정 (이미지 업로드 포함)
   // PATCH : http://localhost:3000/workoutcert/:workoutcert_idx
   @Patch(':idx')
   @UseGuards(JwtAuthGuard)
@@ -156,7 +168,7 @@ export class WorkoutcertController {
     );
   }
 
-  // 6. 인증글 삭제
+  // 7. 인증글 삭제
   // DELETE : http://localhost:3000/workoutcert/:workoutcert_idx
   @Delete(':idx')
   @UseGuards(JwtAuthGuard)
@@ -175,7 +187,7 @@ export class WorkoutcertController {
     await this.workoutcertService.deleteWorkoutCert(idx, user_idx);
   }
 
-  // 7. 이미지 파일 서빙
+  // 8. 이미지 파일 서빙
   @Get('image/:filename')
   @ApiOperation({
     summary: '업로드된 이미지 파일 조회',
