@@ -13,6 +13,7 @@ import {
   UploadedFile,
   BadRequestException,
   Res,
+  Query,
 } from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
@@ -217,5 +218,35 @@ export class WorkoutcertController {
     }
 
     res.sendFile(imagePath);
+  }
+
+  // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
+  // GET : http://localhost:3000/workoutcert/user/:userIdx/challenge/:challengeParticipantIdx?page=1&size=10
+  @Get('user/:userIdx/challenge_participant/:challengeParticipantIdx')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '특정 유저의 특정 도전에서의 운동 인증 목록 조회 (페이지네이션)',
+    description: 'GET : http://localhost:3000/workoutcert/user/:userIdx/challenge/:challengeParticipantIdx?page=1&size=10',
+  })
+  @ApiGetItemsResponse(WorkoutCert)
+  async getWorkoutCertsByUserAndChallengeParticipant(
+    @Param('userIdx') userIdx: string,
+    @Param('challengeParticipantIdx') challengeParticipantIdx: string,
+    @Query() pageReqDto: PageReqDto,
+  ): Promise<PageResDto<WorkoutCert>> {
+    const { page, size } = pageReqDto;
+    return await this.workoutcertService.getWorkoutCertsByUserAndChallengeParticipant(userIdx, challengeParticipantIdx, page, size);
+  }
+
+  // 9. 모든 인증글을 최신순으로 조회
+  // GET : http://localhost:3000/workoutcert
+  @Get()
+  @ApiOperation({
+    summary: '모든 인증글을 최신순으로 조회',
+    description: 'GET : http://localhost:3000/workoutcert',
+  })
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    console.log('되고있나');
+    return await this.workoutcertService.getWorkoutCerts();
   }
 }
