@@ -1,4 +1,20 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, NotFoundException, ForbiddenException, UseInterceptors, UploadedFile, BadRequestException, Res, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  NotFoundException,
+  ForbiddenException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Res,
+  Query,
+} from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
@@ -180,5 +196,17 @@ export class WorkoutcertController {
   ): Promise<PageResDto<WorkoutCert>> {
     const { page, size } = pageReqDto;
     return await this.workoutcertService.getWorkoutCertsByUserAndChallengeParticipant(userIdx, challengeParticipantIdx, page, size);
+  }
+
+  // 9. 모든 인증글을 최신순으로 조회
+  // GET : http://localhost:3000/workoutcert
+  @Get()
+  @ApiOperation({
+    summary: '모든 인증글을 최신순으로 조회',
+    description: 'GET : http://localhost:3000/workoutcert',
+  })
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    console.log('되고있나');
+    return await this.workoutcertService.getWorkoutCerts();
   }
 }

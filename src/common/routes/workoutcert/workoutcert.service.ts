@@ -298,4 +298,14 @@ export class WorkoutcertService {
       // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
   }
   }
+
+  // 9. 모든 인증글을 최신순으로 조회
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    const certs = await this.workoutCertRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user', 'user.profile'],
+    });
+
+    return certs;
+  }
 }
