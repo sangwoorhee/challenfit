@@ -22,6 +22,7 @@ export class FollowController {
   constructor(private readonly followService: FollowService) {}
 
   // 1. 팔로우하기
+  // http://localhost:3000/follow
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
@@ -36,6 +37,7 @@ export class FollowController {
   }
 
   // 2. 언팔로우하기
+  // http://localhost:3000/follow/:target_user_idx
   @Delete(':target_user_idx')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
@@ -50,6 +52,7 @@ export class FollowController {
   }
 
   // 3. 특정 유저의 팔로잉 목록 조회
+  // http://localhost:3000/follow/following/:user_idx
   @Get('following/:user_idx')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
@@ -64,6 +67,7 @@ export class FollowController {
   }
 
   // 4. 특정 유저의 팔로워 목록 조회
+  // http://localhost:3000/follow/follower/:user_idx
   @Get('follower/:user_idx')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
@@ -78,6 +82,7 @@ export class FollowController {
   }
 
   // 5. 내 팔로잉 목록 조회
+  // http://localhost:3000/follow/my/following
   @Get('my/following')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
@@ -91,6 +96,7 @@ export class FollowController {
   }
 
   // 6. 내 팔로워 목록 조회
+  // http://localhost:3000/follow/my/follower
   @Get('my/follower')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
