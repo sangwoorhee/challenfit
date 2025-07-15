@@ -18,6 +18,7 @@ import { UserSetting } from '../../entities/user_setting.entity';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CommonResDto } from './dto/res.dto';
+import { Follow } from 'src/common/entities/follow.entity';
 
 @Injectable()
 export class UserService {
@@ -28,6 +29,8 @@ export class UserService {
     private readonly settingRepository: Repository<UserSetting>,
     @InjectRepository(UserProfile)
     private readonly profileRepository: Repository<UserProfile>,
+    @InjectRepository(Follow)
+    private readonly followRepository: Repository<Follow>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -197,17 +200,53 @@ export class UserService {
   }
 
   // 5,6. 다른 유저 및 나의 마이프로필 정보 조회
-  async getUserProfile(user_idx: string) {
+  async getUserProfile(user_idx: string, current_user_idx?: string) {
     const user = await this.userRepository.findOne({
       where: { idx: user_idx },
       relations: ['profile'],
+      select: [
+        'idx',
+        'email',
+        'phone',
+        'name',
+        'nickname',
+        'provider',
+        'status',
+        'challenge_mode',
+        'created_at',
+        'updated_at',
+        'last_login',
+        'following_count',
+        'follower_count',
+      ],
     });
+    
     if (!user) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
+
+    let is_following = false;
+    
+    // 다른 유저의 프로필을 조회하는 경우 팔로우 여부 확인
+    if (current_user_idx && current_user_idx !== user_idx) {
+      // Follow 엔티티를 통해 팔로우 여부 확인
+      const follow = await this.followRepository.findOne({
+        where: {
+          follower: { idx: current_user_idx },
+          following: { idx: user_idx },
+        },
+      });
+      is_following = !!follow;
+    }
+
     return {
-      user,
+      user: {
+        ...user,
+        following_count: user.following_count || 0,
+        follower_count: user.follower_count || 0,
+      },
       profile: user.profile,
+      is_following,
     };
   }
 }
