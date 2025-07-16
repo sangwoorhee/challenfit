@@ -100,6 +100,27 @@ export class WorkoutcertController {
     }
   }
 
+  // 10. 내가 팔로우하는 유저들의 인증글 조회 (페이지네이션)
+  // GET : http://localhost:3000/workoutcert/following?page=1&size=10
+  @Get('following')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '내가 팔로우하는 유저들의 인증글 목록 조회 (페이지네이션)',
+    description: 'GET : http://localhost:3000/workoutcert/following?page=1&size=10',
+  })
+  @ApiGetItemsResponse(WorkoutCert)
+  async getFollowingUsersWorkoutCerts(
+    @User() user: UserAfterAuth,
+    @Query() pageReqDto: PageReqDto,
+  ): Promise<PageResDto<WorkoutCert>> {
+    const { page, size } = pageReqDto;
+    return await this.workoutcertService.getFollowingUsersWorkoutCerts(
+      user.idx,
+      page,
+      size,
+    );
+  }
+
   // 3. 도전의 인증글 목록 조회
   // GET : http://localhost:3000/workoutcert/challenge/:challenge_participant_idx
   @Get('challenge/:challenge_participant_idx')
@@ -236,26 +257,5 @@ export class WorkoutcertController {
   async getWorkoutCerts(): Promise<WorkoutCert[]> {
     console.log('되고있나');
     return await this.workoutcertService.getWorkoutCerts();
-  }
-
-  // 10. 내가 팔로우하는 유저들의 인증글 조회 (페이지네이션)
-  // GET : http://localhost:3000/workoutcert/following?page=1&size=10
-  @Get('following')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({
-    summary: '내가 팔로우하는 유저들의 인증글 목록 조회 (페이지네이션)',
-    description: 'GET : http://localhost:3000/workoutcert/following?page=1&size=10',
-  })
-  @ApiGetItemsResponse(WorkoutCert)
-  async getFollowingUsersWorkoutCerts(
-    @User() user: UserAfterAuth,
-    @Query() pageReqDto: PageReqDto,
-  ): Promise<PageResDto<WorkoutCert>> {
-    const { page, size } = pageReqDto;
-    return await this.workoutcertService.getFollowingUsersWorkoutCerts(
-      user.idx,
-      page,
-      size,
-    );
   }
 }
