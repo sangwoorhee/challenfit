@@ -13,6 +13,7 @@ import {
   UploadedFile,
   BadRequestException,
   Res,
+  Query,
 } from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
