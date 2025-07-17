@@ -26,6 +26,7 @@ import { RefreshToken } from './refresh_token.entity';
 import { Comment } from './comment.entity';
 import { Like } from './like.entity';
 import { Follow } from './follow.entity';
+import { FollowRequest } from './follow_request.entity';
 
 // User 엔티티
 @Entity({ name: 'user' })
@@ -82,12 +83,10 @@ export class User {
   @ApiProperty({ description: '마지막 로그인 시각', required: false })
   last_login?: Date;
 
-    
   @Column({ type: 'int', default: 0 })
   @ApiProperty({ description: '팔로잉 수', default: 0 }) // 팔로잉 수
   following_count: number;
   
-    
   @Column({ type: 'int', default: 0 })
   @ApiProperty({ description: '팔로워 수', default: 0 }) // 팔로워 수
   follower_count: number;
@@ -164,4 +163,14 @@ export class User {
   @OneToMany(() => Follow, (follow) => follow.following)
   @ApiProperty({ type: () => [Follow], description: '나를 팔로우하는 목록' })
   followers: Follow[];
+
+  // 내가 보낸 팔로우 요청들
+  @OneToMany(() => FollowRequest, (request) => request.requester)
+  @ApiProperty({ type: () => [FollowRequest], description: '내가 보낸 팔로우 요청 목록' })
+  sent_follow_requests: FollowRequest[];
+
+  // 내가 받은 팔로우 요청들
+  @OneToMany(() => FollowRequest, (request) => request.requested)
+  @ApiProperty({ type: () => [FollowRequest], description: '내가 받은 팔로우 요청 목록' })
+  received_follow_requests: FollowRequest[];
 }

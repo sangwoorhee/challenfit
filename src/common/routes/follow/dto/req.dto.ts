@@ -8,3 +8,9 @@ export class FollowUserReqDto {
   @IsUUID()
   target_user_idx: string;
 }
+
+export class FollowRequestActionDto {
+  @ApiProperty({ description: '팔로우 요청자 ID' })
+  @IsUUID()
+  requester_idx: string;
+}
