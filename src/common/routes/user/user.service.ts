@@ -18,6 +18,7 @@ import { UserSetting } from '../../entities/user_setting.entity';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CommonResDto } from './dto/res.dto';
+import { Follow } from 'src/common/entities/follow.entity';
 
 @Injectable()
 export class UserService {
@@ -28,6 +29,8 @@ export class UserService {
     private readonly settingRepository: Repository<UserSetting>,
     @InjectRepository(UserProfile)
     private readonly profileRepository: Repository<UserProfile>,
+    @InjectRepository(Follow)
+    private readonly followRepository: Repository<Follow>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -197,17 +200,70 @@ export class UserService {
   }
 
   // 5,6. 다른 유저 및 나의 마이프로필 정보 조회
-  async getUserProfile(user_idx: string) {
+  async getUserProfile(user_idx: string, current_user_idx?: string) {
     const user = await this.userRepository.findOne({
       where: { idx: user_idx },
       relations: ['profile'],
+      select: [
+        'idx',
+        'email',
+        'phone',
+        'name',
+        'nickname',
+        'provider',
+        'status',
+        'challenge_mode',
+        'created_at',
+        'updated_at',
+        'last_login',
+        'following_count',
+        'follower_count',
+      ],
     });
+    
     if (!user) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
+  
+    let is_following = false;
+    
+    // 다른 유저의 프로필을 조회하는 경우 팔로우 여부 확인
+    if (current_user_idx && current_user_idx !== user_idx) {
+      const follow = await this.followRepository.findOne({
+        where: {
+          follower: { idx: current_user_idx },
+          following: { idx: user_idx },
+        },
+      });
+      is_following = !!follow;
+    }
+  
+    // profile 정보와 함께 필요한 모든 정보 반환
     return {
-      user,
-      profile: user.profile,
+      user: {
+        idx: user.idx,
+        email: user.email,
+        phone: user.phone,
+        name: user.name,
+        nickname: user.nickname,
+        provider: user.provider,
+        status: user.status,
+        challenge_mode: user.challenge_mode,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        last_login: user.last_login,
+        following_count: user.following_count || 0,
+        follower_count: user.follower_count || 0,
+      },
+      profile: {
+        height: user.profile?.height,
+        weight: user.profile?.weight,
+        interest_exercises: user.profile?.interest_exercises,
+        exercise_purpose: user.profile?.exercise_purpose,
+        introduction: user.profile?.introduction,
+        profile_image_url: user.profile?.profile_image_url,
+      },
+      is_following,
     };
   }
 }

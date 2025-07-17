@@ -17,6 +17,7 @@ import { LikeModule } from './common/routes/like/like.module';
 import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/workoutcertapproval.module';
 // import { ChatModule } from './common/routes/chat/chat.module';
+import { FollowModule } from './common/routes/follow/follow.module';
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/w
     LikeModule,
     WorkoutcertModule,
     WorkoutcertapprovalModule,
+    FollowModule,
     // ChatModule,
   ],
   controllers: [AppController],

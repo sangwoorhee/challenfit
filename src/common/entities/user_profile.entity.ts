@@ -36,6 +36,11 @@ export class UserProfile {
   @ApiProperty({ description: '프로필 이미지 URL', required: false })
   profile_image_url?: string;
 
+  @Column({ type: 'boolean', default: true })
+  @ApiProperty({ description: '공개 프로필 여부 (true: 공개, false: 비공개)', required: false })
+  is_public: boolean;
+
+  // 관계 설정
   @OneToOne(() => User, (user) => user.profile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_idx' })
   user: User;

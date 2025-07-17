@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/common/entities/user.entity';
 import { UserProfile } from 'src/common/entities/user_profile.entity';
 import { UserSetting } from 'src/common/entities/user_setting.entity';
+import { Follow } from 'src/common/entities/follow.entity';
 
 @Module({
   imports: [
-      TypeOrmModule.forFeature([User, UserProfile, UserSetting]),
+      TypeOrmModule.forFeature([User, UserProfile, UserSetting, Follow]),
     ],
   controllers: [UserController],
   providers: [UserService],

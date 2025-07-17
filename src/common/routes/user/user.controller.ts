@@ -107,14 +107,17 @@ export class UserController {
   // 5. 다른 유저의 마이프로필 정보 조회
   // http://localhost:3000/user/profile/:user_idx
   @Get('profile/:user_idx')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
-    summary: '다른 유저의 마이프로필 정보 조회',
-    description: 'GET : http://localhost:3000/user/profile/:user_idx',
-  })
-  async getOtherUserProfile(@Param('user_idx') user_idx: string) {
-    return await this.userService.getUserProfile(user_idx);
-  }
+@UseGuards(JwtAuthGuard)
+@ApiOperation({ 
+  summary: '다른 유저의 마이프로필 정보 조회',
+  description: 'GET : http://localhost:3000/user/profile/:user_idx',
+})
+async getOtherUserProfile(
+  @User() user: UserAfterAuth,
+  @Param('user_idx') user_idx: string
+) {
+  return await this.userService.getUserProfile(user_idx, user.idx);
+}
 
   // 6. 내 마이프로필 정보 조회
   // http://localhost:3000/user/profile
@@ -125,6 +128,6 @@ export class UserController {
     description: 'GET : http://localhost:3000/user/profile',
   })
   async getMyProfile(@User() user: UserAfterAuth) {
-    return await this.userService.getUserProfile(user.idx);
+    return await this.userService.getUserProfile(user.idx, user.idx);
   }
 }

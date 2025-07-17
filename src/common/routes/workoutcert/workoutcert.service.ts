@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between } from 'typeorm';
+import { Repository, DataSource, Between, In } from 'typeorm';
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
@@ -19,6 +19,7 @@ import { CertApproval } from 'src/common/entities/cert_approval.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PageResDto } from 'src/common/dto/res.dto';
+import { Follow } from 'src/common/entities/follow.entity';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -42,6 +43,8 @@ export class WorkoutcertService {
     private challengeRoomRepository: Repository<ChallengeRoom>,
     @InjectRepository(CertApproval)
     private certApprovalRepository: Repository<CertApproval>,
+    @InjectRepository(Follow)
+    private followRepository: Repository<Follow>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -297,6 +300,73 @@ export class WorkoutcertService {
     });
 
     return certs;
+  }
+
+  // 10. 내가 팔로우하는 유저들의 인증글 조회 (페이지네이션)
+  async getFollowingUsersWorkoutCerts(
+    userIdx: string,
+    page: number,
+    size: number,
+  ): Promise<PageResDto<WorkoutCert>> {
+    // 현재 유저가 팔로우하는 유저들의 idx 목록을 먼저 조회
+    const followingRelations = await this.followRepository.find({
+      where: { follower: { idx: userIdx } },
+      relations: ['following'],
+      select: {
+        following: { idx: true },
+      },
+    });  
+  
+    // 팔로우하는 유저들의 idx 배열 생성
+    const followingUserIds = followingRelations.map(
+      (relation) => relation.following.idx,
+    );
+  
+    // 팔로우하는 유저가 없는 경우
+    if (followingUserIds.length === 0) {
+      return {
+        page,
+        size,
+        totalCount: 0,
+        items: [],
+      };
+    }
+  
+    // 팔로우하는 유저들의 인증글 조회
+    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
+      where: {
+        user: {
+          idx: In(followingUserIds),
+        },
+      },
+      order: { created_at: 'DESC' },
+      relations: [
+        'user',
+        'user.profile',
+        'challenge_participant',
+        'challenge_participant.challenge',
+        'cert_approval',
+        'likes',
+        'comments',
+      ],
+      skip: (page - 1) * size,
+      take: size,
+    });
+  
+    // 각 인증글에 대한 추가 정보 계산 (좋아요 수, 댓글 수 등)
+    const enrichedCerts = certs.map((cert) => ({
+      ...cert,
+      like_count: cert.likes?.length || 0,
+      comment_count: cert.comments?.length || 0,
+      is_liked: cert.likes?.some((like) => like.user?.idx === userIdx) || false,
+    }));
+  
+    return {
+      page,
+      size,
+      totalCount,
+      items: enrichedCerts,
+    };
   }
 
   // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
