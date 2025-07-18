@@ -121,9 +121,9 @@ export class WorkoutcertController {
     );
   }
 
-  // 3. 도전의 인증글 목록 조회
-  // GET : http://localhost:3000/workoutcert/challenge/:challenge_participant_idx
-  @Get('challenge/:challenge_participant_idx')
+  // 3. 도전방의 인증글 목록 조회
+  // GET : http://localhost:3000/workoutcert/challenge/:challenge_room_idx
+  @Get('challenge/:challenge_room_idx')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '도전방의 인증글 목록 조회',
