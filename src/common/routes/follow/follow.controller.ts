@@ -36,6 +36,21 @@ export class FollowController {
     return await this.followService.followUser(user.idx, dto.target_user_idx);
   }
 
+    // 13. 팔로우 관련 알림 삭제
+  // http://localhost:3000/follow/notifications
+  @Delete('notifications')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '팔로우 관련 알림 삭제',
+    description: 'DELETE : http://localhost:3000/follow/notifications',
+  })
+  async clearFollowNotifications(
+    @User() user: UserAfterAuth,
+  ): Promise<FollowResDto> {
+    await this.followService.clearFollowNotifications(user.idx);
+    return { message: '알림을 모두 삭제했습니다.' };
+  }
+
   // 2. 언팔로우하기
   // http://localhost:3000/follow/:target_user_idx
   @Delete(':target_user_idx')
@@ -194,20 +209,5 @@ export class FollowController {
     @User() user: UserAfterAuth,
   ): Promise<any[]> {
     return await this.followService.getFollowNotifications(user.idx);
-  }
-
-  // 13. 팔로우 관련 알림 삭제
-  // http://localhost:3000/follow/notifications
-  @Delete('notifications')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({
-    summary: '팔로우 관련 알림 삭제',
-    description: 'DELETE : http://localhost:3000/follow/notifications',
-  })
-  async clearFollowNotifications(
-    @User() user: UserAfterAuth,
-  ): Promise<FollowResDto> {
-    await this.followService.clearFollowNotifications(user.idx);
-    return { message: '알림을 모두 삭제했습니다.' };
   }
 }
