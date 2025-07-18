@@ -11,3 +11,33 @@ export class WorkoutCertWithStatsDto extends WorkoutCert {
   @ApiProperty({ description: '현재 유저의 좋아요 여부' })
   is_liked: boolean;
 }
+
+// 유저 통계 정보 DTO
+export class UserStatsDto {
+  @ApiProperty({ description: '운동인증 게시글 수' })
+  workout_cert_count: number;
+
+  @ApiProperty({ description: '팔로워 수' })
+  follower_count: number;
+
+  @ApiProperty({ description: '팔로잉 수' })
+  following_count: number;
+}
+
+// 유저 통계 정보를 포함한 페이지네이션 응답 DTO
+export class PageWithUserStatsResDto<T> {
+  @ApiProperty({ description: '현재 페이지' })
+  page: number;
+
+  @ApiProperty({ description: '페이지 크기' })
+  size: number;
+
+  @ApiProperty({ description: '전체 아이템 수' })
+  totalCount: number;
+
+  @ApiProperty({ description: '아이템 목록' })
+  items: T[];
+
+  @ApiProperty({ description: '유저 통계 정보', type: UserStatsDto })
+  userStats: UserStatsDto;
+}
