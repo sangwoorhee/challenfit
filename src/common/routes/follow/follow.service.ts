@@ -166,8 +166,16 @@ import {
         await queryRunner.release();
       }
     }
+
+    // 2. 팔로우 관련 알림 삭제
+      async clearFollowNotifications(user_idx: string): Promise<void> {
+        await this.cacheManager.del(`follow_notification:${user_idx}`);
+        await this.cacheManager.del(`follow_request_notification:${user_idx}`);
+        await this.cacheManager.del(`follow_accept_notification:${user_idx}`);
+        await this.cacheManager.del(`follow_reject_notification:${user_idx}`);
+      }
   
-    // 2. 언팔로우하기
+    // 3. 언팔로우하기
     async unfollowUser(
       follower_idx: string,
       following_idx: string,
@@ -226,7 +234,7 @@ import {
       }
     }
 
-    // 3. 팔로우 요청 수락
+    // 4. 팔로우 요청 수락
     async acceptFollowRequest(
       requested_idx: string,
       requester_idx: string,
@@ -297,7 +305,7 @@ import {
       }
     }
 
-    // 4. 팔로우 요청 거절
+    // 5. 팔로우 요청 거절
     async rejectFollowRequest(
       requested_idx: string,
       requester_idx: string,
@@ -346,7 +354,7 @@ import {
       }
     }
 
-    // 5. 팔로우 요청 취소
+    // 6. 팔로우 요청 취소
     async cancelFollowRequest(
       requester_idx: string,
       requested_idx: string,
@@ -368,7 +376,7 @@ import {
       return { message: '팔로우 요청을 취소했습니다.' };
     }
 
-    // 6. 내가 보낸 팔로우 요청 목록 조회
+    // 7. 내가 보낸 팔로우 요청 목록 조회
     async getSentFollowRequests(user_idx: string): Promise<any> {
       const requests = await this.followRequestRepository.find({
         where: {
@@ -394,7 +402,7 @@ import {
       };
     }
 
-    // 7. 내가 받은 팔로우 요청 목록 조회
+    // 8. 내가 받은 팔로우 요청 목록 조회
     async getReceivedFollowRequests(user_idx: string): Promise<any> {
       const requests = await this.followRequestRepository.find({
         where: {
@@ -420,7 +428,7 @@ import {
       };
     }
   
-    // 8, 10. (특정유저, 나) 팔로잉 목록 조회
+    // 9, 11. (특정유저, 나) 팔로잉 목록 조회
     async getFollowingList(
       user_idx: string,
       current_user_idx?: string,
@@ -461,7 +469,7 @@ import {
       return { users, total };
     }
   
-    // 9, 11. (특정유저, 나) 팔로워 목록 조회
+    // 10, 12. (특정유저, 나) 팔로워 목록 조회
     async getFollowerList(
       user_idx: string,
       current_user_idx?: string,
@@ -516,7 +524,7 @@ import {
       return !!follow;
     }
 
-    // 12. 팔로우 관련 알림 조회
+    // 13. 팔로우 관련 알림 조회
     async getFollowNotifications(user_idx: string): Promise<FollowNotification[]> {
       const notifications: FollowNotification[] = [];
       
@@ -550,13 +558,5 @@ import {
       );
       
       return notifications;
-    }
-
-    // 13. 팔로우 관련 알림 삭제
-    async clearFollowNotifications(user_idx: string): Promise<void> {
-      await this.cacheManager.del(`follow_notification:${user_idx}`);
-      await this.cacheManager.del(`follow_request_notification:${user_idx}`);
-      await this.cacheManager.del(`follow_accept_notification:${user_idx}`);
-      await this.cacheManager.del(`follow_reject_notification:${user_idx}`);
     }
   }

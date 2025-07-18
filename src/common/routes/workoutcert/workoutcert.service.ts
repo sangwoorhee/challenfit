@@ -20,6 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PageResDto } from 'src/common/dto/res.dto';
 import { Follow } from 'src/common/entities/follow.entity';
+import { PageWithUserStatsResDto, UserStatsDto } from './dto/res.dto';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -77,7 +78,7 @@ export class WorkoutcertService {
     };
   }
 
-  // 2. 인증글 생성
+  // 2. 인증글 생성 (이미지 업로드 포함)
   async createWorkoutCert(
     userIdx: string,
     dto: CreateWorkoutCertWithImageDto,
@@ -182,127 +183,7 @@ export class WorkoutcertService {
     }
   }
 
-  // 3. 도전의 인증글 목록 조회
-  async getChallengeRoomWorkoutCerts(
-    challengeParticipantIdx: string,
-  ): Promise<WorkoutCert[]> {
-    const challengeRoom = await this.participantRepository.findOne({
-      where: { idx: challengeParticipantIdx },
-    });
-    if (!challengeRoom)
-      throw new NotFoundException('도전방을 찾을 수 없습니다.');
-
-    return await this.workoutCertRepository.find({
-      where: {
-        challenge_participant: { idx: challengeParticipantIdx },
-      },
-      relations: ['user', 'challenge_participant', 'cert_approval'],
-      order: { created_at: 'DESC' },
-    });
-  }
-
-  // 4. 인증글 단일 조회
-  async getWorkoutCertDetail(idx: string): Promise<WorkoutCert> {
-    const cert = await this.workoutCertRepository.findOne({
-      where: { idx },
-      relations: ['user', 'challenge_participant', 'cert_approval'],
-    });
-    if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
-    return cert;
-  }
-
-  // 5. 인증글 수정 (이미지 파일 처리 포함)
-  async updateWorkoutCert(
-    idx: string,
-    dto: UpdateWorkoutCertWithImageDto,
-    user_idx: any,
-  ): Promise<WorkoutCert> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const cert = await this.getWorkoutCertDetail(idx);
-      if (cert.user.idx !== user_idx)
-        throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
-
-      // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
-      if (dto.image_url && cert.image_url !== dto.image_url) {
-        this.deleteImageFile(cert.image_url);
-        cert.image_url = dto.image_url;
-      }
-
-      if (dto.caption) cert.caption = dto.caption;
-      if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
-
-      const updatedCert = await this.workoutCertRepository.save(cert);
-      await queryRunner.commitTransaction();
-      return updatedCert;
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  // 6. 인증글 삭제
-  async deleteWorkoutCert(idx: string, user_idx: any): Promise<void> {
-    const cert = await this.getWorkoutCertDetail(idx);
-    if (cert.user.idx !== user_idx)
-      throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
-
-    // 이미지 파일 삭제
-    this.deleteImageFile(cert.image_url);
-
-    await this.workoutCertRepository.remove(cert);
-  }
-
-  // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
-  async getWorkoutCertsByUserAndChallengeParticipant(
-    userIdx: string,
-    challengeParticipantIdx: string,
-    page: number,
-    size: number,
-  ): Promise<PageResDto<WorkoutCert>> {
-    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
-    if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
-
-    const participant = await this.participantRepository.findOne({
-      where: { idx: challengeParticipantIdx, user: { idx: userIdx } },
-    });
-    if (!participant) throw new NotFoundException('참가자 정보를 찾을 수 없습니다.');
-
-    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
-      where: {
-        user: { idx: userIdx },
-        challenge_participant: { idx: challengeParticipantIdx },
-      },
-      order: { created_at: 'DESC' },
-      relations: ['challenge_participant', 'challenge_participant.challenge', 'cert_approval'],
-      skip: (page - 1) * size,
-      take: size,
-    });
-
-    return {
-      page,
-      size,
-      totalCount,
-      items: certs,
-    };
-  }
-
-  // 9. 모든 인증글을 최신순으로 조회
-  async getWorkoutCerts(): Promise<WorkoutCert[]> {
-    const certs = await this.workoutCertRepository.find({
-      order: { created_at: 'DESC' },
-      relations: ['user', 'user.profile'],
-    });
-
-    return certs;
-  }
-
-  // 10. 내가 팔로우하는 유저들의 인증글 조회 (페이지네이션)
+  // 3. 내가 팔로우하는 유저들의 인증글 조회 (페이지네이션)
   async getFollowingUsersWorkoutCerts(
     userIdx: string,
     page: number,
@@ -367,6 +248,176 @@ export class WorkoutcertService {
       totalCount,
       items: enrichedCerts,
     };
+  }
+
+  // 4. 도전의 인증글 목록 조회
+  async getChallengeRoomWorkoutCerts(
+    challengeParticipantIdx: string,
+  ): Promise<WorkoutCert[]> {
+    const challengeRoom = await this.participantRepository.findOne({
+      where: { idx: challengeParticipantIdx },
+    });
+    if (!challengeRoom)
+      throw new NotFoundException('도전방을 찾을 수 없습니다.');
+
+    return await this.workoutCertRepository.find({
+      where: {
+        challenge_participant: { idx: challengeParticipantIdx },
+      },
+      relations: ['user', 'challenge_participant', 'cert_approval'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // 5. 인증글 단일 조회
+  async getWorkoutCertDetail(idx: string): Promise<WorkoutCert> {
+    const cert = await this.workoutCertRepository.findOne({
+      where: { idx },
+      relations: ['user', 'challenge_participant', 'cert_approval'],
+    });
+    if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
+    return cert;
+  }
+
+  // 6. 인증글 수정 (이미지 업로드 포함)
+  async updateWorkoutCert(
+    idx: string,
+    dto: UpdateWorkoutCertWithImageDto,
+    user_idx: any,
+  ): Promise<WorkoutCert> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const cert = await this.getWorkoutCertDetail(idx);
+      if (cert.user.idx !== user_idx)
+        throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
+
+      // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
+      if (dto.image_url && cert.image_url !== dto.image_url) {
+        this.deleteImageFile(cert.image_url);
+        cert.image_url = dto.image_url;
+      }
+
+      if (dto.caption) cert.caption = dto.caption;
+      if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
+
+      const updatedCert = await this.workoutCertRepository.save(cert);
+      await queryRunner.commitTransaction();
+      return updatedCert;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // 7. 인증글 삭제
+  async deleteWorkoutCert(idx: string, user_idx: any): Promise<void> {
+    const cert = await this.getWorkoutCertDetail(idx);
+    if (cert.user.idx !== user_idx)
+      throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
+
+    // 이미지 파일 삭제
+    this.deleteImageFile(cert.image_url);
+
+    await this.workoutCertRepository.remove(cert);
+  }
+
+  // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
+  async getWorkoutCertsByUserAndChallengeParticipant(
+    userIdx: string,
+    challengeParticipantIdx: string,
+    page: number,
+    size: number,
+  ): Promise<PageResDto<WorkoutCert>> {
+    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+    if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
+
+    const participant = await this.participantRepository.findOne({
+      where: { idx: challengeParticipantIdx, user: { idx: userIdx } },
+    });
+    if (!participant) throw new NotFoundException('참가자 정보를 찾을 수 없습니다.');
+
+    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
+      where: {
+        user: { idx: userIdx },
+        challenge_participant: { idx: challengeParticipantIdx },
+      },
+      order: { created_at: 'DESC' },
+      relations: ['challenge_participant', 'challenge_participant.challenge', 'cert_approval'],
+      skip: (page - 1) * size,
+      take: size,
+    });
+
+    return {
+      page,
+      size,
+      totalCount,
+      items: certs,
+    };
+  }
+
+  // 9, 10. 특정 유저, 나의 모든 운동 인증 목록과 통계 정보 조회
+  async getMyWorkoutCertsWithStats(
+    userIdx: string,
+    page: number,
+    size: number,
+  ): Promise<PageWithUserStatsResDto<WorkoutCert>> {
+    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+    if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
+  
+    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
+      where: { user: { idx: userIdx } },
+      order: { created_at: 'DESC' },
+      relations: [
+        'challenge_participant',
+        'challenge_participant.challenge',
+        'cert_approval',
+        'likes',
+        'comments',
+      ],
+      skip: (page - 1) * size,
+      take: size,
+    });
+  
+    // 각 인증글에 대한 추가 정보 계산
+    const enrichedCerts = certs.map((cert) => ({
+      ...cert,
+      like_count: cert.likes?.length || 0,
+      comment_count: cert.comments?.length || 0,
+    }));
+  
+    // 유저의 전체 운동인증 게시글 수 조회
+    const workoutCertCount = await this.workoutCertRepository.count({
+      where: { user: { idx: userIdx } },
+    });
+  
+    const userStats: UserStatsDto = {
+      workout_cert_count: workoutCertCount,
+      follower_count: user.follower_count,
+      following_count: user.following_count,
+    };
+  
+    return {
+      page,
+      size,
+      totalCount,
+      items: enrichedCerts,
+      userStats,
+    };
+  }
+
+  // 11. 모든 인증글을 최신순으로 조회
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    const certs = await this.workoutCertRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user', 'user.profile'],
+    });
+
+    return certs;
   }
 
   // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제

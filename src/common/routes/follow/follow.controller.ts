@@ -36,7 +36,7 @@ export class FollowController {
     return await this.followService.followUser(user.idx, dto.target_user_idx);
   }
 
-    // 13. 팔로우 관련 알림 삭제
+  // 2. 팔로우 관련 알림 삭제
   // http://localhost:3000/follow/notifications
   @Delete('notifications')
   @UseGuards(JwtAuthGuard)
@@ -51,7 +51,7 @@ export class FollowController {
     return { message: '알림을 모두 삭제했습니다.' };
   }
 
-  // 2. 언팔로우하기
+  // 3. 언팔로우하기
   // http://localhost:3000/follow/:target_user_idx
   @Delete(':target_user_idx')
   @UseGuards(JwtAuthGuard)
@@ -66,7 +66,7 @@ export class FollowController {
     return await this.followService.unfollowUser(user.idx, target_user_idx);
   }
 
-  // 3. 팔로우 요청 수락
+  // 4. 팔로우 요청 수락
   // http://localhost:3000/follow/request/accept
   @Post('request/accept')
   @UseGuards(JwtAuthGuard)
@@ -81,7 +81,7 @@ export class FollowController {
     return await this.followService.acceptFollowRequest(user.idx, dto.requester_idx);
   }
 
-  // 4. 팔로우 요청 거절
+  // 5. 팔로우 요청 거절
   // http://localhost:3000/follow/request/reject
   @Post('request/reject')
   @UseGuards(JwtAuthGuard)
@@ -96,7 +96,7 @@ export class FollowController {
     return await this.followService.rejectFollowRequest(user.idx, dto.requester_idx);
   }
 
-  // 5. 팔로우 요청 취소
+  // 6. 팔로우 요청 취소
   // http://localhost:3000/follow/request/cancel/:requested_idx
   @Delete('request/cancel/:requested_idx')
   @UseGuards(JwtAuthGuard)
@@ -111,7 +111,7 @@ export class FollowController {
     return await this.followService.cancelFollowRequest(user.idx, requested_idx);
   }
 
-  // 6. 내가 보낸 팔로우 요청 목록
+  // 7. 내가 보낸 팔로우 요청 목록
   // http://localhost:3000/follow/request/sent
   @Get('request/sent')
   @UseGuards(JwtAuthGuard)
@@ -125,7 +125,7 @@ export class FollowController {
     return await this.followService.getSentFollowRequests(user.idx);
   }
 
-  // 7. 내가 받은 팔로우 요청 목록
+  // 8. 내가 받은 팔로우 요청 목록
   // http://localhost:3000/follow/request/received
   @Get('request/received')
   @UseGuards(JwtAuthGuard)
@@ -139,7 +139,7 @@ export class FollowController {
     return await this.followService.getReceivedFollowRequests(user.idx);
   }
 
-  // 8. 특정 유저의 팔로잉 목록 조회
+  // 9. 특정 유저의 팔로잉 목록 조회
   // http://localhost:3000/follow/following/:user_idx
   @Get('following/:user_idx')
   @UseGuards(JwtAuthGuard)
@@ -154,7 +154,7 @@ export class FollowController {
     return await this.followService.getFollowingList(user_idx, user.idx);
   }
 
-  // 9. 특정 유저의 팔로워 목록 조회
+  // 10. 특정 유저의 팔로워 목록 조회
   // http://localhost:3000/follow/follower/:user_idx
   @Get('follower/:user_idx')
   @UseGuards(JwtAuthGuard)
@@ -169,7 +169,7 @@ export class FollowController {
     return await this.followService.getFollowerList(user_idx, user.idx);
   }
 
-  // 10. 내 팔로잉 목록 조회
+  // 11. 내 팔로잉 목록 조회
   // http://localhost:3000/follow/my/following
   @Get('my/following')
   @UseGuards(JwtAuthGuard)
@@ -183,7 +183,7 @@ export class FollowController {
     return await this.followService.getFollowingList(user.idx, user.idx);
   }
 
-  // 11. 내 팔로워 목록 조회
+  // 12. 내 팔로워 목록 조회
   // http://localhost:3000/follow/my/follower
   @Get('my/follower')
   @UseGuards(JwtAuthGuard)
@@ -197,7 +197,7 @@ export class FollowController {
     return await this.followService.getFollowerList(user.idx, user.idx);
   }
 
-  // 12. 팔로우 관련 알림 조회
+  // 13. 팔로우 관련 알림 조회
   // http://localhost:3000/follow/notifications
   @Get('notifications')
   @UseGuards(JwtAuthGuard)
