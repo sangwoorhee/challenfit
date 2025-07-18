@@ -114,7 +114,7 @@ import {
           message = '팔로우했습니다.';
   
           // 캐시에 팔로우 알림 메시지 저장
-          await this.cacheManager.set(
+          await (this.cacheManager as any).set(
             `follow_notification:${following_idx}`,
             {
               type: 'follow',
@@ -122,7 +122,7 @@ import {
               message: `${follower_idx}님이 회원님을 팔로우하기 시작했습니다.`,
               created_at: new Date(),
             },
-            3600, // 1시간 TTL
+            {ttl : 3600}, // 1시간 TTL
           );
         } 
         // 비공개 계정인 경우 - 팔로우 신청
@@ -137,7 +137,7 @@ import {
           message = '팔로우 요청을 보냈습니다.';
   
           // 캐시에 팔로우 요청 알림 메시지 저장
-          await this.cacheManager.set(
+          await (this.cacheManager as any).set(
             `follow_request_notification:${following_idx}`,
             {
               type: 'follow_request',
@@ -145,7 +145,7 @@ import {
               message: `${follower_idx}님이 팔로우를 요청했습니다.`,
               created_at: new Date(),
             },
-            3600, // 1시간 TTL
+            {ttl : 3600}, // 1시간 TTL
           );
         }
   
@@ -252,7 +252,7 @@ import {
         );
   
         // 캐시에 수락 알림 메시지 저장
-        await this.cacheManager.set(
+        await (this.cacheManager as any).set(
           `follow_accept_notification:${requester_idx}`,
           {
             type: 'follow_accept',
@@ -260,7 +260,7 @@ import {
             message: `${requested_idx}님이 팔로우 요청을 수락했습니다.`,
             created_at: new Date(),
           },
-          3600, // 1시간 TTL
+          {ttl : 3600}, // 1시간 TTL
         );
   
         await queryRunner.commitTransaction();
@@ -301,7 +301,7 @@ import {
         await this.followRequestRepository.save(request);
   
         // 캐시에 거절 알림 메시지 저장
-        await this.cacheManager.set(
+        await (this.cacheManager as any).set(
           `follow_reject_notification:${requester_idx}`,
           {
             type: 'follow_reject',
@@ -309,7 +309,7 @@ import {
             message: `${requested_idx}님이 팔로우 요청을 거절했습니다.`,
             created_at: new Date(),
           },
-          3600, // 1시간 TTL
+          {ttl : 3600}, // 1시간 TTL
         );
   
         await queryRunner.commitTransaction();

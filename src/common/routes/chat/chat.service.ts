@@ -55,7 +55,8 @@ export class ChatService {
     private challengeParticipantRepository: Repository<ChallengeParticipant>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Inject(CACHE_MANAGER) 
+    private cacheManager: Cache,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
@@ -88,7 +89,7 @@ export class ChatService {
       
       if (user) {
         userInfo = user;
-        await this.cacheManager.set(cacheKey, userInfo, this.CACHE_TTL);
+        await (this.cacheManager as any).set(cacheKey, userInfo, {ttl : this.CACHE_TTL});
       }
     }
     
@@ -100,10 +101,10 @@ export class ChatService {
     const key = `${this.USER_STATUS_PREFIX}${userIdx}`;
     
     if (status === 'online') {
-      await this.cacheManager.set(key, {
+      await (this.cacheManager as any).set(key, {
         status,
         lastSeen: new Date(),
-      }, this.CACHE_TTL);
+      }, {ttl : this.CACHE_TTL});
     } else {
       await this.cacheManager.del(key);
     }
@@ -126,7 +127,7 @@ export class ChatService {
       });
       
       isParticipant = !!participant;
-      await this.cacheManager.set(cacheKey, isParticipant, this.CACHE_TTL);
+      await (this.cacheManager as any).set(cacheKey, isParticipant, {ttl : this.CACHE_TTL});
     }
     
     return isParticipant;
@@ -226,7 +227,7 @@ export class ChatService {
     
     // 결과 캐싱 (최신 페이지는 짧은 TTL)
     const ttl = page === 1 ? 60 : this.CACHE_TTL; // 첫 페이지는 1분
-    await this.cacheManager.set(cacheKey, result, ttl);
+    await (this.cacheManager as any).set(cacheKey, result, {ttl : ttl});
     
     return result;
   }

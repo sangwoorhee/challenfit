@@ -30,8 +30,12 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AuthService {
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    // REDIS Cache
+    @Inject(CACHE_MANAGER) 
+    private cacheManager: Cache,
+    // DB
+    @InjectRepository(User) 
+    private readonly userRepository: Repository<User>,
     @InjectRepository(UserProfile)
     private readonly profileRepository: Repository<UserProfile>,
     @InjectRepository(UserSetting)
@@ -49,10 +53,23 @@ export class AuthService {
     phone: string,
   ): Promise<{ phone: string; code: string }> {
     const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6자리 숫자 코드
-
+  
     const ttlSeconds = 300; // 5분 동안 유효
-    await this.cacheManager.set(`sms:${phone}`, code, ttlSeconds);
-
+    const cacheKey = `sms:${phone}`;
+    
+    console.log(`🔍 SMS 코드 저장 시도: ${cacheKey} = ${code}, TTL: ${ttlSeconds}초`);
+    
+    try {
+      await (this.cacheManager as any).set(cacheKey, code, {ttl : ttlSeconds} );
+      console.log(`✅ SMS 코드 저장 성공: ${cacheKey}`);
+      
+      // 저장 후 즉시 확인
+      const saved = await this.cacheManager.get(cacheKey);
+      console.log(`🔍 저장 확인: ${cacheKey} = ${saved}`);
+    } catch (error) {
+      console.error(`❌ SMS 코드 저장 실패: ${error.message}`);
+    }
+  
     return {
       phone,
       code,
@@ -64,19 +81,38 @@ export class AuthService {
     phone: string,
     code: string,
   ): Promise<{ success: boolean; message: string }> {
-    const cachedCode = await this.cacheManager.get<string>(`sms:${phone}`);
-    if (!cachedCode) {
+    const cacheKey = `sms:${phone}`;
+    
+    console.log(`🔍 SMS 코드 조회 시도: ${cacheKey}, 입력 코드: ${code}`);
+    
+    try {
+      const cachedCode = await this.cacheManager.get<string>(cacheKey);
+      console.log(`🔍 캐시에서 조회된 코드: ${cachedCode}`);
+      
+      if (!cachedCode) {
+        console.log(`❌ 캐시에 코드가 없음: ${cacheKey}`);
+        return {
+          success: false,
+          message: '인증 코드가 만료되었거나 존재하지 않습니다.',
+        };
+      }
+      if (cachedCode !== code) {
+        console.log(`❌ 코드 불일치: 캐시(${cachedCode}) vs 입력(${code})`);
+        return { success: false, message: '인증 코드가 일치하지 않습니다.' };
+      }
+      
+      // 인증 성공 시 캐시에서 삭제
+      await this.cacheManager.del(cacheKey);
+      console.log(`✅ 인증 성공, 캐시 삭제: ${cacheKey}`);
+      
+      return { success: true, message: '인증이 완료되었습니다.' };
+    } catch (error) {
+      console.error(`❌ SMS 코드 검증 실패: ${error.message}`);
       return {
         success: false,
-        message: '인증 코드가 만료되었거나 존재하지 않습니다.',
+        message: '인증 코드 검증 중 오류가 발생했습니다.',
       };
     }
-    if (cachedCode !== code) {
-      return { success: false, message: '인증 코드가 일치하지 않습니다.' };
-    }
-    // 인증 성공 시 캐시에서 삭제(선택)
-    await this.cacheManager.del(`sms:${phone}`);
-    return { success: true, message: '인증이 완료되었습니다.' };
   }
 
   // 2. 회원가입 (E-mail, PassWord)
