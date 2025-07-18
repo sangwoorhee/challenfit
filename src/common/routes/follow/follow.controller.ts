@@ -181,4 +181,33 @@ export class FollowController {
   ): Promise<FollowListResDto> {
     return await this.followService.getFollowerList(user.idx, user.idx);
   }
+
+  // 12. 팔로우 관련 알림 조회
+  // http://localhost:3000/follow/notifications
+  @Get('notifications')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '팔로우 관련 알림 조회',
+    description: 'GET : http://localhost:3000/follow/notifications',
+  })
+  async getFollowNotifications(
+    @User() user: UserAfterAuth,
+  ): Promise<any[]> {
+    return await this.followService.getFollowNotifications(user.idx);
+  }
+
+  // 13. 팔로우 관련 알림 삭제
+  // http://localhost:3000/follow/notifications
+  @Delete('notifications')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: '팔로우 관련 알림 삭제',
+    description: 'DELETE : http://localhost:3000/follow/notifications',
+  })
+  async clearFollowNotifications(
+    @User() user: UserAfterAuth,
+  ): Promise<FollowResDto> {
+    await this.followService.clearFollowNotifications(user.idx);
+    return { message: '알림을 모두 삭제했습니다.' };
+  }
 }

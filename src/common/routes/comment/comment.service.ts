@@ -48,7 +48,7 @@ export class CommentService {
   async getComment(commentIdx: string): Promise<Comment> {
     const comment = await this.commentRepository.findOne({ 
         where: { idx: commentIdx }, 
-        relations: ['user', 'workout_cert', 'user.nickname'] 
+        relations: ['user'] 
     });
     if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다.');
     return comment;
@@ -61,7 +61,7 @@ export class CommentService {
 
     return await this.commentRepository.find({
       where: { workout_cert: { idx: workoutCertIdx } },
-      relations: ['user', 'user.nickname'],
+      relations: ['user'],
       order: { created_at: 'ASC' },
     });
   }

@@ -9,6 +9,7 @@ export class FollowUserReqDto {
   target_user_idx: string;
 }
 
+// 팔로우 요청 수락/거절
 export class FollowRequestActionDto {
   @ApiProperty({ description: '팔로우 요청자 ID' })
   @IsUUID()

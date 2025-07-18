@@ -48,11 +48,11 @@ import {
       if (follower_idx === following_idx) {
         throw new BadRequestException('자기 자신을 팔로우할 수 없습니다.');
       }
-  
+    
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
       await queryRunner.startTransaction();
-  
+    
       try {
         // 팔로우할 유저와 프로필 정보 가져오기
         const followingUser = await this.userRepository.findOne({
@@ -63,7 +63,7 @@ import {
         if (!followingUser) {
           throw new NotFoundException('팔로우할 유저를 찾을 수 없습니다.');
         }
-  
+    
         // 이미 팔로우 중인지 확인
         const existingFollow = await this.followRepository.findOne({
           where: {
@@ -75,22 +75,29 @@ import {
         if (existingFollow) {
           throw new ConflictException('이미 팔로우 중인 유저입니다.');
         }
-  
-        // 이미 팔로우 요청이 있는지 확인
+    
+        // 기존 팔로우 요청 확인 (모든 상태)
         const existingRequest = await this.followRequestRepository.findOne({
           where: {
             requester: { idx: follower_idx },
             requested: { idx: following_idx },
-            status: FollowRequestStatus.PENDING,
           },
         });
-  
-        if (existingRequest) {
+    
+        // 이미 대기 중인 요청이 있는 경우
+        if (existingRequest && existingRequest.status === FollowRequestStatus.PENDING) {
           throw new ConflictException('이미 팔로우 요청을 보낸 상태입니다.');
         }
-  
+    
+        // 취소되거나 거절된 요청이 있는 경우 삭제
+        if (existingRequest && 
+            (existingRequest.status === FollowRequestStatus.CANCELLED || 
+             existingRequest.status === FollowRequestStatus.REJECTED)) {
+          await this.followRequestRepository.remove(existingRequest);
+        }
+    
         let message: string;
-  
+    
         // 공개 계정인 경우 - 바로 팔로우
         if (followingUser.profile?.is_public === true) {
           const follow = this.followRepository.create({
@@ -98,7 +105,7 @@ import {
             following: { idx: following_idx },
           });
           await this.followRepository.save(follow);
-  
+    
           // 카운트 업데이트
           await this.userRepository.increment(
             { idx: follower_idx },
@@ -110,11 +117,11 @@ import {
             'follower_count',
             1,
           );
-  
+    
           message = '팔로우했습니다.';
-  
+    
           // 캐시에 팔로우 알림 메시지 저장
-          await this.cacheManager.set(
+          await (this.cacheManager as any).set(
             `follow_notification:${following_idx}`,
             {
               type: 'follow',
@@ -122,7 +129,7 @@ import {
               message: `${follower_idx}님이 회원님을 팔로우하기 시작했습니다.`,
               created_at: new Date(),
             },
-            3600, // 1시간 TTL
+            {ttl : 3600}, // 1시간 TTL
           );
         } 
         // 비공개 계정인 경우 - 팔로우 신청
@@ -133,11 +140,11 @@ import {
             status: FollowRequestStatus.PENDING,
           });
           await this.followRequestRepository.save(followRequest);
-  
+    
           message = '팔로우 요청을 보냈습니다.';
-  
+    
           // 캐시에 팔로우 요청 알림 메시지 저장
-          await this.cacheManager.set(
+          await (this.cacheManager as any).set(
             `follow_request_notification:${following_idx}`,
             {
               type: 'follow_request',
@@ -145,10 +152,10 @@ import {
               message: `${follower_idx}님이 팔로우를 요청했습니다.`,
               created_at: new Date(),
             },
-            3600, // 1시간 TTL
+            {ttl : 3600}, // 1시간 TTL
           );
         }
-  
+    
         await queryRunner.commitTransaction();
         return { message };
       } catch (error) {
@@ -252,7 +259,7 @@ import {
         );
   
         // 캐시에 수락 알림 메시지 저장
-        await this.cacheManager.set(
+        await (this.cacheManager as any).set(
           `follow_accept_notification:${requester_idx}`,
           {
             type: 'follow_accept',
@@ -260,7 +267,7 @@ import {
             message: `${requested_idx}님이 팔로우 요청을 수락했습니다.`,
             created_at: new Date(),
           },
-          3600, // 1시간 TTL
+          {ttl : 3600}, // 1시간 TTL
         );
   
         await queryRunner.commitTransaction();
@@ -301,7 +308,7 @@ import {
         await this.followRequestRepository.save(request);
   
         // 캐시에 거절 알림 메시지 저장
-        await this.cacheManager.set(
+        await (this.cacheManager as any).set(
           `follow_reject_notification:${requester_idx}`,
           {
             type: 'follow_reject',
@@ -309,7 +316,7 @@ import {
             message: `${requested_idx}님이 팔로우 요청을 거절했습니다.`,
             created_at: new Date(),
           },
-          3600, // 1시간 TTL
+          {ttl : 3600}, // 1시간 TTL
         );
   
         await queryRunner.commitTransaction();
@@ -334,14 +341,13 @@ import {
           status: FollowRequestStatus.PENDING,
         },
       });
-  
+    
       if (!request) {
         throw new NotFoundException('팔로우 요청을 찾을 수 없습니다.');
       }
-  
-      request.status = FollowRequestStatus.CANCELLED;
-      await this.followRequestRepository.save(request);
-  
+    
+      await this.followRequestRepository.remove(request);
+    
       return { message: '팔로우 요청을 취소했습니다.' };
     }
 
