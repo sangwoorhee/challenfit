@@ -89,10 +89,11 @@ import {
           throw new ConflictException('이미 팔로우 요청을 보낸 상태입니다.');
         }
     
-        // 취소되거나 거절된 요청이 있는 경우 삭제
+        // 취소, 거절, 수락된 요청이 있는 경우 모두 삭제
         if (existingRequest && 
             (existingRequest.status === FollowRequestStatus.CANCELLED || 
-             existingRequest.status === FollowRequestStatus.REJECTED)) {
+             existingRequest.status === FollowRequestStatus.REJECTED ||
+             existingRequest.status === FollowRequestStatus.ACCEPTED)) {
           await this.followRequestRepository.remove(existingRequest);
         }
     
@@ -174,7 +175,7 @@ import {
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
       await queryRunner.startTransaction();
-  
+    
       try {
         // 팔로우 관계 찾기
         const follow = await this.followRepository.findOne({
@@ -186,10 +187,23 @@ import {
         if (!follow) {
           throw new NotFoundException('팔로우 관계를 찾을 수 없습니다.');
         }
-  
+    
         // 팔로우 관계 삭제
         await this.followRepository.remove(follow);
-  
+    
+        // 관련된 팔로우 요청도 삭제 (ACCEPTED 상태의 요청)
+        const followRequest = await this.followRequestRepository.findOne({
+          where: {
+            requester: { idx: follower_idx },
+            requested: { idx: following_idx },
+            status: FollowRequestStatus.ACCEPTED,
+          },
+        });
+        
+        if (followRequest) {
+          await this.followRequestRepository.remove(followRequest);
+        }
+    
         // 카운트 감소
         await this.userRepository.decrement(
           { idx: follower_idx },
@@ -201,7 +215,7 @@ import {
           'follower_count',
           1,
         );
-  
+    
         await queryRunner.commitTransaction();
         return { message: '언팔로우했습니다.' };
       } catch (error) {
@@ -220,7 +234,7 @@ import {
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
       await queryRunner.startTransaction();
-  
+    
       try {
         // 팔로우 요청 찾기
         const request = await this.followRequestRepository.findOne({
@@ -230,22 +244,25 @@ import {
             status: FollowRequestStatus.PENDING,
           },
         });
-  
+    
         if (!request) {
           throw new NotFoundException('팔로우 요청을 찾을 수 없습니다.');
         }
-  
-        // 요청 상태를 수락으로 변경
-        request.status = FollowRequestStatus.ACCEPTED;
-        await this.followRequestRepository.save(request);
-  
+    
         // 팔로우 관계 생성
         const follow = this.followRepository.create({
           follower: { idx: requester_idx },
           following: { idx: requested_idx },
         });
         await this.followRepository.save(follow);
-  
+    
+        // 옵션 1: 요청 레코드 삭제 (권장)
+        await this.followRequestRepository.remove(request);
+        
+        // 옵션 2: 상태만 변경하려면 아래 코드 사용 (위의 remove 대신)
+        // request.status = FollowRequestStatus.ACCEPTED;
+        // await this.followRequestRepository.save(request);
+    
         // 카운트 업데이트
         await this.userRepository.increment(
           { idx: requester_idx },
@@ -257,7 +274,7 @@ import {
           'follower_count',
           1,
         );
-  
+    
         // 캐시에 수락 알림 메시지 저장
         await (this.cacheManager as any).set(
           `follow_accept_notification:${requester_idx}`,
@@ -269,7 +286,7 @@ import {
           },
           {ttl : 3600}, // 1시간 TTL
         );
-  
+    
         await queryRunner.commitTransaction();
         return { message: '팔로우 요청을 수락했습니다.' };
       } catch (error) {
