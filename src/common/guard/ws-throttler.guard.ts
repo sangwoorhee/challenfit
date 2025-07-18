@@ -29,10 +29,10 @@ export class WsThrottlerGuard {
       });
     }
     
-    await this.cacheManager.set(
+    await (this.cacheManager as any).set(
       key,
       current + 1,
-      this.WINDOW_SIZE,
+      {ttl : this.WINDOW_SIZE},
     );
     
     return true;

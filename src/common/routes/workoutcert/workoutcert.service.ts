@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between } from 'typeorm';
+import { Repository, DataSource, Between, In } from 'typeorm';
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
@@ -19,6 +19,7 @@ import { CertApproval } from 'src/common/entities/cert_approval.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PageResDto } from 'src/common/dto/res.dto';
+import { Follow } from 'src/common/entities/follow.entity';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -42,6 +43,8 @@ export class WorkoutcertService {
     private challengeRoomRepository: Repository<ChallengeRoom>,
     @InjectRepository(CertApproval)
     private certApprovalRepository: Repository<CertApproval>,
+    @InjectRepository(Follow)
+    private followRepository: Repository<Follow>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -109,14 +112,17 @@ export class WorkoutcertService {
 
       // challenge_participant를 직접 조회하고 관련 challenge도 함께 가져오기
       const participant = await this.participantRepository.findOne({
-        where: { 
+        where: {
           idx: dto.challenge_participant_idx,
           user: { idx: userIdx },
           status: ChallengerStatus.ONGOING,
         },
         relations: ['challenge'],
       });
-      if (!participant) throw new ForbiddenException('참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.');
+      if (!participant)
+        throw new ForbiddenException(
+          '참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.',
+        );
 
       const challengeRoom = participant.challenge;
       if (challengeRoom.status !== ChallengeStatus.ONGOING) {
@@ -220,6 +226,12 @@ export class WorkoutcertService {
       if (cert.user.idx !== user_idx)
         throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
 
+      // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
+      if (dto.image_url && cert.image_url !== dto.image_url) {
+        this.deleteImageFile(cert.image_url);
+        cert.image_url = dto.image_url;
+      }
+
       if (dto.caption) cert.caption = dto.caption;
       if (dto.is_rest !== undefined) cert.is_rest = dto.is_rest;
 
@@ -239,10 +251,10 @@ export class WorkoutcertService {
     const cert = await this.getWorkoutCertDetail(idx);
     if (cert.user.idx !== user_idx)
       throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
-    
+
     // 이미지 파일 삭제
     this.deleteImageFile(cert.image_url);
-    
+
     await this.workoutCertRepository.remove(cert);
   }
 
@@ -280,22 +292,103 @@ export class WorkoutcertService {
     };
   }
 
+  // 9. 모든 인증글을 최신순으로 조회
+  async getWorkoutCerts(): Promise<WorkoutCert[]> {
+    const certs = await this.workoutCertRepository.find({
+      order: { created_at: 'DESC' },
+      relations: ['user', 'user.profile'],
+    });
+
+    return certs;
+  }
+
+  // 10. 내가 팔로우하는 유저들의 인증글 조회 (페이지네이션)
+  async getFollowingUsersWorkoutCerts(
+    userIdx: string,
+    page: number,
+    size: number,
+  ): Promise<PageResDto<WorkoutCert>> {
+    // 현재 유저가 팔로우하는 유저들의 idx 목록을 먼저 조회
+    const followingRelations = await this.followRepository.find({
+      where: { follower: { idx: userIdx } },
+      relations: ['following'],
+      select: {
+        following: { idx: true },
+      },
+    });  
+  
+    // 팔로우하는 유저들의 idx 배열 생성
+    const followingUserIds = followingRelations.map(
+      (relation) => relation.following.idx,
+    );
+  
+    // 팔로우하는 유저가 없는 경우
+    if (followingUserIds.length === 0) {
+      return {
+        page,
+        size,
+        totalCount: 0,
+        items: [],
+      };
+    }
+  
+    // 팔로우하는 유저들의 인증글 조회
+    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
+      where: {
+        user: {
+          idx: In(followingUserIds),
+        },
+      },
+      order: { created_at: 'DESC' },
+      relations: [
+        'user',
+        'user.profile',
+        'challenge_participant',
+        'challenge_participant.challenge',
+        'cert_approval',
+        'likes',
+        'comments',
+      ],
+      skip: (page - 1) * size,
+      take: size,
+    });
+  
+    // 각 인증글에 대한 추가 정보 계산 (좋아요 수, 댓글 수 등)
+    const enrichedCerts = certs.map((cert) => ({
+      ...cert,
+      like_count: cert.likes?.length || 0,
+      comment_count: cert.comments?.length || 0,
+      is_liked: cert.likes?.some((like) => like.user?.idx === userIdx) || false,
+    }));
+  
+    return {
+      page,
+      size,
+      totalCount,
+      items: enrichedCerts,
+    };
+  }
+
   // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
   private deleteImageFile(imageUrl: string): void {
     try {
       if (imageUrl && imageUrl.startsWith('/uploads/workout-images/')) {
         const filename = imageUrl.split('/').pop();
         if (!filename) return;
-        const filePath = path.join(process.cwd(), 'uploads', 'workout-images', filename);
+        const filePath = path.join(
+          process.cwd(),
+          'uploads',
+          'workout-images',
+          filename,
+        );
 
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       }
-      }
-     catch (error) {
+    } catch (error) {
       console.error('이미지 파일 삭제 중 오류:', error);
       // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
-  }
+    }
   }
 }

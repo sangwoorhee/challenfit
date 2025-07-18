@@ -74,3 +74,11 @@ export enum DurationUnit {
   WEEK = 'week',
   MONTH = 'month',
 }
+
+// 팔로우 요청 상태
+export enum FollowRequestStatus {
+  PENDING = 'pending',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+  CANCELLED = 'cancelled',
+}
