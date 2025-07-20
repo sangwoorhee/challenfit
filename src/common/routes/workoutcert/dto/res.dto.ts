@@ -10,6 +10,9 @@ export class WorkoutCertWithStatsDto extends WorkoutCert {
 
   @ApiProperty({ description: '현재 유저의 좋아요 여부' })
   is_liked: boolean;
+
+  @ApiProperty({ description: '댓글 작성 여부', required: false })
+  is_commented?: boolean;
 }
 
 // 유저 통계 정보 DTO

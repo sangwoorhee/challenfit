@@ -39,6 +39,15 @@ export class GetChallengeRoomsResDto {
   @ApiProperty({ description: '결과' })
   result: string;
 
+  @ApiProperty({ description: '현재 페이지' })
+  page: number;
+
+  @ApiProperty({ description: '페이지 크기' })
+  size: number;
+
+  @ApiProperty({ description: '전체 아이템 수' })
+  totalCount: number;
+
   @ApiProperty({ description: '도전방 목록' })
   challengeRooms: ChallengeRoomFeedDto[];
 }
