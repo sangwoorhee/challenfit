@@ -102,24 +102,20 @@ export class ChallengeroomService {
   }
 
   // 2. 도전 방 목록조회
-  async getChallengeRooms(): Promise<GetChallengeRoomsResDto> {
-    const challengeRooms = await this.challengeRepository.find({
+  async getChallengeRooms(page: number, size: number): Promise<GetChallengeRoomsResDto> {
+    const [challengeRooms, totalCount] = await this.challengeRepository.findAndCount({
       where: { is_public: true },
-      select: [
-        'idx',
-        'title',
-        'status',
-        'duration_value',
-        'duration_unit',
-        'goal',
-        'current_participants',
-        'max_participants',
-      ],
+      relations: ['user', 'user.profile'],
       order: { created_at: 'DESC' },
+      skip: (page - 1) * size,
+      take: size,
     });
 
     return {
       result: 'ok',
+      page,
+      size,
+      totalCount,
       challengeRooms: challengeRooms.map((room) => ({
         roomId: room.idx,
         title: room.title,
@@ -129,6 +125,7 @@ export class ChallengeroomService {
         goal: room.goal,
         currentMemberCount: room.current_participants,
         maxMembers: room.max_participants,
+        creatorProfileImageUrl: room.user?.profile?.profile_image_url || null,
       })),
     };
   }
