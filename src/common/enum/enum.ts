@@ -70,9 +70,9 @@ export enum NotificationType {
 
 // 도전 기간 단위
 export enum DurationUnit {
-  DAY = 'day',
-  WEEK = 'week',
-  MONTH = 'month',
+  DAY = '일',
+  WEEK = '주',
+  MONTH = '개월',
 }
 
 // 팔로우 요청 상태

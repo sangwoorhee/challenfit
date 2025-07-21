@@ -2,6 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 
 // 페이지네이션 (전역모듈) 응답 DTO
 export class PageResDto<T> {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '현재 페이지 번호' })
   page: number;
 

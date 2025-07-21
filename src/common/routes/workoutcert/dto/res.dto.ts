@@ -29,6 +29,9 @@ export class UserStatsDto {
 
 // 유저 통계 정보를 포함한 페이지네이션 응답 DTO
 export class PageWithUserStatsResDto<T> {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '현재 페이지' })
   page: number;
 
@@ -43,4 +46,16 @@ export class PageWithUserStatsResDto<T> {
 
   @ApiProperty({ description: '유저 통계 정보', type: UserStatsDto })
   userStats: UserStatsDto;
+}
+
+// 운동 인증 생성/수정 응답 DTO
+export class WorkoutCertResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
+  @ApiProperty({ description: '운동 인증 정보' })
+  workoutCert: WorkoutCert;
+
+  @ApiProperty({ description: '선택된 도전 참가자 idx', required: false })
+  selected_challenge_participant_idx?: string;
 }
