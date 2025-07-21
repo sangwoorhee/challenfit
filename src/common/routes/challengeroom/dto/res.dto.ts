@@ -3,6 +3,9 @@ import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 import { ChallengeStatus } from 'src/common/enum/enum';
 
 export class CreateChallengeRoomResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty()
   idx: string;
 

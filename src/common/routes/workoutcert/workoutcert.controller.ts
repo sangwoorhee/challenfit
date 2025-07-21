@@ -32,7 +32,7 @@ import { Response } from 'express';
 import { ApiGetItemsResponse } from 'src/common/decorators/swagger.decorator';
 import { PageReqDto } from 'src/common/dto/req.dto';
 import { PageResDto } from 'src/common/dto/res.dto';
-import { PageWithUserStatsResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
+import { PageWithUserStatsResDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
@@ -64,14 +64,14 @@ export class WorkoutcertController {
   @ApiOperation({
     summary: '인증글 생성',
     description:
-      'POST : http://localhost:3000/workoutcert (multipart/form-data)',
+      'POST : http://localhost:3000/workoutcert (multipart/form-data)\n\n자동으로 진행 중인 도전을 찾아서 인증글을 생성합니다.',
   })
   @ApiConsumes('multipart/form-data')
   async createWorkoutCert(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
-  ): Promise<WorkoutCert> {
+  ): Promise<WorkoutCertResDto> {
     try {
       if (!file) {
         throw new BadRequestException('이미지 파일이 필요합니다.');
@@ -176,7 +176,7 @@ export class WorkoutcertController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UpdateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
-  ): Promise<WorkoutCert> {
+  ): Promise<WorkoutCertResDto> {
     const user_idx = user.idx;
     // 새로운 이미지가 업로드된 경우
     let updateData = { ...dto };
@@ -204,12 +204,13 @@ export class WorkoutcertController {
   async deleteWorkoutCert(
     @Param('idx') idx: string,
     @User() user: UserAfterAuth,
-  ): Promise<void> {
+  ): Promise<{ result: string }> {
     const cert = await this.workoutcertService.getWorkoutCertDetail(idx);
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
 
     const user_idx = user.idx;
     await this.workoutcertService.deleteWorkoutCert(idx, user_idx);
+    return { result: 'ok' };
   }
 
   // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
@@ -275,6 +276,7 @@ export class WorkoutcertController {
   // 11. 모든 인증글을 최신순으로 조회
   // GET : http://localhost:3000/workoutcert
   @Get()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '모든 인증글을 최신순으로 조회 (페이지네이션)',
     description: 'GET : http://localhost:3000/workoutcert?page=1&size=10\n\n로그인한 경우 is_liked 정보가 포함됩니다.',

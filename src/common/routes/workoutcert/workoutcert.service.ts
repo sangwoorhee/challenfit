@@ -20,7 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PageResDto } from 'src/common/dto/res.dto';
 import { Follow } from 'src/common/entities/follow.entity';
-import { PageWithUserStatsResDto, UserStatsDto, WorkoutCertWithStatsDto } from './dto/res.dto';
+import { PageWithUserStatsResDto, UserStatsDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -79,6 +79,7 @@ export class WorkoutcertService {
     const enrichedCerts = this.enrichWorkoutCerts(certs, userIdx);
 
     return {
+      result: 'ok',
       page,
       size,
       totalCount,
@@ -90,7 +91,7 @@ export class WorkoutcertService {
   async createWorkoutCert(
     userIdx: string,
     dto: CreateWorkoutCertWithImageDto,
-  ): Promise<WorkoutCert> {
+  ): Promise<WorkoutCertResDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -119,26 +120,37 @@ export class WorkoutcertService {
         throw new ForbiddenException('진행 중인 도전이 없습니다. 인증글을 생성할 수 없습니다.');
       }
 
-      // challenge_participant를 직접 조회하고 관련 challenge도 함께 가져오기
-      const participant = await this.participantRepository.findOne({
-        where: {
-          idx: dto.challenge_participant_idx,
-          user: { idx: userIdx },
-          status: ChallengerStatus.ONGOING,
-        },
-        relations: ['challenge'],
-      });
-      if (!participant)
-        throw new ForbiddenException(
-          '참가자 정보를 찾을 수 없거나 참가 중이 아닙니다.',
-        );
+      // 현재 날짜의 자정과 다음 날 자정 계산 (한국 시간 기준)
+      const now = new Date();
+      const todayMidnight = new Date(now);
+      todayMidnight.setHours(0, 0, 0, 0);
+      const nextDayMidnight = new Date(todayMidnight);
+      nextDayMidnight.setDate(todayMidnight.getDate() + 1);
 
-      const challengeRoom = participant.challenge;
-      if (challengeRoom.status !== ChallengeStatus.ONGOING) {
-        throw new NotFoundException('진행 중인 도전방이 아닙니다.');
+      // 오늘 인증글을 올리지 않은 도전 찾기
+      let selectedParticipant: ChallengeParticipant | null = null;
+      
+      for (const participant of ongoingChallenges) {
+        const existingCert = await this.workoutCertRepository.findOne({
+          where: {
+            challenge_participant: { idx: participant.idx },
+            created_at: Between(todayMidnight, nextDayMidnight),
+          },
+        });
+        
+        if (!existingCert) {
+          selectedParticipant = participant;
+          break;
+        }
       }
 
-      const now = new Date();
+      if (!selectedParticipant) {
+        throw new ConflictException(
+          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.',
+        );
+      }
+
+      const challengeRoom = selectedParticipant.challenge;
       const startDate = challengeRoom.start_date
         ? new Date(challengeRoom.start_date)
         : null;
@@ -152,27 +164,9 @@ export class WorkoutcertService {
         );
       }
 
-      // 현재 날짜의 자정과 다음 날 자정 계산 (한국 시간 기준)
-      const todayMidnight = new Date(now);
-      todayMidnight.setHours(0, 0, 0, 0);
-      const nextDayMidnight = new Date(todayMidnight);
-      nextDayMidnight.setDate(todayMidnight.getDate() + 1);
-
-      // 오늘 자정부터 다음 날 자정까지의 인증글 체크
-      const existingCert = await this.workoutCertRepository.findOne({
-        where: {
-          challenge_participant: { idx: participant.idx },
-          created_at: Between(todayMidnight, nextDayMidnight),
-        },
-      });
-      if (existingCert)
-        throw new ConflictException(
-          '오늘 자정 이후 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.',
-        );
-
       const workoutCert = this.workoutCertRepository.create({
         user,
-        challenge_participant: participant,
+        challenge_participant: selectedParticipant,
         image_url: dto.image_url,
         caption: dto.caption,
         is_rest: dto.is_rest,
@@ -182,7 +176,12 @@ export class WorkoutcertService {
 
       const savedCert = await this.workoutCertRepository.save(workoutCert);
       await queryRunner.commitTransaction();
-      return savedCert;
+      
+      return {
+        result: 'ok',
+        workoutCert: savedCert,
+        selected_challenge_participant_idx: selectedParticipant.idx,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -214,6 +213,7 @@ export class WorkoutcertService {
     // 팔로우하는 유저가 없는 경우
     if (followingUserIds.length === 0) {
       return {
+        result: 'ok',
         page,
         size,
         totalCount: 0,
@@ -248,6 +248,7 @@ export class WorkoutcertService {
     const enrichedCerts = this.enrichWorkoutCerts(certs, userIdx);
   
     return {
+      result: 'ok',
       page,
       size,
       totalCount,
@@ -290,6 +291,7 @@ export class WorkoutcertService {
     const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx);
 
     return {
+      result: 'ok',
       page,
       size,
       totalCount,
@@ -326,7 +328,7 @@ export class WorkoutcertService {
     idx: string,
     dto: UpdateWorkoutCertWithImageDto,
     user_idx: any,
-  ): Promise<WorkoutCert> {
+  ): Promise<WorkoutCertResDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -351,7 +353,11 @@ export class WorkoutcertService {
 
       const updatedCert = await this.workoutCertRepository.save(cert);
       await queryRunner.commitTransaction();
-      return updatedCert;
+      
+      return {
+        result: 'ok',
+        workoutCert: updatedCert,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -416,6 +422,7 @@ export class WorkoutcertService {
     const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx);
 
     return {
+      result: 'ok',
       page,
       size,
       totalCount,
@@ -465,6 +472,7 @@ export class WorkoutcertService {
     };
   
     return {
+      result: 'ok',
       page,
       size,
       totalCount,
@@ -498,6 +506,7 @@ export class WorkoutcertService {
     const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx);
 
     return {
+      result: 'ok',
       page,
       size,
       totalCount,
