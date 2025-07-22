@@ -54,6 +54,7 @@ export class ChatGateway
 
   private logger: Logger = new Logger('ChatGateway');
   private connectedClients: Map<string, { userIdx: string; rooms: Set<string> }> = new Map();
+  private isRedisAvailable = true;
 
   constructor(
     private readonly chatService: ChatService,
@@ -63,11 +64,21 @@ export class ChatGateway
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
     
-    // 서버 간 메시지 동기화를 위한 Redis 구독
-    this.redisPubSub.subscribe('chat:broadcast', async (data) => {
-      const { room, event, payload } = data;
-      this.server.to(room).emit(event, payload);
-    });
+    // 서버 간 메시지 동기화를 위한 Redis 구독 (Redis 사용 가능한 경우에만)
+    this.subscribeToRedis();
+  }
+
+  private async subscribeToRedis() {
+    try {
+      await this.redisPubSub.subscribe('chat:broadcast', async (data) => {
+        const { room, event, payload } = data;
+        this.server.to(room).emit(event, payload);
+      });
+      this.logger.log('Successfully subscribed to Redis pub/sub');
+    } catch (error) {
+      this.logger.warn('Redis pub/sub not available. Running in single-server mode.');
+      this.isRedisAvailable = false;
+    }
   }
 
   async handleConnection(client: Socket) {
@@ -163,15 +174,24 @@ export class ChatGateway
       client.emit('onlineUsers', onlineUsers);
       
       // 다른 서버의 클라이언트에게도 알림
-      await this.redisPubSub.publish('chat:broadcast', {
-        room: roomName,
-        event: 'userJoined',
-        payload: {
+      if (this.isRedisAvailable) {
+        await this.redisPubSub.publish('chat:broadcast', {
+          room: roomName,
+          event: 'userJoined',
+          payload: {
+            userIdx,
+            nickname: client.data.user.nickname,
+            timestamp: new Date(),
+          },
+        });
+      } else {
+        // Redis 없이 현재 서버의 클라이언트에게만 브로드캐스트
+        this.server.to(roomName).emit('userJoined', {
           userIdx,
           nickname: client.data.user.nickname,
           timestamp: new Date(),
-        },
-      });
+        });
+      }
       
       this.logger.log(`User ${userIdx} joined room ${challengeRoomIdx}`);
       
@@ -222,11 +242,16 @@ export class ChatGateway
       });
       
       // 모든 서버의 클라이언트에게 전송
-      await this.redisPubSub.publish('chat:broadcast', {
-        room: roomName,
-        event: 'newMessage',
-        payload: savedMessage,
-      });
+      if (this.isRedisAvailable) {
+        await this.redisPubSub.publish('chat:broadcast', {
+          room: roomName,
+          event: 'newMessage',
+          payload: savedMessage,
+        });
+      } else {
+        // Redis 없이 현재 서버의 클라이언트에게만 브로드캐스트
+        this.server.to(roomName).emit('newMessage', savedMessage);
+      }
       
       // 푸시 알림 발송 (비동기)
       this.chatService.sendPushNotifications(challengeRoomIdx, userIdx, message)

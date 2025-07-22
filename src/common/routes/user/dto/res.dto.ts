@@ -3,12 +3,18 @@ import { ApiProperty } from '@nestjs/swagger';
 import { UserProvider, UserStatus } from 'src/common/enum/enum';
 
 export class CommonResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '응답 메시지' })
   message: string;
 }
 
 // 마이프로필 조회 응답 DTO
 export class ProfileResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+  
   user: {
     idx: string;
     email: string;
