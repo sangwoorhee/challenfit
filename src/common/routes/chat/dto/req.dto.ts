@@ -1,4 +1,3 @@
-// src/common/routes/chat/dto/get-messages.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsNumber, IsString, IsDateString, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
