@@ -8,7 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptor/transform.interceptor'
 import { RedisIoAdapter } from './common/config/redis.adapter';
 import * as dotenv from 'dotenv';
@@ -17,12 +17,20 @@ import * as fs from 'fs';
 dotenv.config();
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
-    // Redis Adapter 설정 (WebSocket 수평 확장용)
-    // const redisIoAdapter = await RedisIoAdapter.create(app);
-    // app.useWebSocketAdapter(redisIoAdapter);
+    // Redis Adapter 설정 (WebSocket 수평 확장용) - 선택적 활성화
+  try {
+    const redisIoAdapter = await RedisIoAdapter.create(app);
+    app.useWebSocketAdapter(redisIoAdapter);
+    logger.log('Redis adapter successfully initialized');
+  } catch (error) {
+    logger.error('Failed to initialize Redis adapter. Running without Redis.', error.message);
+    logger.warn('WebSocket will work but without horizontal scaling support');
+    // Redis 없이도 WebSocket은 작동하지만 수평 확장은 불가능
+  }
 
     // uploads 폴더 생성 (이미지 업로드용)
     const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
@@ -100,11 +108,10 @@ async function bootstrap() {
 
   const PORT = configService.get<number>('PORT') ?? 3000;
   await app.listen(PORT);
-  console.log('DB_HOST:', configService.get<string>('DB_HOST'));
-  console.log('DB_USERNAME:', configService.get<string>('DB_USERNAME'));
-  console.log('DB_NAME:', configService.get<string>('DB_NAME'));
-  console.log(`POSTGRESQL_PORT: ${PORT} is running...`);
+  
+  logger.log(`Server running on port ${PORT}`);
+  logger.log(`DB Host: ${configService.get<string>('DB_HOST')}`);
+  logger.log(`Redis Host: ${configService.get<string>('REDIS_HOST')}`);
 }
 
 bootstrap();
-//first
