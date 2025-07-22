@@ -1,5 +1,5 @@
 // src/common/routes/chat/chat.service.ts
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, Not } from 'typeorm';
 import { ChatMessage } from 'src/common/entities/chat_message.entity';
@@ -47,6 +47,7 @@ export class ChatService {
   private readonly MESSAGE_CACHE_PREFIX = 'chat:messages:';
   private readonly USER_STATUS_PREFIX = 'user:status:';
   private readonly ROOM_PARTICIPANTS_PREFIX = 'room:participants:';
+  private readonly logger = new Logger('ChatService');
 
   constructor(
     @InjectRepository(ChatMessage)
@@ -79,7 +80,7 @@ export class ChatService {
   // 사용자 정보 조회 (캐싱)
   async getUserInfo(userIdx: string): Promise<any> {
     const cacheKey = `user:info:${userIdx}`;
-    let userInfo = await this.cacheManager.get(cacheKey);
+    let userInfo = await this.safeGetCache(cacheKey);
     
     if (!userInfo) {
       const user = await this.userRepository.findOne({
@@ -89,7 +90,7 @@ export class ChatService {
       
       if (user) {
         userInfo = user;
-        await (this.cacheManager as any).set(cacheKey, userInfo, {ttl : this.CACHE_TTL});
+        await this.safeSetCache(cacheKey, userInfo, this.CACHE_TTL);
       }
     }
     
@@ -101,12 +102,12 @@ export class ChatService {
     const key = `${this.USER_STATUS_PREFIX}${userIdx}`;
     
     if (status === 'online') {
-      await (this.cacheManager as any).set(key, {
+      await this.safeSetCache(key, {
         status,
         lastSeen: new Date(),
-      }, {ttl : this.CACHE_TTL});
+      }, this.CACHE_TTL);
     } else {
-      await this.cacheManager.del(key);
+      await this.safeDelCache(key);
     }
   }
 
@@ -116,7 +117,7 @@ export class ChatService {
     challengeRoomIdx: string,
   ): Promise<boolean> {
     const cacheKey = `${this.ROOM_PARTICIPANTS_PREFIX}${challengeRoomIdx}:${userIdx}`;
-    let isParticipant = await this.cacheManager.get<boolean>(cacheKey);
+    let isParticipant = await this.safeGetCache<boolean>(cacheKey);
     
     if (isParticipant === null || isParticipant === undefined) {
       const participant = await this.challengeParticipantRepository.findOne({
@@ -127,7 +128,7 @@ export class ChatService {
       });
       
       isParticipant = !!participant;
-      await (this.cacheManager as any).set(cacheKey, isParticipant, {ttl : this.CACHE_TTL});
+      await this.safeSetCache(cacheKey, isParticipant, this.CACHE_TTL);
     }
     
     return isParticipant;
@@ -382,5 +383,34 @@ export class ChatService {
         nickname: message.sender.nickname,
       },
     }));
+  }
+
+  // 안전한 캐시 get 메소드
+  private async safeGetCache<T>(key: string): Promise<T | null> {
+    try {
+      const result = await this.cacheManager.get<T>(key);
+      return result ?? null; // undefined일 때 null 반환
+    } catch (error) {
+      this.logger.warn(`Cache get failed for key ${key}:`, error.message);
+      return null;
+    }
+  }
+
+  // 안전한 캐시 set 메소드
+  private async safeSetCache(key: string, value: any, ttl?: number): Promise<void> {
+    try {
+      await (this.cacheManager as any).set(key, value, { ttl: ttl || this.CACHE_TTL });
+    } catch (error) {
+      this.logger.warn(`Cache set failed for key ${key}:`, error.message);
+    }
+  }
+
+  // 안전한 캐시 delete 메소드
+  private async safeDelCache(key: string): Promise<void> {
+    try {
+      await this.cacheManager.del(key);
+    } catch (error) {
+      this.logger.warn(`Cache delete failed for key ${key}:`, error.message);
+    }
   }
 }

@@ -16,7 +16,7 @@ import { CommentModule } from './common/routes/comment/comment.module';
 import { LikeModule } from './common/routes/like/like.module';
 import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.module';
 import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/workoutcertapproval.module';
-// import { ChatModule } from './common/routes/chat/chat.module';
+import { ChatModule } from './common/routes/chat/chat.module';
 import { FollowModule } from './common/routes/follow/follow.module';
 
 @Module({
@@ -93,7 +93,7 @@ import { FollowModule } from './common/routes/follow/follow.module';
     WorkoutcertModule,
     WorkoutcertapprovalModule,
     FollowModule,
-    // ChatModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
