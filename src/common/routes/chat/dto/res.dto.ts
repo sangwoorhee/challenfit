@@ -1,4 +1,3 @@
-// src/common/routes/chat/dto/chat-message-response.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 
 export class MessageSenderDto {
@@ -57,6 +56,9 @@ export class PaginationDto {
 }
 
 export class GetMessagesResponseDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ 
     description: '메시지 목록', 
     type: [ChatMessageDto] 

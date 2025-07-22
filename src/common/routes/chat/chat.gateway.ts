@@ -1,4 +1,3 @@
-// src/common/routes/chat/chat.gateway.ts
 import {
   WebSocketGateway,
   SubscribeMessage,

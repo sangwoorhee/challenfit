@@ -1,4 +1,3 @@
-// src/common/routes/chat/chat.controller.ts
 import {
     Controller,
     Get,
@@ -56,7 +55,7 @@ import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
       }
   
       // 채팅 내역 조회 (프로필 이미지 포함)
-      const result = await this.chatService.getChatHistoryWithProfile(
+      const chatHistory = await this.chatService.getChatHistoryWithProfile(
         challengeRoomIdx,
         query.page,
         query.limit,
@@ -64,8 +63,9 @@ import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
       );
   
       return {
-        messages: result.data,
-        pagination: result.pagination,
+        result: 'ok',
+        messages: chatHistory.data,
+        pagination: chatHistory.pagination,
         challengeRoomIdx,
       };
     }
@@ -110,6 +110,7 @@ import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
       );
   
       return {
+        result: 'ok',
         messages,
         challengeRoomIdx,
         exportDate: new Date(),
@@ -150,6 +151,7 @@ import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
       );
   
       return {
+        result: 'ok',
         onlineUsers,
         challengeRoomIdx,
         totalCount: onlineUsers.length,
