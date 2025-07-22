@@ -5,6 +5,7 @@ import { WorkoutcertapprovalService } from './workoutcertapproval.service';
 import { CreateCertApprovalReqDto } from './dto/req.dto';
 import { CertApproval } from 'src/common/entities/cert_approval.entity';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { CertApprovalResDto, CertApprovalsResDto } from './dto/res.dto';
 
 @ApiTags('운동 인증 승인')
 @Controller('workoutcertapproval')
@@ -24,8 +25,9 @@ export class WorkoutcertapprovalController {
   async createApproval(
     @Body() dto: CreateCertApprovalReqDto,
     @User() user: UserAfterAuth,
-  ): Promise<CertApproval> {
-    return await this.workoutcertapprovalService.createApproval(user.idx, dto);
+  ): Promise<CertApprovalResDto> {
+    const approval = await this.workoutcertapprovalService.createApproval(user.idx, dto);
+    return { result: 'ok', approval };
   }
 
   // 2. 인증 승인 목록 조회
@@ -38,9 +40,9 @@ export class WorkoutcertapprovalController {
   })
   async getApprovals(
     @Param('workout_cert_idx') workoutCertIdx: string,
-  ): Promise<CertApproval[]> {
+  ): Promise<CertApprovalsResDto> {
     const approvals = await this.workoutcertapprovalService.getApprovalsByCert(workoutCertIdx);
-    if (!approvals) throw new NotFoundException('인증 승인을 찾을 수 없습니다.');
-    return approvals;
+    if (!approvals || approvals.length === 0) throw new NotFoundException('인증 승인을 찾을 수 없습니다.');
+    return { result: 'ok', approvals };
   }
 }

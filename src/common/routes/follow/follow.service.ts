@@ -158,7 +158,7 @@ import {
         }
     
         await queryRunner.commitTransaction();
-        return { message };
+        return { result: 'ok', message };
       } catch (error) {
         await queryRunner.rollbackTransaction();
         throw error;
@@ -225,7 +225,7 @@ import {
         );
     
         await queryRunner.commitTransaction();
-        return { message: '언팔로우했습니다.' };
+        return { result: 'ok', message: '언팔로우했습니다.' };
       } catch (error) {
         await queryRunner.rollbackTransaction();
         throw error;
@@ -296,7 +296,7 @@ import {
         );
     
         await queryRunner.commitTransaction();
-        return { message: '팔로우 요청을 수락했습니다.' };
+        return { result: 'ok', message: '팔로우 요청을 수락했습니다.' };
       } catch (error) {
         await queryRunner.rollbackTransaction();
         throw error;
@@ -345,7 +345,7 @@ import {
         );
   
         await queryRunner.commitTransaction();
-        return { message: '팔로우 요청을 거절했습니다.' };
+        return { result: 'ok', message: '팔로우 요청을 거절했습니다.' };
       } catch (error) {
         await queryRunner.rollbackTransaction();
         throw error;
@@ -373,7 +373,7 @@ import {
     
       await this.followRequestRepository.remove(request);
     
-      return { message: '팔로우 요청을 취소했습니다.' };
+      return { result: 'ok', message: '팔로우 요청을 취소했습니다.' };
     }
 
     // 7. 내가 보낸 팔로우 요청 목록 조회
@@ -388,6 +388,7 @@ import {
       });
   
       return {
+        result: 'ok',
         requests: requests.map(req => ({
           idx: req.idx,
           user: {
@@ -414,6 +415,7 @@ import {
       });
   
       return {
+        result: 'ok',
         requests: requests.map(req => ({
           idx: req.idx,
           user: {
@@ -466,7 +468,7 @@ import {
         }),
       );
   
-      return { users, total };
+      return { result: 'ok', users, total };
     }
   
     // 10, 12. (특정유저, 나) 팔로워 목록 조회
@@ -507,7 +509,7 @@ import {
         }),
       );
   
-      return { users, total };
+      return { result: 'ok', users, total };
     }
   
     // 팔로우 여부 확인

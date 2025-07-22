@@ -11,7 +11,7 @@ import {
   UpdateUserProfileReqDto,
   ChangePasswordReqDto,
 } from './dto/req.dto';
-import { CommonResDto } from './dto/res.dto';
+import { CommonResDto, ProfileResDto } from './dto/res.dto';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -115,8 +115,9 @@ export class UserController {
 async getOtherUserProfile(
   @User() user: UserAfterAuth,
   @Param('user_idx') user_idx: string
-) {
-  return await this.userService.getUserProfile(user_idx, user.idx);
+): Promise<ProfileResDto> {
+  const profile = await this.userService.getUserProfile(user_idx, user.idx);
+  return { result: 'ok', ...profile };
 }
 
   // 6. 내 마이프로필 정보 조회
@@ -127,7 +128,8 @@ async getOtherUserProfile(
     summary: '본인의 마이프로필 정보 조회',
     description: 'GET : http://localhost:3000/user/profile',
   })
-  async getMyProfile(@User() user: UserAfterAuth) {
-    return await this.userService.getUserProfile(user.idx, user.idx);
+  async getMyProfile(@User() user: UserAfterAuth): Promise<ProfileResDto> {
+    const profile = await this.userService.getUserProfile(user.idx, user.idx);
+    return { result: 'ok', ...profile };
   }
 }

@@ -54,7 +54,7 @@ export class UserService {
       await this.settingRepository.save(setting);
 
       await queryRunner.commitTransaction();
-      return { message: '환경설정이 수정되었습니다.' };
+      return { result: 'ok', message: '환경설정이 수정되었습니다.' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(`error: ${error}`);
@@ -107,7 +107,7 @@ export class UserService {
       await this.profileRepository.save(user.profile);
 
       await queryRunner.commitTransaction();
-      return { message: '프로필이 수정되었습니다.' };
+      return { result: 'ok', message: '프로필이 수정되었습니다.' };
     } catch (error) {
       console.error(`error: ${error}`);
       await queryRunner.rollbackTransaction();
@@ -155,7 +155,7 @@ export class UserService {
       await this.userRepository.save(user);
       await queryRunner.commitTransaction(); // ✅ 커밋 필수
 
-      return { message: '비밀번호가 성공적으로 변경되었습니다.' };
+      return { result: 'ok', message: '비밀번호가 성공적으로 변경되었습니다.' };
     } catch (error) {
       console.error(`[비밀번호 변경 에러]: ${error}`);
       await queryRunner.rollbackTransaction();
@@ -189,7 +189,7 @@ export class UserService {
 
       await this.userRepository.remove(user);
       await queryRunner.commitTransaction();
-      return { message: '회원탈퇴가 완료되었습니다.' };
+      return { result: 'ok', message: '회원탈퇴가 완료되었습니다.' };
     } catch (error) {
       console.error(`error: ${error}`);
       await queryRunner.rollbackTransaction();

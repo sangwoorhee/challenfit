@@ -4,6 +4,9 @@ import { IsUUID } from 'class-validator';
 
 // Response DTOs
 export class FollowResDto {
+    @ApiProperty({ description: '결과' })
+    result: string;
+
     @ApiProperty({ description: '응답 메시지' })
     message: string;
   }
@@ -29,6 +32,9 @@ export class FollowResDto {
   }
   
   export class FollowListResDto {
+    @ApiProperty({ description: '결과' })
+    result: string;
+
     @ApiProperty({ description: '유저 목록', type: [UserFollowInfoDto] })
     users: UserFollowInfoDto[];
   
@@ -37,6 +43,9 @@ export class FollowResDto {
   }
   
   export class ProfileWithFollowDto {
+    @ApiProperty({ description: '결과' })
+    result: string;
+
     @ApiProperty({ description: '유저 정보' })
     user: {
       idx: string;

@@ -3,6 +3,9 @@ import { IsString, IsNumber, IsDate, IsOptional } from 'class-validator';
 
 // 좋아요 응답 DTO
 export class LikeResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '좋아요 ID', format: 'uuid' })
   @IsString()
   idx: string;
@@ -28,6 +31,9 @@ export class LikeResDto {
 
 // 좋아요 수 응답 DTO
 export class LikeCountResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
   @ApiProperty({ description: '좋아요 수' })
   @IsNumber()
   count: number;
