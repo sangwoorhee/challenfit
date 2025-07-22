@@ -11,10 +11,17 @@ import { ConfigService } from '@nestjs/config';
 import { RedisPubSubService } from 'src/common/services/redis-pubsub.service';
 import { WsJwtGuard } from 'src/common/guard/ws-jwt.guard';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
+import { UserProfile } from 'src/common/entities/user_profile.entity';
+import { ChatController } from './chat.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatMessage, ChallengeParticipant, User]),
+    TypeOrmModule.forFeature([
+      ChatMessage, 
+      ChallengeParticipant, 
+      User,
+      UserProfile,
+    ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -23,6 +30,7 @@ import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
       }),
     }),
   ],
+  controllers: [ChatController],
   providers: [
     ChatGateway,
     ChatService,
