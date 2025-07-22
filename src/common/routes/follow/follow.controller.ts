@@ -30,8 +30,8 @@ export class FollowController {
     description: 'POST : http://localhost:3000/follow',
   })
   async followUser(
-    @User() user: UserAfterAuth,
-    @Body() dto: FollowUserReqDto,
+    @User() user: UserAfterAuth, 
+    @Body() dto: FollowUserReqDto
   ): Promise<FollowResDto> {
     return await this.followService.followUser(user.idx, dto.target_user_idx);
   }
@@ -48,7 +48,7 @@ export class FollowController {
     @User() user: UserAfterAuth,
   ): Promise<FollowResDto> {
     await this.followService.clearFollowNotifications(user.idx);
-    return { message: '알림을 모두 삭제했습니다.' };
+    return { result: 'ok', message: '알림을 모두 삭제했습니다.' };
   }
 
   // 3. 언팔로우하기
@@ -122,7 +122,8 @@ export class FollowController {
   async getSentFollowRequests(
     @User() user: UserAfterAuth,
   ): Promise<any> {
-    return await this.followService.getSentFollowRequests(user.idx);
+    const result = await this.followService.getSentFollowRequests(user.idx);
+    return { result: 'ok', ...result };
   }
 
   // 8. 내가 받은 팔로우 요청 목록
@@ -136,7 +137,8 @@ export class FollowController {
   async getReceivedFollowRequests(
     @User() user: UserAfterAuth,
   ): Promise<any> {
-    return await this.followService.getReceivedFollowRequests(user.idx);
+    const result = await this.followService.getReceivedFollowRequests(user.idx);
+    return { result: 'ok', ...result };
   }
 
   // 9. 특정 유저의 팔로잉 목록 조회
@@ -207,7 +209,8 @@ export class FollowController {
   })
   async getFollowNotifications(
     @User() user: UserAfterAuth,
-  ): Promise<any[]> {
-    return await this.followService.getFollowNotifications(user.idx);
+  ): Promise<any> {
+    const notifications = await this.followService.getFollowNotifications(user.idx);
+    return { result: 'ok', notifications };
   }
 }

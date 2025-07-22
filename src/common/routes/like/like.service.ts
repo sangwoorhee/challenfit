@@ -21,7 +21,7 @@ export class LikeService {
   ) {}
 
   // 1. 운동인증 좋아요 생성
-  async createWorkoutCertLike(userIdx: string, workoutCertIdx: string): Promise<Like> {
+  async createWorkoutCertLike(userIdx: string, workoutCertIdx: string): Promise<LikeResDto> {
     const user = await this.userRepository.findOne({ where: { idx: userIdx } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
@@ -38,7 +38,8 @@ export class LikeService {
       workout_cert: workoutCert,
     });
 
-    return await this.likeRepository.save(like);
+    const savedLike = await this.likeRepository.save(like);
+    return { result: 'ok', idx: savedLike.idx, created_at: savedLike.created_at, user_idx: userIdx, workout_cert_idx: workoutCertIdx };
   }
 
   // 2. 운동인증 좋아요 수 확인
@@ -50,16 +51,25 @@ export class LikeService {
   }
 
   // 3. 운동인증 좋아요 목록 확인 (누가 좋아요를 눌렀는지)
-  async getLikesByWorkoutCert(workoutCertIdx: string): Promise<Like[]> {
+  async getLikesByWorkoutCert(workoutCertIdx: string): Promise<LikeResDto[]> {
     const workoutCert = await this.workoutCertRepository.findOne({ where: { idx: workoutCertIdx } });
     if (!workoutCert) throw new NotFoundException('운동 인증을 찾을 수 없습니다.');
 
-    return await this.likeRepository.find({
+    const likes = await this.likeRepository.find({
       where: { workout_cert: { idx: workoutCertIdx } },
       relations: ['user'],
       order: { created_at: 'ASC' },
     });
+
+    return likes.map(like => ({
+      result: 'ok',
+      idx: like.idx,
+      created_at: like.created_at,
+      user_idx: like.user.idx,
+      workout_cert_idx: workoutCertIdx,
+    }));
   }
+
 
   // 4. 운동인증 좋아요 취소(삭제)
   async deleteWorkoutCertLike(workoutCertIdx: string, userIdx: string): Promise<void> {
@@ -91,6 +101,7 @@ export class LikeService {
 
     const savedLike = await this.likeRepository.save(like);
     return {
+      result: 'ok',
       idx: savedLike.idx,
       created_at: savedLike.created_at,
       user_idx: userIdx,
@@ -118,6 +129,7 @@ export class LikeService {
     });
 
     return likes.map((like) => ({
+      result: 'ok',
       idx: like.idx,
       created_at: like.created_at,
       user_idx: like.user.idx,

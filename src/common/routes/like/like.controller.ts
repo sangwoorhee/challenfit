@@ -23,7 +23,7 @@ export class LikeController {
   async createWorkoutCertLike(
     @Body() dto: CreateLikeReqDto,
     @User() user: UserAfterAuth,
-  ): Promise<Like> {
+  ): Promise<LikeResDto> {
     if (!dto.workout_cert_idx) throw new Error('workout_cert_idx 가 필요합니다.');
     return await this.likeService.createWorkoutCertLike(user.idx, dto.workout_cert_idx);
   }
@@ -36,8 +36,9 @@ export class LikeController {
     summary: '운동인증 좋아요 수 확인', 
     description: 'GET : http://localhost:3000/like/count/workoutcert/:workoutcert_idx' 
   })
-  async geteWorkoutCertLikeCount(@Param('workoutcert_idx') workoutCertIdx: string): Promise<number> {
-    return await this.likeService.geteWorkoutCertLikeCount(workoutCertIdx);
+  async geteWorkoutCertLikeCount(@Param('workoutcert_idx') workoutCertIdx: string): Promise<LikeCountResDto> {
+    const count = await this.likeService.geteWorkoutCertLikeCount(workoutCertIdx);
+    return { result: 'ok', count };
   }
 
   // 3. 운동인증 좋아요 목록 확인 (누가 좋아요를 눌렀는지)
@@ -48,7 +49,7 @@ export class LikeController {
     summary: '운동인증 좋아요 목록 확인 (누가 좋아요를 눌렀는지)', 
     description: 'GET : http://localhost:3000/like/list/workoutcert/:workoutcert_idx' 
   })
-  async getLikesByWorkoutCert(@Param('workoutcert_idx') workoutCertIdx: string): Promise<Like[]> {
+  async getLikesByWorkoutCert(@Param('workoutcert_idx') workoutCertIdx: string): Promise<LikeResDto[]> {
     return await this.likeService.getLikesByWorkoutCert(workoutCertIdx);
   }
 
@@ -60,10 +61,11 @@ export class LikeController {
     summary: '운동인증 좋아요 취소(삭제)', 
     description: 'DELETE : http://localhost:3000/like/workoutcert/:workoutcert_idx' 
   })
-  async deleteWorkoutCertLike(@Param('workoutcert_idx') workoutCertIdx: string, @User() user: UserAfterAuth): Promise<void> {
+  async deleteWorkoutCertLike(@Param('workoutcert_idx') workoutCertIdx: string, @User() user: UserAfterAuth): Promise<{ result: string }> {
     await this.likeService.deleteWorkoutCertLike(workoutCertIdx, user.idx);
+    return { result: 'ok' };
   }
-
+  
   // 5. 댓글 좋아요 생성
   // POST : http://localhost:3000/like/comment
   @Post('comment')
@@ -90,7 +92,7 @@ export class LikeController {
     })
   async getCommentLikeCount(@Param('comment_idx') commentIdx: string): Promise<LikeCountResDto> {
     const count = await this.likeService.getCommentLikeCount(commentIdx);
-    return { count };
+    return { result: 'ok', count };
   }
 
   // 7. 댓글 좋아요 목록 확인 (누가 좋아요를 눌렀는지)
@@ -113,7 +115,8 @@ export class LikeController {
       summary: '댓글 좋아요 취소(삭제)', 
       description: 'DELETE : http://localhost:3000/like/comment/:comment_idx' 
     })
-  async deleteCommentLike(@Param('comment_idx') commentIdx: string, @User() user: UserAfterAuth): Promise<void> {
+  async deleteCommentLike(@Param('comment_idx') commentIdx: string, @User() user: UserAfterAuth): Promise<{ result: string }> {
     await this.likeService.deleteCommentLike(commentIdx, user.idx);
+    return { result: 'ok' };
   }
 }
