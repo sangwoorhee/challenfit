@@ -1,4 +1,3 @@
-// src/common/routes/chat/chat.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatGateway } from './chat.gateway';

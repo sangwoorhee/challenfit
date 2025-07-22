@@ -1,4 +1,3 @@
-// src/common/routes/chat/chat.service.ts
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, Not } from 'typeorm';
