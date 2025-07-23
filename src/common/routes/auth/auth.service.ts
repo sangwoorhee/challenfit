@@ -241,7 +241,7 @@ export class AuthService {
     return { result: 'ok', accessToken, refreshToken, user };
   }
 
-  // 4. OAuth 소셜 로그인 처리 (카카오, 네이버, 구글, 애플)
+  // 5,6,7,8. OAuth 소셜 로그인 처리 (카카오, 네이버, 구글, 애플)
   async oauthLogin(oauthUser: any): Promise<AuthTokenResDto> {
     // provider 값 검증 및 enum 캐스팅
     const rawProvider = oauthUser.provider as string;
@@ -304,15 +304,84 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  // 9. 토큰 갱신 - Refresh Token을 사용해 새로운 Access Token 발급
+  async refreshTokens(refreshToken: string): Promise<AuthTokenResDto> {
+    try {
+      // 리프레시 토큰 검증
+      const decoded = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get('JWT_SECRET'),
+      });
+
+      // 토큰 타입 확인
+      if (decoded.tokenType !== 'refresh') {
+        throw new HttpException(
+          '유효하지 않은 토큰 타입입니다.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      // DB에서 리프레시 토큰 확인
+      const refreshTokenEntity = await this.refreshTokenRepository.findOne({
+        where: { user: { idx: decoded.sub }, token: refreshToken },
+        relations: ['user'],
+      });
+
+      if (!refreshTokenEntity) {
+        throw new HttpException(
+          '유효하지 않은 리프레시 토큰입니다.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      // 사용자 상태 확인
+      if (refreshTokenEntity.user.status !== UserStatus.ACTIVE) {
+        throw new ForbiddenException('비활성화된 사용자입니다.');
+      }
+
+      // 새로운 토큰 발급
+      const newAccessToken = this.generateAccessToken(refreshTokenEntity.user.idx);
+      const newRefreshToken = this.generateRefreshToken(refreshTokenEntity.user.idx);
+
+      // 리프레시 토큰 업데이트
+      await this.createRefreshTokenUsingUser(refreshTokenEntity.user.idx, newRefreshToken);
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new HttpException(
+          '리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      throw new HttpException(
+        '토큰 갱신에 실패했습니다.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+  }
+
+  // 10. 로그아웃 - Refresh Token 삭제
+  async logout(userId: string): Promise<{ message: string }> {
+    try {
+      await this.refreshTokenRepository.delete({ user: { idx: userId } });
+      return { message: '로그아웃되었습니다.' };
+    } catch (error) {
+      throw new InternalServerErrorException('로그아웃 처리 중 오류가 발생했습니다.');
+    }
+  }
+
   // ------------------------------ 공용 모듈 ------------------------------
   // *** 액세스 토큰 생성 ***
-  private generateAccessToken(user_idx: string) {
+  generateAccessToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'access' };
     return this.jwtService.sign(payload); // JwtModule에서 secret, expiresIn 설정됨
   }
 
   // *** 리프레시 토큰 생성 ***
-  private generateRefreshToken(user_idx: string) {
+  generateRefreshToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'refresh' };
     return this.jwtService.sign(payload, { expiresIn: '30d' }); // 기간만 명시
   }
