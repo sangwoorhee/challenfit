@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -18,6 +18,10 @@ import { WorkoutcertModule } from './common/routes/workoutcert/workoutcert.modul
 import { WorkoutcertapprovalModule } from './common/routes/workoutcertapproval/workoutcertapproval.module';
 import { ChatModule } from './common/routes/chat/chat.module';
 import { FollowModule } from './common/routes/follow/follow.module';
+import { HealthModule } from './common/routes/health/health.module';
+import { JwtMiddleware } from './common/middleware/jwt.middleware';
+import { User } from './common/entities/user.entity';
+import { RefreshToken } from './common/entities/refresh_token.entity';
 
 @Module({
   imports: [
@@ -83,6 +87,8 @@ import { FollowModule } from './common/routes/follow/follow.module';
         synchronize: true, // 프로덕션에선 false
       }),
     }),
+    // TypeORM 연결 설정
+    TypeOrmModule.forFeature([User, RefreshToken]),
     // 모듈 임포트
     AuthModule,
     UserModule,
@@ -94,8 +100,17 @@ import { FollowModule } from './common/routes/follow/follow.module';
     WorkoutcertapprovalModule,
     FollowModule,
     ChatModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // JWT 미들웨어를 모든 경로에 적용
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes('*');
+  }
+}

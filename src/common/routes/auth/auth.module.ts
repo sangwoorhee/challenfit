@@ -14,6 +14,7 @@ import { KakaoStrategy } from './social-login/kakao.strategy';
 import { NaverStrategy } from './social-login/naver.strategy';
 import { GoogleStrategy } from './social-login/google.strategy';
 import { AppleStrategy } from './social-login/apple.strategy';
+import { JwtRefreshInterceptor } from 'src/common/interceptor/jwt-refresh.interceptor';
 
 @Module({
   imports: [
@@ -38,7 +39,8 @@ import { AppleStrategy } from './social-login/apple.strategy';
     NaverStrategy,
     GoogleStrategy,
     AppleStrategy,
+    JwtRefreshInterceptor,
   ],
-  exports: [AuthService],
+  exports: [TypeOrmModule, AuthService, JwtModule, JwtRefreshInterceptor],
 })
 export class AuthModule {}
