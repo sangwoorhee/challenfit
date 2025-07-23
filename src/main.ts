@@ -14,6 +14,7 @@ import { RedisIoAdapter } from './common/config/redis.adapter';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
 import * as fs from 'fs';
+import { TokenResponseInterceptor } from './common/interceptor/token-response.interceptor';
 dotenv.config();
 
 async function bootstrap() {
@@ -105,8 +106,11 @@ async function bootstrap() {
   // 전역 유효성 검사 파이프 추가
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  // 페이지네이션을 위한 TransformInterceptor 전역 적용
-  app.useGlobalInterceptors(new TransformInterceptor());
+  // TransformInterceptor, TokenResponseInterceptor 전역 적용
+  app.useGlobalInterceptors(
+    new TransformInterceptor(),
+    new TokenResponseInterceptor(),
+  );
 
   const PORT = configService.get<number>('PORT') ?? 3000;
   await app.listen(PORT);

@@ -1,10 +1,12 @@
-import { Controller, Post, Body, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Query, UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginReqDto, SignupReqDto, VerifySmsCodeReqDto } from './dto/req.dto';
 import { AuthTokenResDto } from './dto/res.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
-import { User } from 'src/common/decorators/user.decorator';
+import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
+import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
+import { JwtRefreshInterceptor } from 'src/common/interceptor/jwt-refresh.interceptor';
 
 @ApiTags('인증/인가')
 @Controller('auth')
@@ -80,6 +82,7 @@ export class AuthController {
     // Passport가 자동으로 처리
   }
 
+  // 카카오 로그인 콜백
   @Get('kakao/callback')
   @UseGuards(AuthGuard('kakao'))
   @ApiOperation({
@@ -103,6 +106,7 @@ export class AuthController {
     // Passport가 자동으로 처리
   }
 
+  // 네이버 로그인 콜백
   @Get('naver/callback')
   @UseGuards(AuthGuard('naver'))
   @ApiOperation({
@@ -126,6 +130,7 @@ export class AuthController {
     // Passport가 자동으로 처리
   }
 
+  // 구글 로그인 콜백
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({
@@ -149,6 +154,7 @@ export class AuthController {
     // Passport가 자동으로 처리
   }
 
+  // 애플 로그인 콜백
   @Get('apple/callback')
   @UseGuards(AuthGuard('apple'))
   @ApiOperation({
@@ -157,5 +163,30 @@ export class AuthController {
   })
   async appleCallback(@User() user) {
     return await this.authService.oauthLogin(user);
+  }
+
+  // 9. 토큰 갱신
+  // POST : http://localhost:3000/auth/refresh
+  @Post('refresh')
+  @ApiOperation({
+    summary: '토큰 갱신',
+    description: 'POST : http://localhost:3000/auth/refresh',
+  })
+  async refresh(@Body('refreshToken') refreshToken: string): Promise<AuthTokenResDto> {
+    return await this.authService.refreshTokens(refreshToken);
+  }
+
+  // 10. 로그아웃
+  // POST : http://localhost:3000/auth/logout
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(JwtRefreshInterceptor)
+  // @ApiBearerAuth()
+  @ApiOperation({
+    summary: '로그아웃 (리프레시 토큰 삭제)',
+    description: 'POST : http://localhost:3000/auth/logout',
+  })
+  async logout(@User() user: UserAfterAuth): Promise<{ message: string }> {
+    return await this.authService.logout(user.idx);
   }
 }
