@@ -1,14 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { HealthIndicatorResult, HealthCheckError, HealthIndicatorService } from '@nestjs/terminus';
+import { HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 
 @Injectable()
 export class HealthService {
-  constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private healthIndicatorService: HealthIndicatorService,
-  ) {}
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
 
   async checkRedis(key: string): Promise<HealthIndicatorResult> {
     const testKey = 'health_check_test';
@@ -38,6 +35,36 @@ export class HealthService {
     } catch (error) {
       throw new HealthCheckError(
         'Redis health check failed',
+        {
+          [key]: {
+            status: 'down',
+            message: error.message,
+          },
+        },
+      );
+    }
+  }
+
+  async checkSystem(key: string): Promise<HealthIndicatorResult> {
+    try {
+      const memoryUsage = process.memoryUsage();
+      const uptime = process.uptime();
+      
+      return {
+        [key]: {
+          status: 'up',
+          message: 'System is working properly',
+          uptime: `${Math.floor(uptime)}s`,
+          memory: {
+            rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+            heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+            heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+          },
+        },
+      };
+    } catch (error) {
+      throw new HealthCheckError(
+        'System health check failed',
         {
           [key]: {
             status: 'down',
