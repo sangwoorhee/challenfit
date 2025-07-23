@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { HealthCheck, HealthCheckService, TypeOrmHealthIndicator, MemoryHealthIndicator, DiskHealthIndicator } from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { HealthService } from './health.service';
 
 @ApiTags('헬스체크')
@@ -8,9 +8,6 @@ import { HealthService } from './health.service';
 export class HealthController {
   constructor(
     private health: HealthCheckService,
-    private db: TypeOrmHealthIndicator,
-    private memory: MemoryHealthIndicator,
-    private disk: DiskHealthIndicator,
     private healthService: HealthService,
   ) {}
 
@@ -24,23 +21,11 @@ export class HealthController {
   })
   check() {
     return this.health.check([
-      // Database 헬스체크
-      () => this.db.pingCheck('database'),
-      
       // Redis 헬스체크
       () => this.healthService.checkRedis('redis'),
       
-      // 메모리 헬스체크 (힙 메모리가 300MB 미만인지 확인)
-      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
-      
-      // 메모리 RSS 체크 (600MB 미만인지 확인)
-      () => this.memory.checkRSS('memory_rss', 600 * 1024 * 1024),
-      
-      // 디스크 사용량 체크 (사용률 90% 미만인지 확인)
-      () => this.disk.checkStorage('disk', { 
-        thresholdPercent: 0.9, 
-        path: '/' 
-      }),
+      // 시스템 상태 기본 체크
+      () => this.healthService.checkSystem('system'),
     ]);
   }
 
@@ -59,17 +44,17 @@ export class HealthController {
     };
   }
 
-  // 3. DB 연결 상태 확인
-  // GET : http://localhost:3000/health/db
-  @Get('db')
+  // 3. 시스템 상태 확인
+  // GET : http://localhost:3000/health/system
+  @Get('system')
   @HealthCheck()
   @ApiOperation({
-    summary: 'DB 연결 상태 확인',
-    description: 'PostgreSQL 데이터베이스 연결 상태를 확인합니다.',
+    summary: '시스템 상태 확인',
+    description: '서버 시스템 상태 (메모리, 업타임 등)를 확인합니다.',
   })
-  checkDatabase() {
+  checkSystemStatus() {
     return this.health.check([
-      () => this.db.pingCheck('database'),
+      () => this.healthService.checkSystem('system'),
     ]);
   }
 
