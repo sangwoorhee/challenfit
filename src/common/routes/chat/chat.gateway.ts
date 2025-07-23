@@ -218,6 +218,7 @@ export class ChatGateway
     const { challengeRoomIdx, message, userIdx, messageType, attachmentUrl } = data;
     const roomName = `room-${challengeRoomIdx}`;
     
+    this.logger.debug(`Received sendMessage event: ${JSON.stringify(data)}`);
     try {
       // 메시지 유효성 검사
       if (!message.trim() && messageType === 'text') {
@@ -245,6 +246,9 @@ export class ChatGateway
         messageType: messageType || 'text',
         attachmentUrl,
       });
+
+      // 저장된 메시지 로그 출력 (디버깅용)
+      this.logger.debug(`Message saved: ${JSON.stringify(savedMessage)}`);
       
       // 모든 서버의 클라이언트에게 전송
       if (this.isRedisAvailable) {

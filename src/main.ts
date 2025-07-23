@@ -18,7 +18,9 @@ dotenv.config();
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn', 'log', 'verbose', 'debug'],
+  });
   const configService = app.get(ConfigService);
 
     // Redis Adapter 설정 (WebSocket 수평 확장용) - 선택적 활성화

@@ -146,6 +146,7 @@ export class ChatService {
       attachment_url: attachmentUrl,
       sender: { idx: userIdx },
       challenge_room: { idx: challengeRoomIdx },
+      is_deleted: false,
     });
 
     const saved = await this.chatMessageRepository.save(chatMessage);
@@ -416,6 +417,7 @@ export class ChatService {
     }
   }
 
+  // 1. 도전방 채팅 메시지 조회
   // 채팅 내역 조회 (프로필 이미지 포함)
   async getChatHistoryWithProfile(
     challengeRoomIdx: string,
@@ -494,6 +496,7 @@ export class ChatService {
     return result;
   }
 
+  // 2. 도전방 채팅 메시지 내보내기
   // 대량 메시지 조회 (프로필 이미지 포함)
   async exportChatHistoryWithProfile(
     challengeRoomIdx: string,
@@ -533,6 +536,7 @@ export class ChatService {
     }));
   }
 
+  // 3. 도전방 온라인 사용자 조회
   // 도전방의 온라인 사용자 목록 조회 (프로필 이미지 포함)
   async getRoomOnlineUsersWithProfile(challengeRoomIdx: string): Promise<any[]> {
     const participants = await this.challengeParticipantRepository.find({
