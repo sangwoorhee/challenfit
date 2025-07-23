@@ -81,15 +81,19 @@ export class ChatGateway
   }
 
   async handleConnection(client: Socket) {
+    this.logger.debug(`Client attempting to connect: ${client.id}`);
     try {
-      const token = client.handshake.auth.token;
+      const token = client.handshake.headers.authorization?.replace('Bearer ', '') || client.handshake.auth?.token;
+      this.logger.debug(`Received token: ${token || 'none'}`);
       const userInfo = await this.chatService.validateToken(token);
-      
+      this.logger.debug(`User info: ${JSON.stringify(userInfo) || 'none'}`);
+  
       if (!userInfo) {
+        this.logger.error(`No user info, disconnecting client: ${client.id}`);
         client.disconnect();
         return;
       }
-
+  
       client.data.user = userInfo;
       this.connectedClients.set(client.id, { 
         userIdx: userInfo.idx, 
@@ -97,12 +101,9 @@ export class ChatGateway
       });
       
       this.logger.log(`Client connected: ${client.id}, User: ${userInfo.idx}`);
-      
-      // 연결 상태 업데이트
       await this.chatService.updateUserStatus(userInfo.idx, 'online');
-      
     } catch (error) {
-      this.logger.error(`Connection error: ${error.message}`);
+      this.logger.error(`Connection error for client ${client.id}: ${error.message}`);
       client.disconnect();
     }
   }
@@ -128,12 +129,16 @@ export class ChatGateway
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
+  // 1. 채팅방 (도전방)에 참가
   @UseGuards(WsJwtGuard, WsThrottlerGuard)
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: JoinRoomDto,
   ) {
+    console.log('joinRoom called:', data);
+    console.log('client.data.user:', client.data.user);
+    console.log('client.handshake.auth:', client.handshake.auth);
     const { challengeRoomIdx, userIdx } = data;
     const roomName = `room-${challengeRoomIdx}`;
     
@@ -203,6 +208,7 @@ export class ChatGateway
     }
   }
 
+  // 2. 메시지 전송
   @UseGuards(WsJwtGuard, WsThrottlerGuard)
   @SubscribeMessage('sendMessage')
   async handleMessage(
@@ -265,6 +271,7 @@ export class ChatGateway
     }
   }
 
+  // 3. 이전 메시지 로드
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('loadMoreMessages')
   async handleLoadMoreMessages(
@@ -295,6 +302,7 @@ export class ChatGateway
     }
   }
 
+  // 4. 메시지 삭제
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('deleteMessage')
   async handleDeleteMessage(
@@ -331,6 +339,7 @@ export class ChatGateway
     }
   }
 
+  // 5. 타이핑 상태 브로드캐스트
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('typing')
   async handleTyping(
@@ -348,6 +357,7 @@ export class ChatGateway
     });
   }
 
+  // 6. 채팅방 나가기
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
