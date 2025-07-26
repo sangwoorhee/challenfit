@@ -167,14 +167,14 @@ export class ChatGateway
       }
       
       // 채팅 내역 전송 (페이지네이션)
-      const messages = await this.chatService.getChatHistory(challengeRoomIdx, 1, 50);
+      const messages = await this.chatService.getChatHistoryWithProfile(challengeRoomIdx, 1, 50);
       client.emit('chatHistory', {
         messages: messages.data,
         pagination: messages.pagination,
       });
       
       // 현재 접속자 목록 전송
-      const onlineUsers = await this.chatService.getRoomOnlineUsers(challengeRoomIdx);
+      const onlineUsers = await this.chatService.getChatHistoryWithProfile(challengeRoomIdx);
       client.emit('onlineUsers', onlineUsers);
       
       // 다른 서버의 클라이언트에게도 알림
@@ -285,7 +285,7 @@ export class ChatGateway
     const { challengeRoomIdx, page = 1, limit = 50, beforeTimestamp } = data;
     
     try {
-      const messages = await this.chatService.getChatHistory(
+      const messages = await this.chatService.getChatHistoryWithProfile(
         challengeRoomIdx,
         page,
         limit,

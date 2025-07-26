@@ -136,6 +136,9 @@ export class ChatService {
     }
   }
 
+  // 메시지 캐시 무효화 - 모든 관련 캐시 삭제
+
+
   // 메시지 저장
   async saveMessage(dto: SaveMessageDto): Promise<any> {
     const { userIdx, challengeRoomIdx, message, messageType, attachmentUrl } = dto;
@@ -148,29 +151,32 @@ export class ChatService {
       challenge_room: { idx: challengeRoomIdx },
       is_deleted: false,
     });
-
+  
     const saved = await this.chatMessageRepository.save(chatMessage);
     
-    // 캐시 무효화
+    // 캐시 무효화 - 모든 관련 캐시 삭제
     await this.invalidateMessageCache(challengeRoomIdx);
     
-    // 발신자 정보 포함해서 반환
-    const messageWithSender = await this.chatMessageRepository.findOne({
-      where: { idx: saved.idx },
-      relations: ['sender'],
-      select: {
+    // 발신자 정보와 프로필 정보 포함해서 반환
+  const messageWithSender = await this.chatMessageRepository.findOne({
+    where: { idx: saved.idx },
+    relations: ['sender', 'sender.profile'],
+    select: {
+      idx: true,
+      message: true,
+      message_type: true,
+      attachment_url: true,
+      created_at: true,
+      is_deleted: true,
+      sender: {
         idx: true,
-        message: true,
-        message_type: true,
-        attachment_url: true,
-        created_at: true,
-        is_deleted: true,
-        sender: {
-          idx: true,
-          nickname: true,
+        nickname: true,
+        profile: {
+          profile_image_url: true,
         },
       },
-    });
+    },
+  });
     
     return messageWithSender;
   }
@@ -182,32 +188,39 @@ export class ChatService {
     limit: number = 50,
     beforeTimestamp?: string,
   ): Promise<PaginatedResponse<any>> {
-    const cacheKey = `${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:${page}:${limit}:${beforeTimestamp || 'latest'}`;
+    const cacheKey = `${this.MESSAGE_CACHE_PREFIX}profile:${challengeRoomIdx}:${page}:${limit}:${beforeTimestamp || 'latest'}`;
     
-    // 캐시 확인
-    const cached = await this.cacheManager.get<PaginatedResponse<any>>(cacheKey);
-    if (cached) {
-      return cached;
+    // 타입을 명시적으로 선언
+    let cached: PaginatedResponse<any> | null = null;
+    
+    // 첫 페이지는 캐시 확인 건너뛰고 항상 DB에서 조회
+    if (page > 1) {
+      cached = await this.safeGetCache<PaginatedResponse<any>>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
     
     // 쿼리 빌더
     const queryBuilder = this.chatMessageRepository
-      .createQueryBuilder('message')
-      .leftJoinAndSelect('message.sender', 'sender')
-      .where('message.challenge_room = :challengeRoomIdx', { challengeRoomIdx })
-      .andWhere('message.is_deleted = :isDeleted', { isDeleted: false })
-      .select([
-        'message.idx',
-        'message.message',
-        'message.message_type',
-        'message.attachment_url',
-        'message.created_at',
-        'sender.idx',
-        'sender.nickname',
-      ])
-      .orderBy('message.created_at', 'DESC')
-      .take(limit)
-      .skip((page - 1) * limit);
+    .createQueryBuilder('message')
+    .leftJoinAndSelect('message.sender', 'sender')
+    .leftJoinAndSelect('sender.profile', 'profile')
+    .where('message.challenge_room = :challengeRoomIdx', { challengeRoomIdx })
+    .andWhere('message.is_deleted = :isDeleted', { isDeleted: false })
+    .select([
+      'message.idx',
+      'message.message',
+      'message.message_type',
+      'message.attachment_url',
+      'message.created_at',
+      'sender.idx',
+      'sender.nickname',
+      'profile.profile_image_url',
+    ])
+    .orderBy('message.created_at', 'DESC')
+    .take(limit)
+    .skip((page - 1) * limit);
     
     // 특정 시간 이전 메시지만 조회
     if (beforeTimestamp) {
@@ -217,20 +230,34 @@ export class ChatService {
     }
     
     const [messages, total] = await queryBuilder.getManyAndCount();
-    
-    const result: PaginatedResponse<any> = {
-      data: messages.reverse(), // 시간순으로 정렬
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasMore: page * limit < total,
-      },
-    };
+  
+  const formattedMessages = messages.reverse().map(message => ({
+    idx: message.idx,
+    message: message.message,
+    messageType: message.message_type,
+    attachmentUrl: message.attachment_url,
+    isDeleted: false,
+    createdAt: message.created_at,
+    sender: {
+      idx: message.sender.idx,
+      nickname: message.sender.nickname,
+      profileImageUrl: message.sender.profile?.profile_image_url || null,
+    },
+  }));
+  
+  const result: PaginatedResponse<any> = {
+    data: formattedMessages,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page * limit < total,
+    },
+  };
     
     // 결과 캐싱 (최신 페이지는 짧은 TTL)
-    const ttl = page === 1 ? 60 : this.CACHE_TTL; // 첫 페이지는 1분
+    const ttl = page === 1 ? 10 : this.CACHE_TTL; // 첫 페이지는 10초
     await (this.cacheManager as any).set(cacheKey, result, {ttl : ttl});
     
     return result;
@@ -339,16 +366,32 @@ export class ChatService {
 
   // 메시지 캐시 무효화
   private async invalidateMessageCache(challengeRoomIdx: string): Promise<void> {
-    const pattern = `${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:*`;
-    // cache-manager v5에서는 keys 메서드가 없으므로 다른 방식 사용
-    // 실제로는 Redis 클라이언트를 직접 사용하거나 패턴 매칭을 지원하는 캐시 라이브러리 사용
     try {
-      // 간단한 구현: 페이지별로 캐시 삭제 (1-10 페이지)
-      for (let i = 1; i <= 10; i++) {
-        await this.cacheManager.del(`${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:${i}:50:latest`);
+      // 일반 채팅 캐시와 프로필 포함 캐시 모두 삭제
+      const prefixes = [
+        `${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:`,           // chat:messages:{roomIdx}:
+        `${this.MESSAGE_CACHE_PREFIX}profile:${challengeRoomIdx}:`    // chat:messages:profile:{roomIdx}:
+      ];
+
+      // 삭제할 캐시 키 로그
+    this.logger.debug(`Invalidating cache for patterns: ${prefixes.join(', ')}`);
+
+      // 각 프리픽스에 대해 페이지별로 캐시 삭제
+      for (const prefix of prefixes) {
+        // 페이지 1-20까지 삭제 (더 많은 페이지 고려)
+        for (let page = 1; page <= 20; page++) {
+          // 다양한 limit 값에 대해서도 삭제
+          for (const limit of [20, 50, 100]) {
+            const key = `${prefix}${page}:${limit}:latest`;
+            await this.safeDelCache(key);
+            this.logger.debug(`Deleted cache key: ${key}`);
+          }
+        }
       }
+
+      this.logger.debug(`Cache invalidated for room ${challengeRoomIdx}`);
     } catch (error) {
-      console.error('Cache invalidation error:', error);
+      this.logger.error('Cache invalidation error:', error);
     }
   }
 
@@ -427,10 +470,12 @@ export class ChatService {
   ): Promise<PaginatedResponse<any>> {
     const cacheKey = `${this.MESSAGE_CACHE_PREFIX}profile:${challengeRoomIdx}:${page}:${limit}:${beforeTimestamp || 'latest'}`;
     
-    // 캐시 확인
-    const cached = await this.safeGetCache<PaginatedResponse<any>>(cacheKey);
-    if (cached) {
-      return cached;
+    // 첫 페이지는 캐시 확인 건너뛰고 항상 DB에서 조회
+    if (page > 1) {
+      const cached = await this.safeGetCache<PaginatedResponse<any>>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
     
     // 쿼리 빌더
@@ -490,7 +535,7 @@ export class ChatService {
     };
     
     // 결과 캐싱 (최신 페이지는 짧은 TTL)
-    const ttl = page === 1 ? 60 : this.CACHE_TTL; // 첫 페이지는 1분
+    const ttl = page === 1 ? 10 : this.CACHE_TTL; // 첫 페이지는 10초
     await this.safeSetCache(cacheKey, result, ttl);
     
     return result;
