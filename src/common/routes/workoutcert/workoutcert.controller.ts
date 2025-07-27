@@ -32,7 +32,11 @@ import { Response } from 'express';
 import { ApiGetItemsResponse } from 'src/common/decorators/swagger.decorator';
 import { PageReqDto } from 'src/common/dto/req.dto';
 import { PageResDto } from 'src/common/dto/res.dto';
-import { PageWithUserStatsResDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
+import {
+  PageWithUserStatsResDto,
+  WorkoutCertResDto,
+  WorkoutCertWithStatsDto,
+} from './dto/res.dto';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
@@ -44,7 +48,8 @@ export class WorkoutcertController {
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-    summary: '내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회 (페이지네이션)',
+    summary:
+      '내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회 (페이지네이션)',
     description: 'GET : http://localhost:3000/workoutcert/my?page=1&size=10',
   })
   @ApiGetItemsResponse(WorkoutCertWithStatsDto)
@@ -52,8 +57,13 @@ export class WorkoutcertController {
     @User() user: UserAfterAuth,
     @Query() pageReqDto: PageReqDto,
   ): Promise<PageResDto<WorkoutCertWithStatsDto>> {
+    console.log('alsdkfqhrszkqmrszhkqmsrhzkqmsrhzkqms');
     const { page, size } = pageReqDto;
-    return await this.workoutcertService.getWorkoutCertsByUser(user.idx, page, size);
+    return await this.workoutcertService.getWorkoutCertsByUser(
+      user.idx,
+      page,
+      size,
+    );
   }
 
   // 2. 인증글 생성 (이미지 업로드 포함)
@@ -79,7 +89,6 @@ export class WorkoutcertController {
 
       // 파일 경로를 image_url로 설정
       const imageUrl = `/uploads/workout-images/${file.filename}`;
-
       return await this.workoutcertService.createWorkoutCert(user.idx, {
         ...dto,
         image_url: imageUrl,
@@ -107,7 +116,8 @@ export class WorkoutcertController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '내가 팔로우하는 유저들의 인증글 목록 조회 (페이지네이션)',
-    description: 'GET : http://localhost:3000/workoutcert/following?page=1&size=10',
+    description:
+      'GET : http://localhost:3000/workoutcert/following?page=1&size=10',
   })
   @ApiGetItemsResponse(WorkoutCertWithStatsDto)
   async getFollowingUsersWorkoutCerts(
@@ -219,7 +229,8 @@ export class WorkoutcertController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '특정 유저의 특정 도전에서의 운동 인증 목록 조회 (페이지네이션)',
-    description: 'GET : http://localhost:3000/workoutcert/user/:userIdx/challenge/:challengeParticipantIdx?page=1&size=10',
+    description:
+      'GET : http://localhost:3000/workoutcert/user/:userIdx/challenge/:challengeParticipantIdx?page=1&size=10',
   })
   @ApiGetItemsResponse(WorkoutCertWithStatsDto)
   async getWorkoutCertsByUserAndChallengeParticipant(
@@ -243,8 +254,10 @@ export class WorkoutcertController {
   @Get('user/:userIdx')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-    summary: '특정 유저의 모든 운동 인증 목록 조회 및 유저 통계 정보 (페이지네이션)',
-    description: 'GET : http://localhost:3000/workoutcert/user/:userIdx?page=1&size=10\n\n유저의 운동인증 게시글수, 팔로워수, 팔로잉수를 함께 반환합니다.',
+    summary:
+      '특정 유저의 모든 운동 인증 목록 조회 및 유저 통계 정보(페이지네이션)',
+    description:
+      'GET : http://localhost:3000/workoutcert/user/:userIdx?page=1&size=10\n\n유저의 운동인증 게시글수, 팔로워수, 팔로잉수를 함께 반환합니다.',
   })
   @ApiGetItemsResponse(WorkoutCertWithStatsDto)
   async getUserWorkoutCertsWithStats(
@@ -253,7 +266,12 @@ export class WorkoutcertController {
     @User() user: UserAfterAuth,
   ): Promise<PageWithUserStatsResDto<WorkoutCertWithStatsDto>> {
     const { page, size } = pageReqDto;
-    return await this.workoutcertService.getMyWorkoutCertsWithStats(userIdx, page, size, user.idx);
+    return await this.workoutcertService.getMyWorkoutCertsWithStats(
+      userIdx,
+      page,
+      size,
+      user.idx,
+    );
   }
 
   // 10. 내 모든 운동 인증 목록과 통계 정보 조회
@@ -261,8 +279,10 @@ export class WorkoutcertController {
   @Get('my/stats')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-    summary: '현재 로그인한 유저의 운동 인증 목록 및 통계 정보 조회 (페이지네이션)',
-    description: 'GET : http://localhost:3000/workoutcert/my/stats?page=1&size=10\n\n현재 로그인한 유저의 운동인증 게시글 수, 팔로워 수, 팔로잉 수를 함께 반환합니다.',
+    summary:
+      '현재 로그인한 유저의 운동 인증 목록 및 통계 정보 조회 (페이지네이션)',
+    description:
+      'GET : http://localhost:3000/workoutcert/my/stats?page=1&size=10\n\n현재 로그인한 유저의 운동인증 게시글 수, 팔로워 수, 팔로잉 수를 함께 반환합니다.',
   })
   @ApiGetItemsResponse(WorkoutCertWithStatsDto)
   async getMyWorkoutCertsWithStats(
@@ -270,7 +290,11 @@ export class WorkoutcertController {
     @Query() pageReqDto: PageReqDto,
   ): Promise<PageWithUserStatsResDto<WorkoutCertWithStatsDto>> {
     const { page, size } = pageReqDto;
-    return await this.workoutcertService.getMyWorkoutCertsWithStats(user.idx, page, size);
+    return await this.workoutcertService.getMyWorkoutCertsWithStats(
+      user.idx,
+      page,
+      size,
+    );
   }
 
   // 11. 모든 인증글을 최신순으로 조회
@@ -279,7 +303,8 @@ export class WorkoutcertController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '모든 인증글을 최신순으로 조회 (페이지네이션)',
-    description: 'GET : http://localhost:3000/workoutcert?page=1&size=10\n\n로그인한 경우 is_liked 정보가 포함됩니다.',
+    description:
+      'GET : http://localhost:3000/workoutcert?page=1&size=10\n\n로그인한 경우 is_liked 정보가 포함됩니다.',
   })
   @ApiGetItemsResponse(WorkoutCertWithStatsDto)
   async getWorkoutCerts(
@@ -289,7 +314,7 @@ export class WorkoutcertController {
     const { page, size } = pageReqDto;
     return await this.workoutcertService.getWorkoutCerts(page, size, user?.idx);
   }
-  
+
   // 이미지 파일 서빙
   @Get('image/:filename')
   @ApiOperation({
@@ -306,12 +331,12 @@ export class WorkoutcertController {
       'workout-images',
       filename,
     );
-  
+
     // 파일 존재 확인
     if (!fs.existsSync(imagePath)) {
       throw new NotFoundException('이미지를 찾을 수 없습니다.');
     }
-  
+
     res.sendFile(imagePath);
   }
 }

@@ -20,7 +20,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PageResDto } from 'src/common/dto/res.dto';
 import { Follow } from 'src/common/entities/follow.entity';
-import { PageWithUserStatsResDto, UserStatsDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
+import {
+  PageWithUserStatsResDto,
+  UserStatsDto,
+  WorkoutCertResDto,
+  WorkoutCertWithStatsDto,
+} from './dto/res.dto';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -113,11 +118,14 @@ export class WorkoutcertService {
 
       // 진행 중인 도전이 있는지 확인
       const ongoingChallenges = ongoingParticipants.filter(
-        (participant) => participant.challenge.status === ChallengeStatus.ONGOING,
+        (participant) =>
+          participant.challenge.status === ChallengeStatus.ONGOING,
       );
 
       if (ongoingChallenges.length === 0) {
-        throw new ForbiddenException('진행 중인 도전이 없습니다. 인증글을 생성할 수 없습니다.');
+        throw new ForbiddenException(
+          '진행 중인 도전이 없습니다. 인증글을 생성할 수 없습니다.',
+        );
       }
 
       // 현재 날짜의 자정과 다음 날 자정 계산 (한국 시간 기준)
@@ -129,7 +137,7 @@ export class WorkoutcertService {
 
       // 오늘 인증글을 올리지 않은 도전 찾기
       let selectedParticipant: ChallengeParticipant | null = null;
-      
+
       for (const participant of ongoingChallenges) {
         const existingCert = await this.workoutCertRepository.findOne({
           where: {
@@ -137,7 +145,7 @@ export class WorkoutcertService {
             created_at: Between(todayMidnight, nextDayMidnight),
           },
         });
-        
+
         if (!existingCert) {
           selectedParticipant = participant;
           break;
@@ -176,7 +184,7 @@ export class WorkoutcertService {
 
       const savedCert = await this.workoutCertRepository.save(workoutCert);
       await queryRunner.commitTransaction();
-      
+
       return {
         result: 'ok',
         workoutCert: savedCert,
@@ -203,13 +211,13 @@ export class WorkoutcertService {
       select: {
         following: { idx: true },
       },
-    });  
-  
+    });
+
     // 팔로우하는 유저들의 idx 배열 생성
     const followingUserIds = followingRelations.map(
       (relation) => relation.following.idx,
     );
-  
+
     // 팔로우하는 유저가 없는 경우
     if (followingUserIds.length === 0) {
       return {
@@ -220,7 +228,7 @@ export class WorkoutcertService {
         items: [],
       };
     }
-  
+
     // 팔로우하는 유저들의 인증글 조회
     const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
       where: {
@@ -243,10 +251,10 @@ export class WorkoutcertService {
       skip: (page - 1) * size,
       take: size,
     });
-  
+
     // 각 인증글에 대한 추가 정보 계산 (좋아요 수, 댓글 수 등)
     const enrichedCerts = this.enrichWorkoutCerts(certs, userIdx);
-  
+
     return {
       result: 'ok',
       page,
@@ -318,7 +326,7 @@ export class WorkoutcertService {
       ],
     });
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
-    
+
     const enrichedCerts = this.enrichWorkoutCerts([cert], currentUserIdx);
     return enrichedCerts[0];
   }
@@ -353,7 +361,7 @@ export class WorkoutcertService {
 
       const updatedCert = await this.workoutCertRepository.save(cert);
       await queryRunner.commitTransaction();
-      
+
       return {
         result: 'ok',
         workoutCert: updatedCert,
@@ -396,7 +404,8 @@ export class WorkoutcertService {
     const participant = await this.participantRepository.findOne({
       where: { idx: challengeParticipantIdx, user: { idx: userIdx } },
     });
-    if (!participant) throw new NotFoundException('참가자 정보를 찾을 수 없습니다.');
+    if (!participant)
+      throw new NotFoundException('참가자 정보를 찾을 수 없습니다.');
 
     const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
       where: {
@@ -439,7 +448,7 @@ export class WorkoutcertService {
   ): Promise<PageWithUserStatsResDto<WorkoutCertWithStatsDto>> {
     const user = await this.userRepository.findOne({ where: { idx: userIdx } });
     if (!user) throw new NotFoundException('유저를 찾을 수 없습니다.');
-  
+
     const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
       where: { user: { idx: userIdx } },
       order: { created_at: 'DESC' },
@@ -457,20 +466,23 @@ export class WorkoutcertService {
       skip: (page - 1) * size,
       take: size,
     });
-  
-    const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx || userIdx);
-  
+
+    const enrichedCerts = this.enrichWorkoutCerts(
+      certs,
+      currentUserIdx || userIdx,
+    );
+
     // 유저의 전체 운동인증 게시글 수 조회
     const workoutCertCount = await this.workoutCertRepository.count({
       where: { user: { idx: userIdx } },
     });
-  
+
     const userStats: UserStatsDto = {
       workout_cert_count: workoutCertCount,
       follower_count: user.follower_count,
       following_count: user.following_count,
     };
-  
+
     return {
       result: 'ok',
       page,
@@ -550,7 +562,9 @@ export class WorkoutcertService {
         ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
         : false,
       is_commented: currentUserIdx
-        ? cert.comments?.some((comment) => comment.user?.idx === currentUserIdx) || false
+        ? cert.comments?.some(
+            (comment) => comment.user?.idx === currentUserIdx,
+          ) || false
         : false,
     }));
   }

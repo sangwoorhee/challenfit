@@ -56,7 +56,7 @@ export class ChatService {
     private challengeParticipantRepository: Repository<ChallengeParticipant>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @Inject(CACHE_MANAGER) 
+    @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
     private jwtService: JwtService,
     private configService: ConfigService,
@@ -71,7 +71,7 @@ export class ChatService {
   ): Promise<boolean> {
     const cacheKey = `${this.ROOM_PARTICIPANTS_PREFIX}${challengeRoomIdx}:${userIdx}`;
     let isParticipant = await this.safeGetCache<boolean>(cacheKey);
-    
+
     if (isParticipant === null || isParticipant === undefined) {
       const participant = await this.challengeParticipantRepository.findOne({
         where: {
@@ -79,11 +79,11 @@ export class ChatService {
           challenge: { idx: challengeRoomIdx },
         },
       });
-      
+
       isParticipant = !!participant;
       await this.safeSetCache(cacheKey, isParticipant, this.CACHE_TTL);
     }
-    
+
     return isParticipant;
   }
 
@@ -93,7 +93,7 @@ export class ChatService {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
-      
+
       // 사용자 정보 캐싱
       const userInfo = await this.getUserInfo(payload.sub);
       return userInfo;
@@ -106,31 +106,38 @@ export class ChatService {
   async getUserInfo(userIdx: string): Promise<any> {
     const cacheKey = `user:info:${userIdx}`;
     let userInfo = await this.safeGetCache(cacheKey);
-    
+
     if (!userInfo) {
       const user = await this.userRepository.findOne({
         where: { idx: userIdx },
         select: ['idx', 'nickname', 'email'],
       });
-      
+
       if (user) {
         userInfo = user;
         await this.safeSetCache(cacheKey, userInfo, this.CACHE_TTL);
       }
     }
-    
+
     return userInfo;
   }
 
   // 사용자 온라인 상태 업데이트
-  async updateUserStatus(userIdx: string, status: 'online' | 'offline'): Promise<void> {
+  async updateUserStatus(
+    userIdx: string,
+    status: 'online' | 'offline',
+  ): Promise<void> {
     const key = `${this.USER_STATUS_PREFIX}${userIdx}`;
-    
+
     if (status === 'online') {
-      await this.safeSetCache(key, {
-        status,
-        lastSeen: new Date(),
-      }, this.CACHE_TTL);
+      await this.safeSetCache(
+        key,
+        {
+          status,
+          lastSeen: new Date(),
+        },
+        this.CACHE_TTL,
+      );
     } else {
       await this.safeDelCache(key);
     }
@@ -138,8 +145,8 @@ export class ChatService {
 
   // 메시지 저장
   async saveMessage(dto: SaveMessageDto): Promise<any> {
-    const { userIdx, challengeRoomIdx, message, messageType, attachmentUrl } = dto;
-    
+    const { userIdx, challengeRoomIdx, message, messageType, attachmentUrl } =
+      dto;
     const chatMessage = this.chatMessageRepository.create({
       message,
       message_type: messageType,
@@ -150,10 +157,10 @@ export class ChatService {
     });
 
     const saved = await this.chatMessageRepository.save(chatMessage);
-    
+
     // 캐시 무효화
     await this.invalidateMessageCache(challengeRoomIdx);
-    
+
     // 발신자 정보 포함해서 반환
     const messageWithSender = await this.chatMessageRepository.findOne({
       where: { idx: saved.idx },
@@ -171,7 +178,7 @@ export class ChatService {
         },
       },
     });
-    
+
     return messageWithSender;
   }
 
@@ -183,13 +190,14 @@ export class ChatService {
     beforeTimestamp?: string,
   ): Promise<PaginatedResponse<any>> {
     const cacheKey = `${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:${page}:${limit}:${beforeTimestamp || 'latest'}`;
-    
+
     // 캐시 확인
-    const cached = await this.cacheManager.get<PaginatedResponse<any>>(cacheKey);
+    const cached =
+      await this.cacheManager.get<PaginatedResponse<any>>(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     // 쿼리 빌더
     const queryBuilder = this.chatMessageRepository
       .createQueryBuilder('message')
@@ -208,16 +216,16 @@ export class ChatService {
       .orderBy('message.created_at', 'DESC')
       .take(limit)
       .skip((page - 1) * limit);
-    
+
     // 특정 시간 이전 메시지만 조회
     if (beforeTimestamp) {
       queryBuilder.andWhere('message.created_at < :beforeTimestamp', {
         beforeTimestamp: new Date(beforeTimestamp),
       });
     }
-    
+
     const [messages, total] = await queryBuilder.getManyAndCount();
-    
+
     const result: PaginatedResponse<any> = {
       data: messages.reverse(), // 시간순으로 정렬
       pagination: {
@@ -228,11 +236,11 @@ export class ChatService {
         hasMore: page * limit < total,
       },
     };
-    
+
     // 결과 캐싱 (최신 페이지는 짧은 TTL)
     const ttl = page === 1 ? 60 : this.CACHE_TTL; // 첫 페이지는 1분
-    await (this.cacheManager as any).set(cacheKey, result, {ttl : ttl});
-    
+    await (this.cacheManager as any).set(cacheKey, result, { ttl: ttl });
+
     return result;
   }
 
@@ -242,17 +250,17 @@ export class ChatService {
       where: { idx: messageIdx },
       relations: ['sender', 'challenge_room'],
     });
-    
+
     if (!message || message.sender.idx !== userIdx) {
       return null;
     }
-    
+
     message.is_deleted = true;
     await this.chatMessageRepository.save(message);
-    
+
     // 캐시 무효화
     await this.invalidateMessageCache(message.challenge_room.idx);
-    
+
     return message;
   }
 
@@ -268,13 +276,13 @@ export class ChatService {
         },
       },
     });
-    
+
     const onlineUsers: OnlineUser[] = [];
-    
+
     for (const participant of participants) {
       const statusKey = `${this.USER_STATUS_PREFIX}${participant.user.idx}`;
       const status = await this.cacheManager.get<UserStatus>(statusKey);
-      
+
       if (status) {
         onlineUsers.push({
           userIdx: participant.user.idx,
@@ -284,7 +292,7 @@ export class ChatService {
         });
       }
     }
-    
+
     return onlineUsers;
   }
 
@@ -297,19 +305,19 @@ export class ChatService {
     try {
       // 도전방 참가자 중 오프라인 사용자 조회
       const participants = await this.challengeParticipantRepository.find({
-        where: { 
+        where: {
           challenge: { idx: challengeRoomIdx },
           user: { idx: Not(senderIdx) }, // 발신자 제외
         },
         relations: ['user'],
       });
-      
+
       const sender = await this.getUserInfo(senderIdx);
-      
+
       for (const participant of participants) {
         const statusKey = `${this.USER_STATUS_PREFIX}${participant.user.idx}`;
         const status = await this.cacheManager.get(statusKey);
-        
+
         // 오프라인 사용자에게만 푸시 알림
         if (!status) {
           // 푸시 알림 큐에 추가 (실제 구현 시 FCM/APNs 사용)
@@ -338,14 +346,18 @@ export class ChatService {
   }
 
   // 메시지 캐시 무효화
-  private async invalidateMessageCache(challengeRoomIdx: string): Promise<void> {
+  private async invalidateMessageCache(
+    challengeRoomIdx: string,
+  ): Promise<void> {
     const pattern = `${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:*`;
     // cache-manager v5에서는 keys 메서드가 없으므로 다른 방식 사용
     // 실제로는 Redis 클라이언트를 직접 사용하거나 패턴 매칭을 지원하는 캐시 라이브러리 사용
     try {
       // 간단한 구현: 페이지별로 캐시 삭제 (1-10 페이지)
       for (let i = 1; i <= 10; i++) {
-        await this.cacheManager.del(`${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:${i}:50:latest`);
+        await this.cacheManager.del(
+          `${this.MESSAGE_CACHE_PREFIX}${challengeRoomIdx}:${i}:50:latest`,
+        );
       }
     } catch (error) {
       console.error('Cache invalidation error:', error);
@@ -364,18 +376,18 @@ export class ChatService {
       .where('message.challenge_room = :challengeRoomIdx', { challengeRoomIdx })
       .andWhere('message.is_deleted = :isDeleted', { isDeleted: false })
       .orderBy('message.created_at', 'ASC');
-    
+
     if (startDate) {
       queryBuilder.andWhere('message.created_at >= :startDate', { startDate });
     }
-    
+
     if (endDate) {
       queryBuilder.andWhere('message.created_at <= :endDate', { endDate });
     }
-    
+
     const messages = await queryBuilder.getMany();
-    
-    return messages.map(message => ({
+
+    return messages.map((message) => ({
       idx: message.idx,
       message: message.message,
       messageType: message.message_type,
@@ -400,9 +412,15 @@ export class ChatService {
   }
 
   // 안전한 캐시 set 메소드
-  private async safeSetCache(key: string, value: any, ttl?: number): Promise<void> {
+  private async safeSetCache(
+    key: string,
+    value: any,
+    ttl?: number,
+  ): Promise<void> {
     try {
-      await (this.cacheManager as any).set(key, value, { ttl: ttl || this.CACHE_TTL });
+      await (this.cacheManager as any).set(key, value, {
+        ttl: ttl || this.CACHE_TTL,
+      });
     } catch (error) {
       this.logger.warn(`Cache set failed for key ${key}:`, error.message);
     }
@@ -426,13 +444,13 @@ export class ChatService {
     beforeTimestamp?: string,
   ): Promise<PaginatedResponse<any>> {
     const cacheKey = `${this.MESSAGE_CACHE_PREFIX}profile:${challengeRoomIdx}:${page}:${limit}:${beforeTimestamp || 'latest'}`;
-    
+
     // 캐시 확인
     const cached = await this.safeGetCache<PaginatedResponse<any>>(cacheKey);
     if (cached) {
       return cached;
     }
-    
+
     // 쿼리 빌더
     const queryBuilder = this.chatMessageRepository
       .createQueryBuilder('message')
@@ -453,18 +471,18 @@ export class ChatService {
       .orderBy('message.created_at', 'DESC')
       .take(limit)
       .skip((page - 1) * limit);
-    
+
     // 특정 시간 이전 메시지만 조회
     if (beforeTimestamp) {
       queryBuilder.andWhere('message.created_at < :beforeTimestamp', {
         beforeTimestamp: new Date(beforeTimestamp),
       });
     }
-    
+
     const [messages, total] = await queryBuilder.getManyAndCount();
-    
+
     // 응답 형식 변환
-    const formattedMessages = messages.reverse().map(message => ({
+    const formattedMessages = messages.reverse().map((message) => ({
       idx: message.idx,
       message: message.message,
       messageType: message.message_type,
@@ -477,7 +495,7 @@ export class ChatService {
         profileImageUrl: message.sender.profile?.profile_image_url || null,
       },
     }));
-    
+
     const result: PaginatedResponse<any> = {
       data: formattedMessages,
       pagination: {
@@ -488,11 +506,11 @@ export class ChatService {
         hasMore: page * limit < total,
       },
     };
-    
+
     // 결과 캐싱 (최신 페이지는 짧은 TTL)
     const ttl = page === 1 ? 60 : this.CACHE_TTL; // 첫 페이지는 1분
     await this.safeSetCache(cacheKey, result, ttl);
-    
+
     return result;
   }
 
@@ -510,18 +528,18 @@ export class ChatService {
       .where('message.challenge_room = :challengeRoomIdx', { challengeRoomIdx })
       .andWhere('message.is_deleted = :isDeleted', { isDeleted: false })
       .orderBy('message.created_at', 'ASC');
-    
+
     if (startDate) {
       queryBuilder.andWhere('message.created_at >= :startDate', { startDate });
     }
-    
+
     if (endDate) {
       queryBuilder.andWhere('message.created_at <= :endDate', { endDate });
     }
-    
+
     const messages = await queryBuilder.getMany();
-    
-    return messages.map(message => ({
+
+    return messages.map((message) => ({
       idx: message.idx,
       message: message.message,
       messageType: message.message_type,
@@ -532,13 +550,15 @@ export class ChatService {
         idx: message.sender.idx,
         nickname: message.sender.nickname,
         profileImageUrl: message.sender.profile?.profile_image_url || null,
-        },
+      },
     }));
   }
 
   // 3. 도전방 온라인 사용자 조회
   // 도전방의 온라인 사용자 목록 조회 (프로필 이미지 포함)
-  async getRoomOnlineUsersWithProfile(challengeRoomIdx: string): Promise<any[]> {
+  async getRoomOnlineUsersWithProfile(
+    challengeRoomIdx: string,
+  ): Promise<any[]> {
     const participants = await this.challengeParticipantRepository.find({
       where: { challenge: { idx: challengeRoomIdx } },
       relations: ['user', 'user.profile'],
@@ -552,13 +572,13 @@ export class ChatService {
         },
       },
     });
-    
+
     const onlineUsers: any[] = [];
-    
+
     for (const participant of participants) {
       const statusKey = `${this.USER_STATUS_PREFIX}${participant.user.idx}`;
       const status = await this.safeGetCache<UserStatus>(statusKey);
-      
+
       if (status) {
         onlineUsers.push({
           userIdx: participant.user.idx,
@@ -569,7 +589,7 @@ export class ChatService {
         });
       }
     }
-    
+
     return onlineUsers;
   }
 }

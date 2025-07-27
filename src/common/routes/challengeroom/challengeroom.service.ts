@@ -21,7 +21,11 @@ import {
   JoinChallengeRoomReqDto,
   KickParticipantReqDto,
 } from './dto/req.dto';
-import { ChallengeRoomFeedDto, GetChallengeRoomDetailResDto, GetChallengeRoomsResDto } from './dto/res.dto';
+import {
+  ChallengeRoomFeedDto,
+  GetChallengeRoomDetailResDto,
+  GetChallengeRoomsResDto,
+} from './dto/res.dto';
 
 @Injectable()
 export class ChallengeroomService {
@@ -89,7 +93,7 @@ export class ChallengeroomService {
       await queryRunner.manager.save(participant);
 
       await queryRunner.commitTransaction();
-      return { result: 'ok' };
+      return { result: 'ok', roomId: savedRoom.idx };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error('도전방 생성 실패:', error);
@@ -102,14 +106,18 @@ export class ChallengeroomService {
   }
 
   // 2. 도전 방 목록조회
-  async getChallengeRooms(page: number, size: number): Promise<GetChallengeRoomsResDto> {
-    const [challengeRooms, totalCount] = await this.challengeRepository.findAndCount({
-      where: { is_public: true },
-      relations: ['user', 'user.profile'],
-      order: { created_at: 'DESC' },
-      skip: (page - 1) * size,
-      take: size,
-    });
+  async getChallengeRooms(
+    page: number,
+    size: number,
+  ): Promise<GetChallengeRoomsResDto> {
+    const [challengeRooms, totalCount] =
+      await this.challengeRepository.findAndCount({
+        where: { is_public: true },
+        relations: ['user', 'user.profile'],
+        order: { created_at: 'DESC' },
+        skip: (page - 1) * size,
+        take: size,
+      });
 
     return {
       result: 'ok',
@@ -131,7 +139,9 @@ export class ChallengeroomService {
   }
 
   /// 3. 도전 방 상세조회
-  async getChallengeRoomDetail(idx: string): Promise<GetChallengeRoomDetailResDto> {
+  async getChallengeRoomDetail(
+    idx: string,
+  ): Promise<GetChallengeRoomDetailResDto> {
     const challengeRoom = await this.challengeRepository.findOne({
       where: { idx },
       relations: [
@@ -149,3 +159,4 @@ export class ChallengeroomService {
     };
   }
 }
+//
