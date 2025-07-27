@@ -56,16 +56,24 @@ export class ChallengeroomService {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
-      // 도전방 중복 참여 방지
-      const existRoom = await queryRunner.manager.findOne(ChallengeRoom, {
-        where: { idx: user_idx },
-      });
+      // 도전방 중복 참여 방지 - 수정: 사용자가 이미 진행중인 도전이 있는지 확인
+      const existingParticipant = await queryRunner.manager.findOne(
+        ChallengeParticipant,
+        {
+          where: {
+            user: { idx: user_idx },
+            status: ChallengerStatus.ONGOING,
+          },
+          relations: ['challenge'],
+        },
+      );
 
       if (
-        existRoom?.status === ChallengeStatus.PENDING ||
-        existRoom?.status === ChallengeStatus.ONGOING
+        existingParticipant &&
+        (existingParticipant.challenge.status === ChallengeStatus.PENDING ||
+          existingParticipant.challenge.status === ChallengeStatus.ONGOING)
       ) {
-        throw new ConflictException('도전방은 중복 참여 할 수 없습니다.');
+        throw new ConflictException('이미 진행 중인 도전이 있습니다.');
       }
 
       const challengeRoom = this.challengeRepository.create({
@@ -81,11 +89,11 @@ export class ChallengeroomService {
       // 도전방 저장
       const savedRoom = await queryRunner.manager.save(challengeRoom);
 
-      // 생성자를 도전자 목록에 자동 추가
+      // 생성자를 도전자 목록에 추가 - 상태를 PENDING으로 변경
       const participant = this.participantRepository.create({
-        user, // User 엔티티 전체
-        challenge: savedRoom, // ChallengeRoom 엔티티
-        status: ChallengerStatus.ONGOING,
+        user,
+        challenge: savedRoom,
+        status: ChallengerStatus.PENDING, // ONGOING에서 PENDING으로 변경
         joined_at: new Date(),
         completed_at: null,
       });
@@ -93,7 +101,7 @@ export class ChallengeroomService {
       await queryRunner.manager.save(participant);
 
       await queryRunner.commitTransaction();
-      return { result: 'ok', roomId: savedRoom.idx };
+      return { result: 'ok', roomId: savedRoom.idx }; // roomId 추가
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error('도전방 생성 실패:', error);
