@@ -27,6 +27,33 @@ export class ChallengeparticipantService {
     private readonly dataSource: DataSource,
   ) {}
 
+  // 현재 진행 중인 도전 참가 정보 조회 (도전글 작성 시 사용)
+  async getActiveParticipation(userIdx: string): Promise<ChallengeParticipant | null> {
+    const activeParticipant = await this.participantRepository.findOne({
+      where: {
+        user: { idx: userIdx },
+        status: ChallengerStatus.ONGOING,
+      },
+      relations: ['challenge'],
+      order: {
+        joined_at: 'DESC',
+      },
+    });
+
+    // 추가 검증: 도전방이 실제로 진행 중인지 확인
+    if (activeParticipant && activeParticipant.challenge) {
+      const challengeRoom = await this.challengeRoomRepository.findOne({
+        where: { idx: activeParticipant.challenge.idx },
+      });
+
+      if (challengeRoom && challengeRoom.status === ChallengeStatus.ONGOING) {
+        return activeParticipant;
+      }
+    }
+
+    return null;
+  }
+
   // 2. 도전 참가
   async participateChallengeRoom(
     challengeRoomIdx: string,
@@ -52,13 +79,33 @@ export class ChallengeparticipantService {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
+      // 이미 참가한 도전방인지 확인
+      const existingParticipant = await queryRunner.manager.findOne(
+        ChallengeParticipant,
+        {
+          where: {
+            user: { idx: userIdx },
+            challenge: { idx: challengeRoomIdx },
+          },
+        },
+      );
+
+      if (existingParticipant) {
+        throw new ConflictException('이미 참가한 도전방입니다.');
+      }
+
       // 현재 참여자 수 증가
       challengeRoom.current_participants += 1;
+
+      // 도전방 상태에 따라 참가자 상태 결정
+      const participantStatus = challengeRoom.status === ChallengeStatus.ONGOING 
+        ? ChallengerStatus.ONGOING 
+        : ChallengerStatus.PENDING;
 
       const participant = this.participantRepository.create({
         user,
         challenge: challengeRoom,
-        status: ChallengerStatus.ONGOING,
+        status: participantStatus, // 도전방 상태에 따라 설정
         joined_at: new Date(),
         completed_at: null,
       });
@@ -86,7 +133,7 @@ export class ChallengeparticipantService {
         challengeRoom.start_date = now;
         challengeRoom.end_date = new Date(now.getTime() + days * 86400000);
 
-        // 해당 도전방의 모든 도전 상태를 PARTICIPATING으로 변경
+        // 해당 도전방의 모든 PENDING 참가자 상태를 ONGOING으로 변경
         await queryRunner.manager.update(
           ChallengeParticipant,
           {
@@ -152,18 +199,22 @@ export class ChallengeparticipantService {
         throw new NotFoundException('도전방에 입장하지 않았습니다.');
       }
 
-      if (existingParticipant.status !== ChallengerStatus.ONGOING) {
-        throw new ConflictException('취소할 수 있는 상태가 아닙니다.');
+      // PENDING 또는 ONGOING 상태에서만 취소 가능
+      if (existingParticipant.status === ChallengerStatus.COMPLETED) {
+        throw new ConflictException('완료된 도전은 취소할 수 없습니다.');
       }
 
-      // 참가 취소 시 상태 변경
-      existingParticipant.status = ChallengerStatus.PENDING;
-      existingParticipant.completed_at = null;
+      // 도전방이 이미 시작된 경우 취소 불가
+      if (challengeRoom.status === ChallengeStatus.ONGOING) {
+        throw new ConflictException('이미 시작된 도전은 취소할 수 없습니다.');
+      }
 
-      // current_participants 감소 (참가 취소 시)
+      // 참가 취소 - 참가자 삭제
+      await queryRunner.manager.remove(existingParticipant);
+
+      // current_participants 감소
       challengeRoom.current_participants -= 1;
 
-      await queryRunner.manager.save(existingParticipant);
       await queryRunner.manager.save(challengeRoom);
       await queryRunner.commitTransaction();
       return existingParticipant;
@@ -171,10 +222,11 @@ export class ChallengeparticipantService {
       await queryRunner.rollbackTransaction();
       console.error(`error: ${error}`);
       throw new InternalServerErrorException(
-        `도전 방 입장 실패: ${error.message}`,
+        `도전 방 참가 취소 실패: ${error.message}`,
       );
     } finally {
       await queryRunner.release();
     }
   }
 }
+

@@ -15,3 +15,15 @@ export class GetChallengeRoomsResDto {
     @ApiProperty({ description: '도전방 목록' })
     challengeRooms: ChallengeRoom[];
   }
+
+// 현재 진행 중인 도전 조회
+export class GetActiveParticipationResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
+  @ApiProperty({ description: '도전 참가자 ID', nullable: true })
+  challenge_participant_idx: string | null;
+
+  @ApiProperty({ description: '도전방 ID', nullable: true })
+  challenge_room_idx: string | null;
+}
