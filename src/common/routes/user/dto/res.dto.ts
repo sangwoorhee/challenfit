@@ -40,3 +40,17 @@ export class ProfileResDto {
   };
   is_following: boolean;
 }
+
+export class UserProfileWithFollowResDto {
+  @ApiProperty({ description: '결과' })
+  result: string;
+
+  @ApiProperty({ description: '유저 정보' })
+  user: any;
+
+  @ApiProperty({ description: '프로필 정보' })
+  profile: any;
+
+  @ApiProperty({ description: '현재 사용자의 팔로잉 여부' })
+  is_following: boolean;
+}

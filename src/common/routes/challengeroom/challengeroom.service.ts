@@ -5,7 +5,7 @@ import {
   DurationUnit,
 } from 'src/common/enum/enum';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
 import { User } from 'src/common/entities/user.entity';
@@ -50,6 +50,18 @@ export class ChallengeroomService {
       });
       if (!user) {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 도전방 생성 제한 (한 사람이 여러 개 만들 수 없도록)
+      const existingChallenge = await this.challengeRepository.findOne({
+        where: {
+          user: { idx: user_idx },
+          status: In([ChallengeStatus.PENDING, ChallengeStatus.ONGOING]),
+        },
+      });
+      
+      if (existingChallenge) {
+        throw new ConflictException('이미 진행 중이거나 대기 중인 도전방이 있습니다. 한 번에 하나의 도전방만 생성할 수 있습니다.');
       }
 
       // 도전방 중복 참여 방지 - 수정: 사용자가 이미 진행중인 도전이 있는지 확인

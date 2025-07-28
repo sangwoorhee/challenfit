@@ -20,7 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PageResDto } from 'src/common/dto/res.dto';
 import { Follow } from 'src/common/entities/follow.entity';
-import { PageWithUserStatsResDto, UserStatsDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
+import { PageWithUserStatsResDto, UserStatsDto, WorkoutCertDetailDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -76,7 +76,7 @@ export class WorkoutcertService {
       take: size,
     });
 
-    const enrichedCerts = this.enrichWorkoutCerts(certs, userIdx);
+    const enrichedCerts = await this.enrichWorkoutCerts(certs, userIdx);
 
     return {
       result: 'ok',
@@ -209,44 +209,36 @@ export class WorkoutcertService {
     const followingUserIds = followingRelations.map(
       (relation) => relation.following.idx,
     );
+
+    // 자신의 idx도 포함
+    followingUserIds.push(userIdx);
   
-    // 팔로우하는 유저가 없는 경우
-    if (followingUserIds.length === 0) {
-      return {
-        result: 'ok',
-        page,
-        size,
-        totalCount: 0,
-        items: [],
-      };
-    }
-  
-    // 팔로우하는 유저들의 인증글 조회
-    const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
-      where: {
-        user: {
-          idx: In(followingUserIds),
-        },
+    // 팔로우하는 유저가 없는 경우에도 자신의 인증글은 조회
+  const [certs, totalCount] = await this.workoutCertRepository.findAndCount({
+    where: {
+      user: {
+        idx: In(followingUserIds),
       },
-      order: { created_at: 'DESC' },
-      relations: [
-        'user',
-        'user.profile',
-        'challenge_participant',
-        'challenge_participant.challenge',
-        'cert_approval',
-        'likes',
-        'likes.user',
-        'comments',
-        'comments.user',
-      ],
-      skip: (page - 1) * size,
-      take: size,
-    });
-  
-    // 각 인증글에 대한 추가 정보 계산 (좋아요 수, 댓글 수 등)
-    const enrichedCerts = this.enrichWorkoutCerts(certs, userIdx);
-  
+    },
+    order: { created_at: 'DESC' },
+    relations: [
+      'user',
+      'user.profile',
+      'challenge_participant',
+      'challenge_participant.challenge',
+      'cert_approval',
+      'likes',
+      'likes.user',
+      'comments',
+      'comments.user',
+    ],
+    skip: (page - 1) * size,
+    take: size,
+  });
+
+  // 각 인증글에 대한 추가 정보 계산
+  const enrichedCerts = await this.enrichWorkoutCerts(certs, userIdx);
+
     return {
       result: 'ok',
       page,
@@ -288,7 +280,7 @@ export class WorkoutcertService {
       take: size,
     });
 
-    const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx);
+    const enrichedCerts = await this.enrichWorkoutCerts(certs, currentUserIdx);
 
     return {
       result: 'ok',
@@ -303,13 +295,14 @@ export class WorkoutcertService {
   async getWorkoutCertDetail(
     idx: string,
     currentUserIdx?: string,
-  ): Promise<WorkoutCertWithStatsDto> {
+  ): Promise<WorkoutCertDetailDto> {
     const cert = await this.workoutCertRepository.findOne({
       where: { idx },
       relations: [
         'user',
         'user.profile',
         'challenge_participant',
+        'challenge_participant.challenge',
         'cert_approval',
         'likes',
         'likes.user',
@@ -317,10 +310,38 @@ export class WorkoutcertService {
         'comments.user',
       ],
     });
+    
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
     
-    const enrichedCerts = this.enrichWorkoutCerts([cert], currentUserIdx);
-    return enrichedCerts[0];
+    // 단일 조회용 DTO 형식으로 변환
+    const detailDto: WorkoutCertDetailDto = {
+      idx: cert.idx,
+      image_url: cert.image_url,
+      caption: cert.caption,
+      is_rest: cert.is_rest,
+      target_approval_count: cert.target_approval_count,
+      is_completed: cert.is_completed,
+      created_at: cert.created_at,
+      like_count: cert.likes?.length || 0,
+      comment_count: cert.comments?.length || 0,
+      is_liked: currentUserIdx
+        ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
+        : false,
+      is_commented: currentUserIdx
+        ? cert.comments?.some((comment) => comment.user?.idx === currentUserIdx) || false
+        : false,
+      user: {
+        idx: cert.user.idx,
+        nickname: cert.user.nickname,
+        name: cert.user.name,
+        profile: cert.user.profile ? {
+          profile_image_url: cert.user.profile.profile_image_url,
+        } : undefined,
+      },
+      challenge_participant: cert.challenge_participant,
+    };
+    
+    return detailDto;
   }
 
   // 6. 인증글 수정 (이미지 업로드 포함)
@@ -419,7 +440,7 @@ export class WorkoutcertService {
       take: size,
     });
 
-    const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx);
+    const enrichedCerts = await this.enrichWorkoutCerts(certs, currentUserIdx);
 
     return {
       result: 'ok',
@@ -458,7 +479,7 @@ export class WorkoutcertService {
       take: size,
     });
   
-    const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx || userIdx);
+    const enrichedCerts = await this.enrichWorkoutCerts(certs, currentUserIdx || userIdx);
   
     // 유저의 전체 운동인증 게시글 수 조회
     const workoutCertCount = await this.workoutCertRepository.count({
@@ -503,7 +524,7 @@ export class WorkoutcertService {
       take: size,
     });
 
-    const enrichedCerts = this.enrichWorkoutCerts(certs, currentUserIdx);
+    const enrichedCerts = await this.enrichWorkoutCerts(certs, currentUserIdx);
 
     return {
       result: 'ok',
@@ -538,10 +559,31 @@ export class WorkoutcertService {
   }
 
   // 헬퍼 메서드: WorkoutCert에 좋아요/댓글 정보 추가
-  private enrichWorkoutCerts(
+  private async enrichWorkoutCerts(
     certs: WorkoutCert[],
     currentUserIdx?: string,
-  ): WorkoutCertWithStatsDto[] {
+  ): Promise<WorkoutCertWithStatsDto[]> {
+    // 모든 도전방 ID 수집
+    const challengeIds = [...new Set(
+      certs
+        .filter(cert => cert.challenge_participant?.challenge?.idx)
+        .map(cert => cert.challenge_participant.challenge.idx)
+    )];
+  
+    // 현재 사용자가 참여 중인 도전방 한 번에 조회
+    let userChallenges: string[] = [];
+    if (currentUserIdx && challengeIds.length > 0) {
+      const participants = await this.participantRepository.find({
+        where: {
+          user: { idx: currentUserIdx },
+          challenge: { idx: In(challengeIds) },
+          status: ChallengerStatus.ONGOING,
+        },
+        select: ['challenge'],
+      });
+      userChallenges = participants.map(p => p.challenge.idx);
+    }
+  
     return certs.map((cert) => ({
       ...cert,
       like_count: cert.likes?.length || 0,
@@ -551,6 +593,9 @@ export class WorkoutcertService {
         : false,
       is_commented: currentUserIdx
         ? cert.comments?.some((comment) => comment.user?.idx === currentUserIdx) || false
+        : false,
+      is_same_challenge_participant: cert.challenge_participant?.challenge?.idx
+        ? userChallenges.includes(cert.challenge_participant.challenge.idx)
         : false,
     }));
   }
