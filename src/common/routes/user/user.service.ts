@@ -17,7 +17,7 @@ import { UserProfile } from '../../entities/user_profile.entity';
 import { UserSetting } from '../../entities/user_setting.entity';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { CommonResDto } from './dto/res.dto';
+import { CommonResDto, UserProfileWithFollowResDto } from './dto/res.dto';
 import { Follow } from 'src/common/entities/follow.entity';
 
 @Injectable()
@@ -264,6 +264,39 @@ export class UserService {
         profile_image_url: user.profile?.profile_image_url,
       },
       is_following,
+    };
+  }
+
+  //  프로필 조회 시 팔로잉 여부 추가
+  async getUserProfileWithFollowStatus(
+    targetUserIdx: string,
+    currentUserIdx?: string,
+  ): Promise<UserProfileWithFollowResDto> {
+    const user = await this.userRepository.findOne({
+      where: { idx: targetUserIdx },
+      relations: ['profile'],
+    });
+    
+    if (!user) {
+      throw new NotFoundException('유저를 찾을 수 없습니다.');
+    }
+    
+    let isFollowing = false;
+    if (currentUserIdx && currentUserIdx !== targetUserIdx) {
+      const follow = await this.followRepository.findOne({
+        where: {
+          follower: { idx: currentUserIdx },
+          following: { idx: targetUserIdx },
+        },
+      });
+      isFollowing = !!follow;
+    }
+    
+    return {
+      result: 'ok',
+      user,
+      profile: user.profile,
+      is_following: isFollowing,
     };
   }
 }

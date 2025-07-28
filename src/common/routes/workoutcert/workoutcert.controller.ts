@@ -32,7 +32,7 @@ import { Response } from 'express';
 import { ApiGetItemsResponse } from 'src/common/decorators/swagger.decorator';
 import { PageReqDto } from 'src/common/dto/req.dto';
 import { PageResDto } from 'src/common/dto/res.dto';
-import { PageWithUserStatsResDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
+import { PageWithUserStatsResDto, WorkoutCertDetailDto, WorkoutCertResDto, WorkoutCertWithStatsDto } from './dto/res.dto';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
@@ -157,7 +157,7 @@ export class WorkoutcertController {
   async getWorkoutCertDetail(
     @Param('idx') idx: string,
     @User() user: UserAfterAuth,
-  ): Promise<WorkoutCertWithStatsDto> {
+  ): Promise<WorkoutCertDetailDto> {
     return await this.workoutcertService.getWorkoutCertDetail(idx, user.idx);
   }
 
