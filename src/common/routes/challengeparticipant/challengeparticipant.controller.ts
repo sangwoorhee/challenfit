@@ -57,7 +57,7 @@ export class ChallengeparticipantController {
     return { result: 'ok', idx: participant.idx };
   }
 
-  // 3. 도전 참가 취소 (ONGOING 상태를 PENDING으로 변경)
+  // 3. 도전 참가 취소 ( 상태를 PENDING으로 변경)
   // POST : http://localhost:3000/challengeparticipant/cancel
   @Post('cancel')
   @UseGuards(JwtAuthGuard)

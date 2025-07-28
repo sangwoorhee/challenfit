@@ -63,28 +63,6 @@ export class CommentService {
       where: { workout_cert: { idx: workoutCertIdx } },
       relations: ['user', 'user.profile'], // profile 관계 추가
       order: { created_at: 'ASC' },
-      select: {
-        idx: true,
-        content: true,
-        created_at: true,
-        updated_at: true,
-        user: {
-          idx: true,
-          nickname: true,
-          name: true,
-          profile: {
-            idx: true,
-            birth_date: true,
-            height: true,
-            weight: true,
-            interest_exercises: true,
-            exercise_purpose: true,
-            introduction: true,
-            profile_image_url: true,
-            is_public: true,
-          },
-        },
-      },
     });
   }
 
