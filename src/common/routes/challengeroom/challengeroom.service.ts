@@ -153,6 +153,7 @@ export class ChallengeroomService {
         'user',
         'challenge_participants',
         'challenge_participants.user',
+        'user.profile',
       ],
     });
     if (!challengeRoom) {
