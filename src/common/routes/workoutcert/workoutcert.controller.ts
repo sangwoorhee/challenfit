@@ -157,7 +157,7 @@ export class WorkoutcertController {
   async getWorkoutCertDetail(
     @Param('idx') idx: string,
     @User() user: UserAfterAuth,
-  ): Promise<WorkoutCertDetailDto> {
+  ): Promise<WorkoutCertWithStatsDto> {
     return await this.workoutcertService.getWorkoutCertDetail(idx, user.idx);
   }
 
