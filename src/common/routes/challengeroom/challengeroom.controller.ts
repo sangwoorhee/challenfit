@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User, UserAfterAuth } from 'src/common/decorators/user.decorator';
 import { ChallengeroomService } from './challengeroom.service';
@@ -42,7 +50,8 @@ export class ChallengeroomController {
   // @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '도전방 목록조회 (페이지네이션)',
-    description: 'GET : http://localhost:3000/challengeroom?page=1&size=10\n\n도전방 생성자의 프로필 이미지 URL도 함께 반환합니다.',
+    description:
+      'GET : http://localhost:3000/challengeroom?page=1&size=10\n\n도전방 생성자의 프로필 이미지 URL도 함께 반환합니다.',
   })
   async getChallengeRooms(
     @Query() pageReqDto: PageReqDto,

@@ -7,9 +7,7 @@ import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 
 @Module({
-  imports: [
-        TypeOrmModule.forFeature([Comment, WorkoutCert, User]),
-      ],
+  imports: [TypeOrmModule.forFeature([Comment, WorkoutCert, User])],
   controllers: [CommentController],
   providers: [CommentService],
 })
