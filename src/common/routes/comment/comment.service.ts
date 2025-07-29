@@ -9,6 +9,7 @@ import { Comment } from 'src/common/entities/comment.entity';
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
 import { CreateCommentReqDto, UpdateCommentReqDto } from './dto/req.dto';
+import { CommentResponseDto } from './dto/res.dto';
 
 @Injectable()
 export class CommentService {
@@ -73,18 +74,32 @@ export class CommentService {
   }
 
   // 4. 댓글 목록 조회
-  async getCommentsByWorkoutCert(workoutCertIdx: string): Promise<Comment[]> {
+  async getCommentsByWorkoutCert(
+    workoutCertIdx: string,
+  ): Promise<CommentResponseDto[]> {
     const workoutCert = await this.workoutCertRepository.findOne({
       where: { idx: workoutCertIdx },
     });
     if (!workoutCert)
       throw new NotFoundException('운동 인증을 찾을 수 없습니다.');
 
-    return await this.commentRepository.find({
+    const comments = await this.commentRepository.find({
       where: { workout_cert: { idx: workoutCertIdx } },
-      relations: ['user'],
+      relations: ['user', 'user.profile'],
       order: { created_at: 'ASC' },
     });
+
+    const response = comments.map((comment) => ({
+      commentId: comment.idx,
+      content: comment.content,
+      createdAt: comment.created_at,
+      userId: comment.user.idx,
+      nickname: comment.user.nickname,
+      profileImage: comment.user.profile?.profile_image_url || null,
+      postId: workoutCert.idx,
+    }));
+
+    return response;
   }
 
   // 5. 댓글 삭제
