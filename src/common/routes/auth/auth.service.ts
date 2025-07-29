@@ -192,7 +192,7 @@ export class AuthService {
       // } catch (emailError) {
       //   console.error(`이메일 인증 메일 발송 실패: ${emailError.message}`);
       // }
-      return { accessToken, refreshToken, user: savedUser };
+      return { accessToken, refreshToken, user: savedUser, profile };
       // catch문 에러 로그
     } catch (error) {
       await queryRunner.rollbackTransaction();
