@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Get, UseGuards, Query, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Query,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginReqDto, SignupReqDto, VerifySmsCodeReqDto } from './dto/req.dto';
 import { AuthTokenResDto } from './dto/res.dto';
@@ -60,9 +68,9 @@ export class AuthController {
   // 4. 회원가입 시 이메일 인증
   // GET : http://localhost:3000/auth/verify-email
   @Get('verify-email')
-  @ApiOperation({ 
-    summary: '이메일 인증', 
-    description: 'GET : http://localhost:3000/auth/verify-email' 
+  @ApiOperation({
+    summary: '이메일 인증',
+    description: 'GET : http://localhost:3000/auth/verify-email',
   })
   async verifyEmail(@Query('token') token: string) {
     await this.authService.verifyEmail(token);
@@ -172,7 +180,9 @@ export class AuthController {
     summary: '토큰 갱신',
     description: 'POST : http://localhost:3000/auth/refresh',
   })
-  async refresh(@Body('refreshToken') refreshToken: string): Promise<AuthTokenResDto> {
+  async refresh(
+    @Body('refreshToken') refreshToken: string,
+  ): Promise<AuthTokenResDto> {
     return await this.authService.refreshTokens(refreshToken);
   }
 
