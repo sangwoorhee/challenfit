@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
-import { ChallengeStatus } from 'src/common/enum/enum';
+import { ChallengeStatus, DurationUnit } from 'src/common/enum/enum';
 
 export class CreateChallengeRoomResDto {
   @ApiProperty({ description: '결과' })
@@ -56,12 +56,28 @@ export class GetChallengeRoomsResDto {
 }
 
 // 도전 방 상세조회
-export class GetChallengeRoomDetailResDto {
-  @ApiProperty({ description: '결과' })
-  result: string;
+export class ChallengeRoomDetailDto {
+  roomId: string;
+  title: string;
+  status: ChallengeStatus;
+  duration_unit: DurationUnit;
+  duration_value: number;
+  goal: string;
+  start_date: Date | null;
+  end_date: Date | null;
+  currentMemberCount: number;
+  maxMembers: number;
+  creatorProfileImageUrl: string | null;
+  members: {
+    user_idx: string;
+    nickname: string;
+    imgUrl: string | null;
+  }[];
+}
 
-  @ApiProperty({ description: '도전방 상세 정보' })
-  challengeRoom: ChallengeRoom;
+export class GetChallengeRoomDetailResDto {
+  result: string;
+  challengeRoom: ChallengeRoomDetailDto;
 }
 
 export class ChallengeRoomFeedDto {

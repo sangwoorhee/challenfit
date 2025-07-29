@@ -121,13 +121,18 @@ export class ChallengeroomService {
     const [challengeRooms, totalCount] =
       await this.challengeRepository.findAndCount({
         where: { is_public: true },
-        relations: ['user', 'user.profile'],
+        relations: [
+          'user',
+          'user.profile',
+          'challenge_participants.user',
+          'challenge_participants.user.profile',
+        ],
         order: { created_at: 'DESC' },
         skip: (page - 1) * size,
         take: size,
       });
 
-    return {
+    const result = {
       result: 'ok',
       page,
       size,
@@ -141,26 +146,56 @@ export class ChallengeroomService {
         goal: room.goal,
         currentMemberCount: room.current_participants,
         maxMembers: room.max_participants,
+        members: room.challenge_participants.map((p) => ({
+          user_idx: p.user?.idx,
+          nickname: p.user?.nickname,
+          imgUrl: p.user?.profile?.profile_image_url ?? null,
+        })),
         creatorProfileImageUrl: room.user?.profile?.profile_image_url || null,
       })),
     };
+
+    return result;
   }
 
   /// 3. 도전 방 상세조회
   async getChallengeRoomDetail(
     idx: string,
   ): Promise<GetChallengeRoomDetailResDto> {
-    const challengeRoom = await this.challengeRepository.findOne({
+    const room = await this.challengeRepository.findOne({
       where: { idx },
       relations: [
         'user',
+        'user.profile',
         'challenge_participants',
         'challenge_participants.user',
+        'challenge_participants.user.profile',
       ],
     });
-    if (!challengeRoom) {
+
+    if (!room) {
       throw new NotFoundException('도전방을 찾을 수 없습니다.');
     }
+
+    const challengeRoom = {
+      roomId: room.idx,
+      title: room.title,
+      status: room.status,
+      duration_unit: room.duration_unit,
+      duration_value: room.duration_value,
+      goal: room.goal,
+      start_date: room.start_date,
+      end_date: room.end_date,
+      currentMemberCount: room.current_participants,
+      maxMembers: room.max_participants,
+      creatorProfileImageUrl: room.user?.profile?.profile_image_url || null,
+      members: room.challenge_participants.map((p) => ({
+        user_idx: p.user?.idx,
+        nickname: p.user?.nickname,
+        imgUrl: p.user?.profile?.profile_image_url ?? null,
+      })),
+    };
+
     return {
       result: 'ok',
       challengeRoom,
