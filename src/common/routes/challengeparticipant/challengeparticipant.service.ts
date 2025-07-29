@@ -13,7 +13,7 @@ import {
   ChallengeStatus,
   DurationUnit,
 } from 'src/common/enum/enum';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 
 @Injectable()
 export class ChallengeparticipantService {
@@ -27,12 +27,13 @@ export class ChallengeparticipantService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // 현재 진행 중인 도전 참가 정보 조회 (도전글 작성 시 사용)
-  async getActiveParticipation(userIdx: string): Promise<ChallengeParticipant | null> {
+  async getActiveParticipation(
+    userIdx: string,
+  ): Promise<ChallengeParticipant | null> {
     const activeParticipant = await this.participantRepository.findOne({
       where: {
         user: { idx: userIdx },
-        status: ChallengerStatus.ONGOING,
+        status: In([ChallengerStatus.ONGOING, ChallengerStatus.PENDING]), // ✅ 두 상태 모두 허용
       },
       relations: ['challenge'],
       order: {
@@ -40,13 +41,19 @@ export class ChallengeparticipantService {
       },
     });
 
-    // 추가 검증: 도전방이 실제로 진행 중인지 확인
+    console.log(activeParticipant);
+
+    // 도전방 상태가 '진행중'인 경우에만 리턴
     if (activeParticipant && activeParticipant.challenge) {
       const challengeRoom = await this.challengeRoomRepository.findOne({
         where: { idx: activeParticipant.challenge.idx },
       });
 
-      if (challengeRoom && challengeRoom.status === ChallengeStatus.ONGOING) {
+      if (
+        challengeRoom &&
+        (challengeRoom.status === ChallengeStatus.ONGOING ||
+          challengeRoom.status === ChallengeStatus.PENDING)
+      ) {
         return activeParticipant;
       }
     }
@@ -98,9 +105,10 @@ export class ChallengeparticipantService {
       challengeRoom.current_participants += 1;
 
       // 도전방 상태에 따라 참가자 상태 결정
-      const participantStatus = challengeRoom.status === ChallengeStatus.ONGOING 
-        ? ChallengerStatus.ONGOING 
-        : ChallengerStatus.PENDING;
+      const participantStatus =
+        challengeRoom.status === ChallengeStatus.ONGOING
+          ? ChallengerStatus.ONGOING
+          : ChallengerStatus.PENDING;
 
       const participant = this.participantRepository.create({
         user,
@@ -229,4 +237,3 @@ export class ChallengeparticipantService {
     }
   }
 }
-
