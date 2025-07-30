@@ -33,7 +33,7 @@ export class ChallengeparticipantService {
     const activeParticipant = await this.participantRepository.findOne({
       where: {
         user: { idx: userIdx },
-        status: In([ChallengerStatus.ONGOING, ChallengerStatus.PENDING]), // ✅ 두 상태 모두 허용
+        status: In([ChallengerStatus.ONGOING, ChallengerStatus.PENDING]),
       },
       relations: ['challenge'],
       order: {
