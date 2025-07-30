@@ -14,6 +14,7 @@ import {
   BadRequestException,
   Res,
   Query,
+  Inject,
 } from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
@@ -37,11 +38,21 @@ import {
   WorkoutCertResDto,
   WorkoutCertWithStatsDto,
 } from './dto/res.dto';
+import { ConfigService } from '@nestjs/config';
+import { createS3MulterConfig } from 'src/common/config/multer-s3-config';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
 export class WorkoutcertController {
-  constructor(private readonly workoutcertService: WorkoutcertService) {}
+  private s3MulterConfig: any;
+
+  constructor(
+    private readonly workoutcertService: WorkoutcertService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
+  ) {
+    // S3 multer 설정을 한 번만 생성
+    this.s3MulterConfig = createS3MulterConfig('workout-images', configService);
+  }
 
   // 1. 내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회
   // GET : http://localhost:3000/workoutcert/my
@@ -70,7 +81,7 @@ export class WorkoutcertController {
   // POST : http://localhost:3000/workoutcert
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({
     summary: '인증글 생성',
     description:
@@ -78,7 +89,7 @@ export class WorkoutcertController {
   })
   @ApiConsumes('multipart/form-data')
   async createWorkoutCert(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.MulterS3.File,
     @Body() dto: CreateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
   ): Promise<WorkoutCertResDto> {
@@ -87,25 +98,14 @@ export class WorkoutcertController {
         throw new BadRequestException('이미지 파일이 필요합니다.');
       }
 
-      // 파일 경로를 image_url로 설정
-      const imageUrl = `/uploads/workout-images/${file.filename}`;
+      // S3에 업로드된 파일의 URL 사용
+      const imageUrl = file.location;
       return await this.workoutcertService.createWorkoutCert(user.idx, {
         ...dto,
         image_url: imageUrl,
       });
     } catch (error) {
-      // 업로드된 파일 삭제 (에러 발생 시)
-      if (file) {
-        const filePath = path.join(
-          process.cwd(),
-          'uploads',
-          'workout-images',
-          file.filename,
-        );
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      }
+      console.log(error.message)
       throw error;
     }
   }
@@ -175,7 +175,7 @@ export class WorkoutcertController {
   // PATCH : http://localhost:3000/workoutcert/:workoutcert_idx
   @Patch(':idx')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @UseInterceptors(FileInterceptor('image'))
   @ApiOperation({
     summary: '인증글 수정',
     description: 'PATCH : http://localhost:3000/workoutcert/:workoutcert_idx',
@@ -183,7 +183,7 @@ export class WorkoutcertController {
   @ApiConsumes('multipart/form-data')
   async updateWorkoutCert(
     @Param('idx') idx: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.MulterS3.File,
     @Body() dto: UpdateWorkoutCertReqDto,
     @User() user: UserAfterAuth,
   ): Promise<WorkoutCertResDto> {
@@ -191,8 +191,7 @@ export class WorkoutcertController {
     // 새로운 이미지가 업로드된 경우
     let updateData = { ...dto };
     if (file) {
-      const imageUrl = `/uploads/workout-images/${file.filename}`;
-      // UpdateWorkoutCertReqDto 타입에 image_url이 없으므로 any로 우회
+      const imageUrl = file.location; // S3 URL
       (updateData as any).image_url = imageUrl;
     }
 
@@ -340,3 +339,20 @@ export class WorkoutcertController {
     res.sendFile(imagePath);
   }
 }
+
+// function FileInterceptor(fieldName: string) {
+//   return UseInterceptors({
+//     intercept: async (context, next) => {
+//       const ctx = context.switchToHttp();
+//       const req = ctx.getRequest();
+      
+//       // Controller에서 설정한 s3MulterConfig 사용
+//       const controller = context.getClass();
+//       const instance = await context['target'];
+//       const config = instance.s3MulterConfig;
+      
+//       const interceptor = new (FileInterceptor as any)(fieldName, config);
+//       return interceptor.intercept(context, next);
+//     },
+//   });
+// }

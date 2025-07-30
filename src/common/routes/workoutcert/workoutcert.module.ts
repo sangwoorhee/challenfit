@@ -8,10 +8,12 @@ import { ChallengeParticipant } from 'src/common/entities/challenge_participant.
 import { ChallengeRoom } from 'src/common/entities/challenge_room.entity';
 import { CertApproval } from 'src/common/entities/cert_approval.entity';
 import { Follow } from 'src/common/entities/follow.entity';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
         TypeOrmModule.forFeature([User, WorkoutCert, ChallengeParticipant, ChallengeRoom, CertApproval, Follow]),
+        ConfigModule, 
       ],
   controllers: [WorkoutcertController],
   providers: [WorkoutcertService],

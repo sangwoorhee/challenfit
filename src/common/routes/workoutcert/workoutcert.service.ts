@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Between, In } from 'typeorm';
@@ -26,6 +27,9 @@ import {
   WorkoutCertResDto,
   WorkoutCertWithStatsDto,
 } from './dto/res.dto';
+import { ConfigService } from '@nestjs/config';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from 'src/common/config/multer-s3-config';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -52,6 +56,7 @@ export class WorkoutcertService {
     @InjectRepository(Follow)
     private followRepository: Repository<Follow>,
     private readonly dataSource: DataSource,
+    @Inject(ConfigService) private readonly configService: ConfigService,
   ) {}
 
   // 1. 내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회
@@ -532,24 +537,32 @@ export class WorkoutcertService {
   }
 
   // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
-  private deleteImageFile(imageUrl: string): void {
+  private async deleteImageFile(imageUrl: string): Promise<void> {
     try {
-      if (imageUrl && imageUrl.startsWith('/uploads/workout-images/')) {
-        const filename = imageUrl.split('/').pop();
-        if (!filename) return;
-        const filePath = path.join(
-          process.cwd(),
-          'uploads',
-          'workout-images',
-          filename,
-        );
-
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+      if (!imageUrl) return;
+  
+      // S3 URL에서 key 추출
+      const bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME');
+      const urlPattern = new RegExp(`https?://[^/]+/${bucketName}/(.+)$`);
+      const match = imageUrl.match(urlPattern);
+      
+      if (!match || !match[1]) {
+        console.error('Invalid S3 URL:', imageUrl);
+        return;
       }
+  
+      const key = match[1];
+      const s3Client = createS3Client(this.configService);
+  
+      const command = new DeleteObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+      });
+  
+      await s3Client.send(command);
+      console.log('S3 파일 삭제 성공:', key);
     } catch (error) {
-      console.error('이미지 파일 삭제 중 오류:', error);
+      console.error('S3 파일 삭제 중 오류:', error);
       // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
     }
   }
