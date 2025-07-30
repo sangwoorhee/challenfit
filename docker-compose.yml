@@ -1,0 +1,39 @@
+name: challenfit-backend
+services:
+  backend-blue:
+    build: .
+    env_file: .env.docker
+    ports:
+      - "3000:3000"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      start_period: 180s
+      timeout: 10s
+      retries: 3
+    networks:
+      - backend-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  backend-green:
+    build: .
+    env_file: .env.docker
+    ports:
+      - "3002:3000"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      start_period: 180s
+      timeout: 10s
+      retries: 3
+    networks:
+      - backend-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  backend-net:
+    driver: bridge
