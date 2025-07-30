@@ -42,18 +42,18 @@ export class ChatController {
   ): Promise<GetMessagesResponseDto> {
     const userIdx = user.idx;
 
-    // 참가자 확인
-    const isParticipant = await this.chatService.checkParticipant(
-      userIdx,
-      challengeRoomIdx,
-    );
+    // // 참가자 확인
+    // const isParticipant = await this.chatService.checkParticipant(
+    //   userIdx,
+    //   challengeRoomIdx,
+    // );
 
-    if (!isParticipant) {
-      throw new HttpException(
-        '도전방 참가자만 메시지를 조회할 수 있습니다.',
-        HttpStatus.FORBIDDEN,
-      );
-    }
+    // if (!isParticipant) {
+    //   throw new HttpException(
+    //     '도전방 참가자만 메시지를 조회할 수 있습니다.',
+    //     HttpStatus.FORBIDDEN,
+    //   );
+    // }
 
     // 채팅 내역 조회 (프로필 이미지 포함)
     const chatHistory = await this.chatService.getChatHistoryWithProfile(
