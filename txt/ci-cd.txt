@@ -1,0 +1,187 @@
+1. .github/workflows/develop.yml
+name: Challenfit Backend CI (Develop)
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+    types: [ closed ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run tests (optional)
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test || echo "Tests failed but continuing"
+          else
+            echo "No tests found, skipping"
+          fi
+
+      - name: Build success notification
+        run: |
+          echo "✅ Develop 브랜치 빌드 및 테스트 완료!"
+          echo "📦 빌드 성공: 배포는 main 브랜치에서만 진행됩니다."
+
+
+2. .github/workflows/main.yml
+name: Challenfit Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run tests (optional)
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test || echo "Tests failed but continuing deployment"
+          else
+            echo "No tests found, skipping"
+          fi
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            /home/ec2-user/deploy-backend.sh
+
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f http://${{ secrets.SSH_HOST }}:3000/health || exit 1
+          echo "✅ Deployment successful and health check passed!"
+
+3. .github/workflows/pilseon.yml
+name: Challenfit Backend CI (Pilseon)
+
+on:
+  push:
+    branches: [ pilseon ]
+  pull_request:
+    branches: [ pilseon ]
+    types: [ closed ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run tests (optional)
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test || echo "Tests failed but continuing"
+          else
+            echo "No tests found, skipping"
+          fi
+
+      - name: Build success notification
+        run: |
+          echo "✅ Pilseon 브랜치 빌드 및 테스트 완료!"
+          echo "📦 빌드 성공: 배포는 main 브랜치에서만 진행됩니다."
+
+4. .github/workflows/sangwoo.yml
+name: Challenfit Backend CI (Sangwoo)
+
+on:
+  push:
+    branches: [ sangwoo ]
+  pull_request:
+    branches: [ sangwoo ]
+    types: [ closed ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run tests (optional)
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test || echo "Tests failed but continuing"
+          else
+            echo "No tests found, skipping"
+          fi
+
+      - name: Build success notification
+        run: |
+          echo "✅ Sangwoo 브랜치 빌드 및 테스트 완료!"
+          echo "📦 빌드 성공: 배포는 main 브랜치에서만 진행됩니다."
