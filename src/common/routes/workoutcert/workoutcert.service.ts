@@ -482,10 +482,24 @@ export class WorkoutcertService {
       where: { user: { idx: userIdx } },
     });
 
+    let isFollowing = false;
+
+    if (currentUserIdx && currentUserIdx !== userIdx) {
+      const follow = await this.followRepository.findOne({
+        where: {
+          follower: { idx: currentUserIdx },
+          following: { idx: userIdx },
+        },
+      });
+
+      isFollowing = !!follow;
+    }
+
     const userStats: UserStatsDto = {
       workout_cert_count: workoutCertCount,
       follower_count: user.follower_count,
       following_count: user.following_count,
+      is_following: isFollowing,
     };
 
     return {
