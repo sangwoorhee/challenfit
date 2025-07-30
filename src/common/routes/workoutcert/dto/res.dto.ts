@@ -29,6 +29,12 @@ export class UserStatsDto {
 
   @ApiProperty({ description: '팔로잉 수' })
   following_count: number;
+
+  @ApiProperty({
+    description: '내가 이 유저를 팔로우 중인지 여부',
+    required: false,
+  })
+  is_following?: boolean;
 }
 
 // 유저 통계 정보를 포함한 페이지네이션 응답 DTO
