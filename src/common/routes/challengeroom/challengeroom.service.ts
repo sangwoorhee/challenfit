@@ -74,7 +74,7 @@ export class ChallengeroomService {
         {
           where: {
             user: { idx: user_idx },
-            status: ChallengerStatus.ONGOING,
+            status: In([ChallengeStatus.PENDING, ChallengeStatus.ONGOING]),
           },
           relations: ['challenge'],
         },
