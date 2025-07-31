@@ -36,24 +36,24 @@ async function bootstrap() {
   }
 
     // uploads 폴더 생성 (이미지 업로드용)
-    const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    // const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
+    // if (!fs.existsSync(uploadDir)) {
+    //   fs.mkdirSync(uploadDir, { recursive: true });
+    // }
   
-    // 정적 파일 서빙 설정
-    app.useStaticAssets(join(process.cwd(), 'uploads'), {
-      prefix: '/uploads/',
-      index: false, // 디렉토리 인덱싱 비활성화
-      redirect: false, // 디렉토리 리다이렉션 비활성화
-      dotfiles: 'deny', // 숨김 파일 접근 차단
-      setHeaders: (res, path, stat) => {
-        // 캐시 설정
-        res.set('Cache-Control', 'public, max-age=3600'); // 1시간 캐시
-        // 보안 헤더 추가
-        res.set('X-Content-Type-Options', 'nosniff');
-      },
-    });
+    // // 정적 파일 서빙 설정
+    // app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    //   prefix: '/uploads/',
+    //   index: false, // 디렉토리 인덱싱 비활성화
+    //   redirect: false, // 디렉토리 리다이렉션 비활성화
+    //   dotfiles: 'deny', // 숨김 파일 접근 차단
+    //   setHeaders: (res, path, stat) => {
+    //     // 캐시 설정
+    //     res.set('Cache-Control', 'public, max-age=3600'); // 1시간 캐시
+    //     // 보안 헤더 추가
+    //     res.set('X-Content-Type-Options', 'nosniff');
+    //   },
+    // });
   
   // cookie-parser 추가
   app.use(cookieParser());
@@ -62,7 +62,8 @@ async function bootstrap() {
   const allowedOrigins = [
     configService.get<string>('FRONTEND_ORIGIN'), 
     'http://localhost:3000',
-    'http://localhost:3001', // 허용하는 도메인 이런식으로 콤마구분해서 추가
+    'http://localhost:3001',
+    'http://3.34.199.169:3000',
   ];
   app.enableCors({
     origin: (origin, callback) => {
