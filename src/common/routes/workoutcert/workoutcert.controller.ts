@@ -14,7 +14,6 @@ import {
   BadRequestException,
   Res,
   Query,
-  Inject,
 } from '@nestjs/common';
 import { WorkoutcertService } from './workoutcert.service';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
@@ -38,21 +37,13 @@ import {
   WorkoutCertResDto,
   WorkoutCertWithStatsDto,
 } from './dto/res.dto';
-import { ConfigService } from '@nestjs/config';
-import { createS3MulterConfig } from 'src/common/config/multer-s3-config';
 
 @ApiTags('운동 인증')
 @Controller('workoutcert')
 export class WorkoutcertController {
-  private s3MulterConfig: any;
-
   constructor(
     private readonly workoutcertService: WorkoutcertService,
-    @Inject(ConfigService) private readonly configService: ConfigService,
-  ) {
-    // S3 multer 설정을 한 번만 생성
-    this.s3MulterConfig = createS3MulterConfig('workout-images', configService);
-  }
+  ) {}
 
   // 1. 내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회
   // GET : http://localhost:3000/workoutcert/my
@@ -356,3 +347,4 @@ export class WorkoutcertController {
 //     },
 //   });
 // }
+

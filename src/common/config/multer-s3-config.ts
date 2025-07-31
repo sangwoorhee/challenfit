@@ -40,7 +40,7 @@ export const createS3MulterConfig = (
     storage: multerS3({
       s3: s3,
       bucket: bucketName,
-      acl: 'public-read', // 퍼블릭 읽기 권한
+      // acl: 'public-read', // ACL 비활성화된 버킷에서는 주석처리
       contentType: multerS3.AUTO_CONTENT_TYPE,
       key: (req, file, cb) => {
         const uniqueName = uuidv4() + extname(file.originalname);

@@ -62,7 +62,8 @@ async function bootstrap() {
   const allowedOrigins = [
     configService.get<string>('FRONTEND_ORIGIN'), 
     'http://localhost:3000',
-    'http://localhost:3001', // 허용하는 도메인 이런식으로 콤마구분해서 추가
+    'http://localhost:3001',
+    'http://3.34.199.169:3000',
   ];
   app.enableCors({
     origin: (origin, callback) => {
