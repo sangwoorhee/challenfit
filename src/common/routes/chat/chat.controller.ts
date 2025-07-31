@@ -159,4 +159,16 @@ export class ChatController {
       totalCount: onlineUsers.length,
     };
   }
+
+  // Socket.IO 연결 테스트
+  @Get('test')
+  @ApiOperation({ summary: 'Socket.IO 연결 테스트' })
+  async testConnection(): Promise<any> {
+    return {
+      result: 'ok',
+      message: 'Chat service is running',
+      socketUrl: `ws://${process.env.EC2_PUBLIC_IP || 'localhost'}:3000/chat`,
+      timestamp: new Date()
+    };
+  }
 }
