@@ -362,7 +362,7 @@ export class WorkoutcertService {
 
       // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
       if (dto.image_url && cert.image_url !== dto.image_url) {
-        this.deleteImageFile(cert.image_url);
+        await this.deleteImageFile(cert.image_url);
         cert.image_url = dto.image_url;
       }
 
@@ -395,7 +395,7 @@ export class WorkoutcertService {
       throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
 
     // 이미지 파일 삭제
-    this.deleteImageFile(cert.image_url);
+    await this.deleteImageFile(cert.image_url);
 
     await this.workoutCertRepository.remove(cert);
   }
