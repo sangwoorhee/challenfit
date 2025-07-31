@@ -1,5 +1,5 @@
 import {
-  Controller, UseGuards, Get, Patch, Body, Req, Delete,
+  Controller, UseGuards, Get, Patch, Body, Delete,
   Param,
   UseInterceptors,
   UploadedFile
@@ -15,15 +15,14 @@ import { CommonResDto, ProfileResDto } from './dto/res.dto';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guard/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { createMulterConfig } from 'src/common/config/multer-config';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @ApiTags('유저')
 @ApiBearerAuth()
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+  ) {}
 
   // 1. 내 정보 환경설정 수정
   // http://localhost:3000/user/setting
@@ -44,38 +43,36 @@ export class UserController {
   // http://localhost:3000/user/profile
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('profile_image_url', createMulterConfig('auth')))
+  @UseInterceptors(
+    FileInterceptor('profile_image_url')
+  )
   @ApiOperation({ 
     summary: '내 마이프로필 수정', 
     description: 'PATCH : http://localhost:3000/user/profile',
   })
   @ApiConsumes('multipart/form-data')
   async updateProfile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.MulterS3.File, // MulterS3.File 타입으로 변경
     @User() user: UserAfterAuth,
     @Body() dto: UpdateUserProfileReqDto,
   ): Promise<CommonResDto> {
+    
     try {
-    // 파일이 업로드된 경우에만 이미지 URL 설정
-    const updateData = { ...dto };
+      // 파일이 업로드된 경우에만 이미지 URL 설정
+      const updateData = { ...dto };
       
-    if (file) {
-      const imageUrl = `/uploads/auth/${file.filename}`;
-      updateData.profile_image_url = imageUrl;
-    }
-
-    return await this.userService.updateProfile(user.idx, updateData);
-  } catch (error) {
-    // 업로드된 파일 삭제 (에러 발생 시)
-    if (file) {
-      const filePath = path.join(process.cwd(), 'uploads', 'auth', file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (file) {
+        // S3에 업로드된 파일의 URL
+        const imageUrl = file.location; // S3 URL
+        updateData.profile_image_url = imageUrl;
       }
+
+      return await this.userService.updateProfile(user.idx, updateData);
+    } catch (error) {
+      console.error(error.message);
+      throw error;
     }
-    throw error;
   }
-}
 
   // 3. 내 비밀번호 변경
   // http://localhost:3000/user/password
