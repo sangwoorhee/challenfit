@@ -88,7 +88,10 @@ export class ChatGateway
   }
 
   async handleConnection(client: Socket) {
-    this.logger.debug(`Client attempting to connect: ${client.id}`);
+    this.logger.log(`=== New connection attempt ===`);
+    this.logger.log(`Client ID: ${client.id}`);
+    this.logger.log(`Headers: ${JSON.stringify(client.handshake.headers)}`);
+    this.logger.log(`Auth: ${JSON.stringify(client.handshake.auth)}`);
     try {
       const token =
         client.handshake.headers.authorization?.replace('Bearer ', '') ||
