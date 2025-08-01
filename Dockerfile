@@ -28,7 +28,7 @@ RUN npm install --only=production \
     && apk add --no-cache curl
 
 # uploads 디렉토리 생성
-RUN mkdir -p uploads/workout-images
+# RUN mkdir -p uploads/workout-images
 
 # 포트 설정
 EXPOSE 3000
