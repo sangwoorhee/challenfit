@@ -2,7 +2,7 @@ name: challenfit-backend
 services:
   backend-blue:
     build: .
-    env_file: .env.docker
+    env_file: .env
     ports:
       - "3000:3000"
     restart: always
@@ -19,7 +19,7 @@ services:
 
   backend-green:
     build: .
-    env_file: .env.docker
+    env_file: .env
     ports:
       - "3002:3000"
     restart: always
