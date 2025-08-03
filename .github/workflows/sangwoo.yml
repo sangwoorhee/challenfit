@@ -1,5 +1,5 @@
 # 백엔드 전용 CI 워크플로우: sangwoo 브랜치
-name: Feature Backend CI
+name: Sangwoo Backend CI
 
 # sangwoo 브랜치로 push나 pull request 시 실행
 on:
