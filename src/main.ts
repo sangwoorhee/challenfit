@@ -74,6 +74,8 @@ async function bootstrap() {
     'http://localhost:8080',  // 대체 포트
     'http://10.0.2.2:3000',   // Android 에뮬레이터
     'http://127.0.0.1:3000',  // iOS 시뮬레이터
+    'http://43.200.3.200:3000',
+    'http://43.200.3.200:3002',
   ].filter(Boolean); // undefined 값 제거
 
   app.enableCors({
