@@ -22,6 +22,7 @@ WORKDIR /app
 # 빌드 결과물만 runner 스테이지로 복사
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
+COPY .env ./
 
 # Production 의존성 설치
 RUN npm install --only=production \
