@@ -143,6 +143,11 @@ async function bootstrap() {
 
   const PORT = configService.get<number>('PORT') ?? 3000;
   await app.listen(PORT);
+
+  // 디버깅 로그 추가
+  logger.log(`AWS_S3_REGION: ${configService.get<string>('AWS_S3_REGION')}`);
+  logger.log(`AWS_ACCESS_KEY_ID: ${configService.get<string>('AWS_ACCESS_KEY_ID') ? '****' : 'undefined'}`);
+  logger.log(`AWS_SECRET_ACCESS_KEY: ${configService.get<string>('AWS_SECRET_ACCESS_KEY') ? '****' : 'undefined'}`);
   
   logger.log(`Server running on port ${PORT}`);
   logger.log(`DB Host: ${configService.get<string>('DB_HOST')}`);
