@@ -1,6 +1,0 @@
-services:
-  backend-blue:
-    profiles: ["blue"]
-    
-  backend-green:
-    profiles: ["green"]
