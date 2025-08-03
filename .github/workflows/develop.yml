@@ -1,0 +1,35 @@
+# 백엔드 전용 CI 워크플로우: develop 브랜치
+name: Develop Backend CI
+
+# develop 브랜치로 push나 pull request 시 실행
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  backend-build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 리포지토리 전체 소스코드를 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Node.js 환경 설정 (버전 22 사용)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      # 3. 백엔드 디렉토리에서 의존성 설치 및 빌드 (테스트 목적)
+      - name: Build and Test backend
+        working-directory: .
+        run: |
+          npm install        # 백엔드 의존성 설치
+          npm run build      # 백엔드 빌드 실행
+          
+      # 4. 병합 성공 메시지
+      - name: Merge Test Success
+        run: echo "✅ Develop 브랜치 병합 테스트 성공! Main 브랜치로 배포할 준비가 되었습니다."

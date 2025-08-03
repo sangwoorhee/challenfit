@@ -27,8 +27,7 @@ COPY --from=builder /app/package*.json ./
 RUN npm install --only=production \
     && apk add --no-cache curl
 
-# uploads 디렉토리 생성
-RUN mkdir -p uploads/workout-images
+# .env 파일은 docker-compose의 env_file로 처리하므로 여기서는 제거
 
 # 포트 설정
 EXPOSE 3000

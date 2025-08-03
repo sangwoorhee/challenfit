@@ -1,187 +1,176 @@
-1. .github/workflows/develop.yml
-name: Challenfit Backend CI (Develop)
+#!/bin/bash
+set -euo pipefail
 
-on:
-  push:
-    branches: [ develop ]
-  pull_request:
-    branches: [ develop ]
-    types: [ closed ]
+echo "🚀 Challenfit Backend 블루-그린 배포 시작 (Nginx 연동)..."
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# 👉 0. 고아 이미지 정리 (조건부 실행)
+echo "🔍 Dangling 이미지 검사 중..."
+DANGLING_COUNT=$(docker images -f "dangling=true" -q | wc -l)
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+if [ "$DANGLING_COUNT" -gt 0 ]; then
+    echo "🧹 $DANGLING_COUNT개의 고아 이미지가 발견되었습니다. 정리합니다..."
+    docker image prune -f
+else
+    echo "✅ 고아 이미지가 없습니다. 정리 생략합니다."
+fi
 
-      - name: Install dependencies
-        run: npm ci
+# 프로젝트 디렉토리로 이동
+cd /home/ec2-user/challenfit_backend
 
-      - name: Build backend
-        run: npm run build
+# PM2 프로세스 중지 (기존 PM2 방식과 충돌 방지)
+if command -v pm2 &> /dev/null; then
+    echo "🛑 기존 PM2 프로세스 중지..."
+    pm2 stop challenfit-backend || true
+    pm2 delete challenfit-backend || true
+fi
 
-      - name: Run tests (optional)
-        run: |
-          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
-            npm test || echo "Tests failed but continuing"
-          else
-            echo "No tests found, skipping"
-          fi
+# 디스크 정리
+docker builder prune -f --filter "until=168h"
+docker system prune -f --filter "until=168h"
 
-      - name: Build success notification
-        run: |
-          echo "✅ Develop 브랜치 빌드 및 테스트 완료!"
-          echo "📦 빌드 성공: 배포는 main 브랜치에서만 진행됩니다."
+### 1. 이전 종료된 OLD 컨테이너 삭제
+for OLD_COLOR in backend-blue backend-green; do
+  CONTAINER_NAME="challenfit-backend-${OLD_COLOR}-1"
+  if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+    STATUS=$(docker inspect --format='{{.State.Status}}' "$CONTAINER_NAME")
+    if [ "$STATUS" = "exited" ]; then
+      echo "🗑   이전 종료된 컨테이너 삭제: $CONTAINER_NAME"
+      docker compose -p challenfit-backend rm -f "$OLD_COLOR"
+    fi
+  fi
+done
 
+### 2. Blue-Green 배포 대상 판단
+CURRENT=$(docker compose -p challenfit-backend ps -q backend-blue 2>/dev/null | wc -l)
+if [ "$CURRENT" -gt 0 ]; then
+    NEW=backend-green
+    OLD=backend-blue
+    NEW_PORT=3002
+    OLD_PORT=3000
+else
+    NEW=backend-blue
+    OLD=backend-green
+    NEW_PORT=3000
+    OLD_PORT=3002
+fi
 
-2. .github/workflows/main.yml
-name: Challenfit Backend CI/CD
+echo "🔄 $OLD → $NEW 으로 전환합니다 (포트: $OLD_PORT → $NEW_PORT)"
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-    types: [ closed ]
+### 3. 소스코드 갱신 및 빌드
+echo "📥 소스코드 업데이트 중..."
+git fetch --all
+git reset --hard origin/main
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+echo "🔨 $NEW 컨테이너 빌드 및 시작..."
+docker compose -p challenfit-backend build $NEW
+docker compose -p challenfit-backend up -d $NEW
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+### 4. Health Check 대기
+echo "🏥 Health Check 진행 중..."
+MAX_RETRIES=30
+COUNT=0
+while [ "$(docker inspect --format='{{.State.Health.Status}}' challenfit-backend-$NEW-1 2>/dev/null || echo 'starting')" != "healthy" ]; do
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "❌ Health check 실패: $NEW 컨테이너가 정상 상태가 아닙니다."
+        docker logs challenfit-backend-$NEW-1
+        exit 1
+    fi
+    echo "🟡 Health check 대기 중... ($COUNT/$MAX_RETRIES)"
+    sleep 10
+    COUNT=$((COUNT + 1))
+done
 
-      - name: Install dependencies
-        run: npm ci
+echo "✅ $NEW 컨테이너가 정상적으로 시작되었습니다!"
 
-      - name: Build backend
-        run: npm run build
+### 5. Nginx Upstream 설정 업데이트
+echo "🔀 Nginx upstream 설정 업데이트 중..."
 
-      - name: Run tests (optional)
-        run: |
-          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
-            npm test || echo "Tests failed but continuing deployment"
-          else
-            echo "No tests found, skipping"
-          fi
+# Nginx 설정 파일 경로
+NGINX_CONFIG="/etc/nginx/conf.d/challenfit.conf"
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          port: ${{ secrets.SSH_PORT }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            /home/ec2-user/deploy-backend.sh
+if [ "$NEW" == "backend-green" ]; then
+    # Green 서버로 전환
+    sudo sed -i 's/server localhost:3000 max_fails=3 fail_timeout=30s;/server localhost:3000 backup max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
+    sudo sed -i 's/server localhost:3002 backup max_fails=3 fail_timeout=30s;/server localhost:3002 max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
+    echo "🟢 Green 서버(포트 3002)로 트래픽 전환"
+else
+    # Blue 서버로 전환
+    sudo sed -i 's/server localhost:3002 max_fails=3 fail_timeout=30s;/server localhost:3002 backup max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
+    sudo sed -i 's/server localhost:3000 backup max_fails=3 fail_timeout=30s;/server localhost:3000 max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
+    echo "🔵 Blue 서버(포트 3000)로 트래픽 전환"
+fi
 
-      - name: Health Check
-        run: |
-          sleep 30
-          curl -f http://${{ secrets.SSH_HOST }}:3000/health || exit 1
-          echo "✅ Deployment successful and health check passed!"
+### 6. Nginx 설정 테스트 및 리로드
+echo "🔧 Nginx 설정 테스트 중..."
+sudo nginx -t
 
-3. .github/workflows/pilseon.yml
-name: Challenfit Backend CI (Pilseon)
+if [ $? -eq 0 ]; then
+    echo "✅ Nginx 설정이 유효합니다. 리로드 진행..."
+    sudo nginx -s reload
+    echo "🔄 Nginx가 성공적으로 리로드되었습니다."
+else
+    echo "❌ Nginx 설정에 오류가 있습니다. 배포를 중단합니다."
+    exit 1
+fi
 
-on:
-  push:
-    branches: [ pilseon ]
-  pull_request:
-    branches: [ pilseon ]
-    types: [ closed ]
+### 7. 새 서버 접속 테스트
+echo "🧪 새 서버 접속 테스트 중..."
+sleep 10
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# Nginx를 통한 접속 테스트
+MAX_RETRIES=10
+COUNT=0
+while ! curl -f http://localhost/health >/dev/null 2>&1; do
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "❌ 새 서버 접속 테스트 실패"
+        exit 1
+    fi
+    echo "🟡 접속 테스트 재시도 중... ($COUNT/$MAX_RETRIES)"
+    sleep 5
+    COUNT=$((COUNT + 1))
+done
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+echo "✅ 새 서버 접속 테스트 성공!"
 
-      - name: Install dependencies
-        run: npm ci
+### 8. 기존 OLD 컨테이너 stop만 수행 (삭제하지 않음)
+if [ "$OLD" != "$NEW" ]; then
+    echo "🛑 기존 $OLD 컨테이너 중지 중..."
+    sleep 30
+    docker compose -p challenfit-backend stop $OLD || true
 
-      - name: Build backend
-        run: npm run build
+    if docker inspect challenfit-backend-$OLD-1 >/dev/null 2>&1; then
+      echo "⏳ $OLD 컨테이너 종료 대기 중..."
+      MAX_RETRIES=30
+      COUNT=0
+      while [ "$(docker inspect --format='{{.State.Status}}' challenfit-backend-$OLD-1)" != "exited" ]; do
+        if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+          echo "❌ 종료 실패: $OLD 컨테이너가 정상 종료되지 않았습니다."
+          docker logs challenfit-backend-$OLD-1
+          break
+        fi
+        sleep 2
+        COUNT=$((COUNT + 1))
+      done
+      echo "🔒 $OLD 컨테이너는 종료되었으나 삭제하지 않고 보관합니다."
+    else
+      echo "💡 컨테이너 $OLD 없음. 제거 스킵."
+    fi
+fi
 
-      - name: Run tests (optional)
-        run: |
-          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
-            npm test || echo "Tests failed but continuing"
-          else
-            echo "No tests found, skipping"
-          fi
+### 9. 현재 Nginx upstream 상태 확인
+echo "📊 현재 Nginx upstream 상태:"
+curl -s http://localhost/nginx_status || echo "Nginx 상태 확인 실패"
 
-      - name: Build success notification
-        run: |
-          echo "✅ Pilseon 브랜치 빌드 및 테스트 완료!"
-          echo "📦 빌드 성공: 배포는 main 브랜치에서만 진행됩니다."
+echo ""
+echo "🎉 배포 완료! 서비스가 http://3.34.199.169 에서 실행 중입니다."
+echo "📊 현재 실행 중인 컨테이너: $NEW (포트: $NEW_PORT)"
+echo "🌐 Nginx를 통한 로드 밸런싱이 활성화되었습니다."
 
-4. .github/workflows/sangwoo.yml
-name: Challenfit Backend CI (Sangwoo)
+# 최종 상태 확인
+echo ""
+echo "📋 현재 컨테이너 상태:"
+docker compose -p challenfit-backend ps
 
-on:
-  push:
-    branches: [ sangwoo ]
-  pull_request:
-    branches: [ sangwoo ]
-    types: [ closed ]
-
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build backend
-        run: npm run build
-
-      - name: Run tests (optional)
-        run: |
-          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
-            npm test || echo "Tests failed but continuing"
-          else
-            echo "No tests found, skipping"
-          fi
-
-      - name: Build success notification
-        run: |
-          echo "✅ Sangwoo 브랜치 빌드 및 테스트 완료!"
-          echo "📦 빌드 성공: 배포는 main 브랜치에서만 진행됩니다."
+echo ""
+echo "🔍 Nginx upstream 설정:"
+grep -A 5 "upstream challenfit_backend" $NGINX_CONFIG

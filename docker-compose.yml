@@ -2,7 +2,10 @@ name: challenfit-backend
 services:
   backend-blue:
     build: .
-    env_file: .env.docker
+    env_file: 
+      - .env
+    environment:
+      - NODE_ENV=production
     ports:
       - "3000:3000"
     restart: always
@@ -16,10 +19,15 @@ services:
       - backend-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./.env:/app/.env:ro  # 읽기 전용으로 .env 파일 마운트
 
   backend-green:
     build: .
-    env_file: .env.docker
+    env_file: 
+      - .env
+    environment:
+      - NODE_ENV=production
     ports:
       - "3002:3000"
     restart: always
@@ -33,6 +41,8 @@ services:
       - backend-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./.env:/app/.env:ro  # 읽기 전용으로 .env 파일 마운트
 
 networks:
   backend-net:
