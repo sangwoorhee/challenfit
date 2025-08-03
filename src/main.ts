@@ -68,6 +68,7 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:3001',
     'http://3.34.199.169:3000',
+    'http://3.34.199.169:3002',
     'http://10.0.2.2:3000',
     'http://localhost:7357',  // 플러터 웹 기본 포트
     'http://localhost:8080',  // 대체 포트
