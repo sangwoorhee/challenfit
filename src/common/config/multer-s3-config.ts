@@ -5,13 +5,49 @@ import * as multerS3 from 'multer-s3';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+// 환경변수 가져오기 헬퍼 함수
+const getEnvValue = (configService: ConfigService, key: string): string | undefined => {
+  // 1. ConfigService에서 먼저 시도
+  const configValue = configService.get<string>(key);
+  if (configValue) return configValue;
+  
+  // 2. process.env에서 직접 시도
+  const envValue = process.env[key];
+  if (envValue) return envValue;
+  
+  // 3. .env 파일 다시 로드 시도 (동기적)
+  try {
+    require('dotenv').config({ path: '.env' });
+    return process.env[key];
+  } catch (e) {
+    console.error(`Failed to load .env file: ${e}`);
+  }
+  
+  return undefined;
+};
+
 // S3 클라이언트 생성 함수
 export const createS3Client = (configService: ConfigService) => {
-  const region = configService.get<string>('AWS_S3_REGION');
-  const accessKeyId = configService.get<string>('AWS_ACCESS_KEY_ID');
-  const secretAccessKey = configService.get<string>('AWS_SECRET_ACCESS_KEY');
+  const region = getEnvValue(configService, 'AWS_S3_REGION');
+  const accessKeyId = getEnvValue(configService, 'AWS_ACCESS_KEY_ID');
+  const secretAccessKey = getEnvValue(configService, 'AWS_SECRET_ACCESS_KEY');
+
+  console.log('S3 Configuration Debug:', {
+    region: region ? `${region.substring(0, 5)}...` : 'NOT FOUND',
+    accessKeyId: accessKeyId ? `${accessKeyId.substring(0, 5)}...` : 'NOT FOUND',
+    secretAccessKey: secretAccessKey ? 'SET' : 'NOT FOUND',
+    cwd: process.cwd(),
+    envPath: `${process.cwd()}/.env`,
+  });
 
   if (!region || !accessKeyId || !secretAccessKey) {
+    const errorMsg = `AWS S3 설정이 누락되었습니다. 
+    Region: ${region ? 'SET' : 'MISSING'}
+    AccessKeyId: ${accessKeyId ? 'SET' : 'MISSING'}
+    SecretAccessKey: ${secretAccessKey ? 'SET' : 'MISSING'}
+    Current Directory: ${process.cwd()}
+    `;
+    console.error(errorMsg);
     throw new Error('AWS S3 설정이 누락되었습니다. AWS_S3_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY를 확인해주세요.');
   }
 
@@ -30,7 +66,7 @@ export const createS3MulterConfig = (
   configService: ConfigService,
 ) => {
   const s3 = createS3Client(configService);
-  const bucketName = configService.get<string>('AWS_S3_BUCKET_NAME');
+  const bucketName = getEnvValue(configService, 'AWS_S3_BUCKET_NAME');
 
   if (!bucketName) {
     throw new Error('AWS S3 버킷명이 누락되었습니다. AWS_S3_BUCKET_NAME을 확인해주세요.');
