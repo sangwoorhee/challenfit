@@ -58,23 +58,43 @@ async function bootstrap() {
   // cookie-parser 추가
   app.use(cookieParser());
 
+  // 환경별 origin 설정
+  const isDevelopment = configService.get<string>('NODE_ENV') === 'development';
+  const frontendOrigin = configService.get<string>('FRONTEND_ORIGIN');
+
   // CORS 설정 추가
   const allowedOrigins = [
-    configService.get<string>('FRONTEND_ORIGIN'), 
+    frontendOrigin,
     'http://localhost:3000',
     'http://localhost:3001',
     'http://3.34.199.169:3000',
     'http://10.0.2.2:3000',
-    '*'
-  ];
+    'http://localhost:7357',  // 플러터 웹 기본 포트
+    'http://localhost:8080',  // 대체 포트
+    'http://10.0.2.2:3000',   // Android 에뮬레이터
+    'http://127.0.0.1:3000',  // iOS 시뮬레이터
+  ].filter(Boolean); // undefined 값 제거
+
   app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+  origin: (origin, callback) => {
+    // 개발 환경에서는 모든 origin 허용
+    if (isDevelopment) {
+      return callback(null, true);
+    }
+    
+    // origin이 없는 경우 (같은 도메인 요청) 허용
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // 허용된 origin 목록에 있는지 확인
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    logger.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
     credentials: true, // 쿠키 전송 허용
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -83,6 +103,9 @@ async function bootstrap() {
       'Cookie',
       'Origin',
       'x-member-seq',
+      'Accept',
+      'Accept-Language',
+      'Content-Language',
     ],
     exposedHeaders: ['Set-Cookie'],
     optionsSuccessStatus: 204, // pre-flight 응답 204
