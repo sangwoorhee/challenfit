@@ -8,8 +8,8 @@ services:
     environment:
       - NODE_ENV=production
       # 호스트의 PostgreSQL과 Redis에 연결
-      - DB_HOST=host.docker.internal
-      - REDIS_HOST=host.docker.internal
+      - DB_HOST=172.17.0.1
+      - REDIS_HOST=172.17.0.1
     ports:
       - "3000:3000"
     restart: always
@@ -34,8 +34,8 @@ services:
     environment:
       - NODE_ENV=production
       # 호스트의 PostgreSQL과 Redis에 연결
-      - DB_HOST=host.docker.internal
-      - REDIS_HOST=host.docker.internal
+      - DB_HOST=172.17.0.1
+      - REDIS_HOST=172.17.0.1
     ports:
       - "3002:3000"
     restart: always
@@ -54,4 +54,5 @@ services:
 
 networks:
   backend-net:
+    name: challenfit-backend_backend-net
     driver: bridge
