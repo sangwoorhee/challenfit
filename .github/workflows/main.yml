@@ -32,7 +32,18 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            # 디렉토리로 이동
             cd /home/ec2-user/challenfit_backend
+            
+            # 코드 업데이트
             git fetch --all
             git reset --hard origin/main
-            /home/ec2-user/deploy-backend.sh
+            
+            # Docker Compose 설정 검증
+            docker-compose -p challenfit-backend config
+            
+            # PostgreSQL 비밀번호 설정
+            export PGPASSWORD=postgres
+            
+            # 배포 스크립트 실행
+            bash /home/ec2-user/deploy-backend.sh
