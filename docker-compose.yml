@@ -1,14 +1,58 @@
 name: challenfit-backend
 services:
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: challenfit
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 캐시
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Blue 백엔드 서버
   backend-blue:
     build: .
     env_file: 
       - .env
     environment:
       - NODE_ENV=production
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
     ports:
       - "3000:3000"
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -17,20 +61,26 @@ services:
       retries: 3
     networks:
       - backend-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
-      - ./.env:/app/.env:ro  # 읽기 전용으로 .env 파일 마운트
+      - ./.env:/app/.env:ro
 
+  # Green 백엔드 서버
   backend-green:
     build: .
     env_file: 
       - .env
     environment:
       - NODE_ENV=production
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
     ports:
       - "3002:3000"
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -39,11 +89,13 @@ services:
       retries: 3
     networks:
       - backend-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
-      - ./.env:/app/.env:ro  # 읽기 전용으로 .env 파일 마운트
+      - ./.env:/app/.env:ro
 
 networks:
   backend-net:
     driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
