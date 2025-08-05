@@ -14,6 +14,7 @@ export class CreateWorkoutCertReqDto {
   @Type(() => Boolean)
   is_rest: boolean;
 
+  @IsOptional()
   @IsInt()
   @Type(() => Number)
   target_approval_count: number;
