@@ -76,6 +76,7 @@ async function bootstrap() {
     'http://127.0.0.1:3000',  // iOS 시뮬레이터
     'http://43.200.3.200:3000',
     'http://43.200.3.200:3002',
+    'http://43.200.3.200',
   ].filter(Boolean); // undefined 값 제거
 
   app.enableCors({
