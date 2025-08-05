@@ -177,13 +177,16 @@ export class WorkoutcertService {
         );
       }
 
+      const calculatedTargetApprovalCount = challengeRoom.current_participants - 1;
+      console.log('calculatedTargetApprovalCount:', calculatedTargetApprovalCount)
+
       const workoutCert = this.workoutCertRepository.create({
         user,
         challenge_participant: selectedParticipant,
         image_url: dto.image_url,
         caption: dto.caption,
         is_rest: dto.is_rest,
-        target_approval_count: dto.target_approval_count,
+        target_approval_count: calculatedTargetApprovalCount,
         is_completed: false,
       });
 
