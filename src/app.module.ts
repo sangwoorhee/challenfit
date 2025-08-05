@@ -84,7 +84,7 @@ import { RefreshToken } from './common/entities/refresh_token.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // 프로덕션에선 false
+        synchronize: false, // 프로덕션에선 false
       }),
     }),
     // TypeORM 연결 설정
