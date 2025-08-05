@@ -40,6 +40,17 @@ interface PaginationDto {
   cors: {
     origin: process.env.FRONTEND_ORIGIN?.split(',') || [
       'http://localhost:3000',
+      'http://localhost:3001',
+      'http://3.34.199.169:3000',
+      'http://3.34.199.169:3002',
+      'http://10.0.2.2:3000',
+      'http://localhost:7357',  // 플러터 웹 기본 포트
+      'http://localhost:8080',  // 대체 포트
+      'http://10.0.2.2:3000',   // Android 에뮬레이터
+      'http://127.0.0.1:3000',  // iOS 시뮬레이터
+      'http://43.200.3.200:3000',
+      'http://43.200.3.200:3002',
+      'http://43.200.3.200',
     ],
     credentials: true,
   },
