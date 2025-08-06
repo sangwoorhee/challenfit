@@ -19,6 +19,8 @@ import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CommonResDto, UserProfileWithFollowResDto } from './dto/res.dto';
 import { Follow } from 'src/common/entities/follow.entity';
+import { ConfigService } from '@nestjs/config';
+import { deleteS3File } from 'src/common/config/multer-s3-config';
 
 @Injectable()
 export class UserService {
@@ -32,6 +34,7 @@ export class UserService {
     @InjectRepository(Follow)
     private readonly followRepository: Repository<Follow>,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   // 1. 회원 환경설정 수정
@@ -87,6 +90,9 @@ export class UserService {
         );
       }
 
+      // 기존 프로필 이미지 URL 저장 (삭제용)
+      const oldProfileImageUrl = user.profile.profile_image_url;
+
       // 닉네임 중복 체크 및 업데이트
       if (dto.nickname !== undefined && dto.nickname !== user.nickname) {
         const existingUser = await this.userRepository.findOne({
@@ -105,6 +111,27 @@ export class UserService {
       const { nickname, ...profileFields } = dto;
       this.profileRepository.merge(user.profile, profileFields);
       await this.profileRepository.save(user.profile);
+
+      // 새로운 프로필 이미지가 업로드되었고, 기존 이미지가 있다면 기존 이미지 삭제
+      if (
+        dto.profile_image_url && 
+        oldProfileImageUrl && 
+        oldProfileImageUrl !== dto.profile_image_url
+      ) {
+        // 트랜잭션 커밋 후 비동기적으로 기존 이미지 삭제
+        setImmediate(async () => {
+          try {
+            const deleted = await deleteS3File(this.configService, oldProfileImageUrl);
+            if (deleted) {
+              console.log(`기존 프로필 이미지 삭제 완료: ${oldProfileImageUrl}`);
+            } else {
+              console.warn(`기존 프로필 이미지 삭제 실패: ${oldProfileImageUrl}`);
+            }
+          } catch (error) {
+            console.error('기존 프로필 이미지 삭제 중 오류:', error);
+          }
+        });
+      }
 
       await queryRunner.commitTransaction();
       return { result: 'ok', message: '프로필이 수정되었습니다.' };

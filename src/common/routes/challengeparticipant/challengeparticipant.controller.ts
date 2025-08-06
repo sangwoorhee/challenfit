@@ -37,8 +37,8 @@ export class ChallengeparticipantController {
   }
 
   // 2. 도전 참가 (입장한 사용자가 ONGOING 상태로 전환)
-  // POST : http://localhost:3000/challengeparticipant/participate
-  @Post('participate')
+  // POST : http://localhost:3000/challengeparticipant/
+  @Post('')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: '도전 참가',

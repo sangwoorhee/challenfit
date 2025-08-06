@@ -22,6 +22,7 @@ import { HealthModule } from './common/routes/health/health.module';
 import { JwtMiddleware } from './common/middleware/jwt.middleware';
 import { User } from './common/entities/user.entity';
 import { RefreshToken } from './common/entities/refresh_token.entity';
+import { EntryModule } from './common/routes/entry/entry.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { RefreshToken } from './common/entities/refresh_token.entity';
     FollowModule,
     ChatModule,
     HealthModule,
+    EntryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
