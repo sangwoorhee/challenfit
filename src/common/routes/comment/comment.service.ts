@@ -26,8 +26,11 @@ export class CommentService {
   async createComment(
     userIdx: string,
     dto: CreateCommentReqDto,
-  ): Promise<Comment> {
-    const user = await this.userRepository.findOne({ where: { idx: userIdx } });
+  ): Promise<CommentResponseDto> {
+    const user = await this.userRepository.findOne({ 
+      where: { idx: userIdx },
+      relations: ['profile']
+    });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
     const workoutCert = await this.workoutCertRepository.findOne({
@@ -42,7 +45,17 @@ export class CommentService {
       workout_cert: workoutCert,
     });
 
-    return await this.commentRepository.save(comment);
+    const savedComment = await this.commentRepository.save(comment);
+
+    return {
+      commentId: savedComment.idx,
+      content: savedComment.content,
+      createdAt: savedComment.created_at,
+      userId: user.idx,
+      nickname: user.nickname,
+      profileImage: user.profile?.profile_image_url || null,
+      postId: workoutCert.idx,
+    };
   }
 
   // 2. 댓글 수정
