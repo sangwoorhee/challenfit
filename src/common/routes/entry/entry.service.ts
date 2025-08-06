@@ -38,6 +38,7 @@ export class EntryService {
     private configService: ConfigService,
   ) {}
 
+  // 토큰 검증
   async validateToken(token: string): Promise<any> {
     try {
       const payload = await this.jwtService.verifyAsync(token, {
@@ -49,6 +50,7 @@ export class EntryService {
     }
   }
 
+  // 유저 정보 조회
   async getUserInfo(userIdx: string): Promise<any> {
     const cacheKey = `user:info:${userIdx}`;
     let userInfo = await this.safeGetCache(cacheKey);
@@ -65,6 +67,7 @@ export class EntryService {
     return userInfo;
   }
 
+  // 참여 생성
   async createParticipant(challengeRoomIdx: string, userIdx: string): Promise<ChallengeParticipant> {
     try {
       const challengeRoom = await this.challengeRoomRepository.findOne({
@@ -116,6 +119,7 @@ export class EntryService {
     }
   }
 
+  // 참여 취소
   async removeParticipant(challengeRoomIdx: string, userIdx: string): Promise<boolean> {
     try {
       const participant = await this.challengeParticipantRepository.findOne({
@@ -143,6 +147,7 @@ export class EntryService {
     }
   }
 
+  // 참가자 목록 조회
   async getChallengeParticipants(challengeRoomIdx: string): Promise<ParticipantInfo[]> {
     const cacheKey = `${this.PARTICIPANTS_CACHE_PREFIX}${challengeRoomIdx}`;
     let participants = await this.safeGetCache<ParticipantInfo[]>(cacheKey);
@@ -174,12 +179,14 @@ export class EntryService {
     return participants || [];
   }
 
+  // 도전방 정보 조회
   async getChallengeRoomInfo(challengeRoomIdx: string): Promise<ChallengeRoom> {
     const challengeRoom = await this.challengeRoomRepository.findOne({ where: { idx: challengeRoomIdx } });
     if (!challengeRoom) throw new HttpException('도전방을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     return challengeRoom;
   }
 
+  // 참여 여부 확인
   async isParticipant(userIdx: string, challengeRoomIdx: string): Promise<boolean> {
     const participant = await this.challengeParticipantRepository.findOne({
       where: { user: { idx: userIdx }, challenge: { idx: challengeRoomIdx } },
@@ -187,6 +194,7 @@ export class EntryService {
     return !!participant;
   }
 
+  // 참가자 목록 캐시 무효화
   private async invalidateParticipantsCache(challengeRoomIdx: string): Promise<void> {
     try {
       const cacheKey = `${this.PARTICIPANTS_CACHE_PREFIX}${challengeRoomIdx}`;
@@ -197,6 +205,7 @@ export class EntryService {
     }
   }
 
+  // 캐시 가져오기
   private async safeGetCache<T>(key: string): Promise<T | null> {
     try {
       const result = await this.cacheManager.get<T>(key);
@@ -207,6 +216,7 @@ export class EntryService {
     }
   }
 
+  // 캐시 설정
   private async safeSetCache(key: string, value: any, ttl?: number): Promise<void> {
     try {
       await (this.cacheManager as any).set(key, value, { ttl: ttl || this.CACHE_TTL });
@@ -215,6 +225,7 @@ export class EntryService {
     }
   }
 
+  // 캐시 삭제
   private async safeDelCache(key: string): Promise<void> {
     try {
       await this.cacheManager.del(key);
