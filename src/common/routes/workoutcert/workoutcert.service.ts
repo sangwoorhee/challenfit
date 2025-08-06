@@ -76,6 +76,7 @@ export class WorkoutcertService {
         'user.profile',
         'challenge_participant',
         'challenge_participant.challenge',
+        'challenge_participant.challenge.challenge_participants', 
         'cert_approval',
         'likes',
         'likes.user',
@@ -250,6 +251,7 @@ export class WorkoutcertService {
         'user.profile',
         'challenge_participant',
         'challenge_participant.challenge',
+        'challenge_participant.challenge.challenge_participants',
         'cert_approval',
         'likes',
         'likes.user',
@@ -327,6 +329,7 @@ export class WorkoutcertService {
         'user.profile',
         'challenge_participant',
         'challenge_participant.challenge',
+        'challenge_participant.challenge.challenge_participants',
         'cert_approval',
         'likes',
         'likes.user',
@@ -533,6 +536,7 @@ export class WorkoutcertService {
         'user.profile',
         'challenge_participant',
         'challenge_participant.challenge',
+        'challenge_participant.challenge.challenge_participants',
         'likes',
         'likes.user',
         'comments',
@@ -589,8 +593,31 @@ export class WorkoutcertService {
     certs: WorkoutCert[],
     currentUserIdx?: string,
   ): WorkoutCertWithStatsDto[] {
-    return certs.map((cert) => ({
+    return certs.map((cert) => {
+      // 현재 도전방의 참가자 수를 동적으로 계산
+      let dynamicTargetApprovalCount = cert.target_approval_count; // 기본값
+      
+      if (cert.challenge_participant && cert.challenge_participant.challenge) {
+        const challengeRoom = cert.challenge_participant.challenge;
+        
+        // challenge_participants가 로드되어 있으면 정확한 카운트 사용
+        if (challengeRoom.challenge_participants) {
+          // ONGOING 또는 PENDING 상태의 참가자만 카운트
+          const activeParticipants = challengeRoom.challenge_participants.filter(
+            participant => 
+              participant.status === ChallengerStatus.ONGOING || 
+              participant.status === ChallengerStatus.PENDING
+          );
+          dynamicTargetApprovalCount = activeParticipants.length - 1;
+        } else {
+          // challenge_participants가 로드되지 않았으면 current_participants 사용
+          dynamicTargetApprovalCount = challengeRoom.current_participants - 1;
+        }
+      }
+
+    return {
       ...cert,  // 기존 cert의 모든 필드 유지
+      target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
       like_count: cert.likes?.length || 0,
       comment_count: cert.comments?.length || 0,
       is_liked: currentUserIdx
@@ -601,6 +628,7 @@ export class WorkoutcertService {
             (comment) => comment.user?.idx === currentUserIdx,
           ) || false
         : false,
-    }));
+      }
+    });
   }
 }
