@@ -16,7 +16,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Comment } from 'src/common/entities/comment.entity';
 import {
   CommentResponseDto,
-  CreateCommentResDto,
+  // CreateCommentResDto,
   DeleteCommentResDto,
   GetCommentResDto,
   GetCommentsByWorkoutCertResDto,
@@ -39,9 +39,8 @@ export class CommentController {
   async createComment(
     @Body() dto: CreateCommentReqDto,
     @User() user: UserAfterAuth,
-  ): Promise<CreateCommentResDto> {
-    const comment = await this.commentService.createComment(user.idx, dto);
-    return { result: 'ok', comment };
+  ): Promise<CommentResponseDto> {
+    return await this.commentService.createComment(user.idx, dto);
   }
 
   // 2. 댓글 수정
