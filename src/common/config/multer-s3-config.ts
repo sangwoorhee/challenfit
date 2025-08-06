@@ -1,5 +1,5 @@
 // src/common/config/multer-s3-config.ts
-import { S3Client } from '@aws-sdk/client-s3';
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import * as multerS3 from 'multer-s3';
 import { extname } from 'path';
@@ -103,4 +103,74 @@ export const createS3MulterConfig = (
 // 기본 S3 설정 (workout-images용)
 export const getS3MulterConfig = (configService: ConfigService) => {
   return createS3MulterConfig('workout-images', configService);
+};
+
+// S3에서 파일을 삭제하는 함수
+export const deleteS3File = async (
+  configService: ConfigService,
+  fileUrl: string,
+): Promise<boolean> => {
+  try {
+    const s3 = createS3Client(configService);
+    const bucketName = getEnvValue(configService, 'AWS_S3_BUCKET_NAME');
+
+    if (!bucketName) {
+      console.error('S3 버킷명이 설정되지 않았습니다.');
+      return false;
+    }
+
+    // S3 URL에서 key 추출
+    const key = extractS3KeyFromUrl(fileUrl, bucketName);
+    if (!key) {
+      console.error('S3 URL에서 키를 추출할 수 없습니다:', fileUrl);
+      return false;
+    }
+
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    await s3.send(deleteCommand);
+    console.log(`S3 파일 삭제 성공: ${key}`);
+    return true;
+  } catch (error) {
+    console.error('S3 파일 삭제 실패:', error);
+    return false;
+  }
+};
+
+// S3 URL에서 키를 추출하는 헬퍼 함수
+const extractS3KeyFromUrl = (fileUrl: string, bucketName: string): string | null => {
+  try {
+    // S3 URL 형식들을 처리
+    // 1. https://bucket-name.s3.region.amazonaws.com/key
+    // 2. https://s3.region.amazonaws.com/bucket-name/key
+    
+    const url = new URL(fileUrl);
+    
+    // 첫 번째 형식: bucket-name.s3.region.amazonaws.com
+    if (url.hostname.includes('.s3.') && url.hostname.startsWith(bucketName)) {
+      return url.pathname.substring(1); // 앞의 '/' 제거
+    }
+    
+    // 두 번째 형식: s3.region.amazonaws.com/bucket-name/
+    if (url.hostname.includes('s3.') && url.pathname.startsWith(`/${bucketName}/`)) {
+      return url.pathname.substring(`/${bucketName}/`.length);
+    }
+    
+    // CloudFront URL이나 다른 형식의 경우
+    // 파일 경로에서 버킷명 이후의 부분을 키로 사용
+    const pathParts = url.pathname.split('/');
+    const bucketIndex = pathParts.indexOf(bucketName);
+    if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+      return pathParts.slice(bucketIndex + 1).join('/');
+    }
+    
+    // 마지막 시도: pathname에서 첫 번째 '/' 제거한 것을 키로 사용
+    return url.pathname.substring(1);
+  } catch (error) {
+    console.error('URL 파싱 실패:', error);
+    return null;
+  }
 };

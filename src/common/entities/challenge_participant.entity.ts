@@ -37,6 +37,10 @@ export class ChallengeParticipant {
   @ApiProperty({ description: '챌린지 완료 일시' })
   completed_at: Date | null;
 
+  // @Column({ type: 'boolean', default: false })
+  // @ApiProperty({ description: '방장 여부' })
+  // is_creator: boolean;
+
   @ManyToOne(() => User, (user) => user.challenge_participants, {
     onDelete: 'CASCADE',
   })

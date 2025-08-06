@@ -29,7 +29,7 @@ import {
 } from './dto/res.dto';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { createS3Client } from 'src/common/config/multer-s3-config';
+import { createS3Client, deleteS3File } from 'src/common/config/multer-s3-config';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -366,10 +366,26 @@ export class WorkoutcertService {
       if (cert.user.idx !== user_idx)
         throw new ForbiddenException('자신의 인증글만 수정할 수 있습니다.');
 
+      // 기존 이미지 URL 저장 (삭제용)
+      const oldImageUrl = cert.image_url;
+
       // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
       if (dto.image_url && cert.image_url !== dto.image_url) {
-        await this.deleteImageFile(cert.image_url);
         cert.image_url = dto.image_url;
+        
+        // 트랜잭션 커밋 후 비동기적으로 기존 이미지 삭제
+        setImmediate(async () => {
+          try {
+            const deleted = await deleteS3File(this.configService, oldImageUrl);
+            if (deleted) {
+              console.log(`기존 인증글 이미지 삭제 완료: ${oldImageUrl}`);
+            } else {
+              console.warn(`기존 인증글 이미지 삭제 실패: ${oldImageUrl}`);
+            }
+          } catch (error) {
+            console.error('기존 인증글 이미지 삭제 중 오류:', error);
+          }
+        });
       }
 
       if (dto.caption) cert.caption = dto.caption;
@@ -400,10 +416,27 @@ export class WorkoutcertService {
     if (cert.user.idx !== user_idx)
       throw new ForbiddenException('자신의 인증글만 삭제할 수 있습니다.');
 
-    // 이미지 파일 삭제
-    await this.deleteImageFile(cert.image_url);
+    // 인증글의 이미지 URL 저장 (삭제용)
+    const imageUrl = cert.image_url;
 
+    // 데이터베이스에서 인증글 삭제
     await this.workoutCertRepository.remove(cert);
+
+    // 비동기적으로 S3에서 이미지 삭제
+    if (imageUrl) {
+      setImmediate(async () => {
+        try {
+          const deleted = await deleteS3File(this.configService, imageUrl);
+          if (deleted) {
+            console.log(`인증글 이미지 삭제 완료: ${imageUrl}`);
+          } else {
+            console.warn(`인증글 이미지 삭제 실패: ${imageUrl}`);
+          }
+        } catch (error) {
+          console.error('인증글 이미지 삭제 중 오류:', error);
+        }
+      });
+    }
   }
 
   // 8. 유저의 도전 운동 인증 목록 조회 (페이지네이션)
@@ -558,35 +591,10 @@ export class WorkoutcertService {
   }
 
   // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
-  private async deleteImageFile(imageUrl: string): Promise<void> {
-    try {
-      if (!imageUrl) return;
-  
-      // S3 URL에서 key 추출
-      const bucketName = this.configService.get<string>('AWS_S3_BUCKET_NAME');
-      const urlPattern = new RegExp(`https?://[^/]+/${bucketName}/(.+)$`);
-      const match = imageUrl.match(urlPattern);
-      
-      if (!match || !match[1]) {
-        console.error('Invalid S3 URL:', imageUrl);
-        return;
-      }
-  
-      const key = match[1];
-      const s3Client = createS3Client(this.configService);
-  
-      const command = new DeleteObjectCommand({
-        Bucket: bucketName,
-        Key: key,
-      });
-  
-      await s3Client.send(command);
-      console.log('S3 파일 삭제 성공:', key);
-    } catch (error) {
-      console.error('S3 파일 삭제 중 오류:', error);
-      // 파일 삭제 실패는 전체 프로세스를 중단시키지 않음
-    }
-  }
+  // 기존 deleteImageFile 메서드는 제거하거나 주석 처리
+  // private async deleteImageFile(imageUrl: string): Promise<void> {
+  //   // 이 메서드는 더 이상 사용하지 않음 - deleteS3File 함수로 대체
+  // }
 
   // 헬퍼 메서드: WorkoutCert에 좋아요/댓글 정보 추가
   private enrichWorkoutCerts(

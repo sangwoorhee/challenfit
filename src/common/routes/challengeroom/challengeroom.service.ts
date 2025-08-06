@@ -104,6 +104,7 @@ export class ChallengeroomService {
       // 생성자를 도전자 목록에 추가 - 상태를 PENDING으로 변경
       const participant = this.participantRepository.create({
         user,
+        // is_creator: true, // 방장 여부 true
         challenge: savedRoom,
         status: ChallengerStatus.PENDING, // ONGOING에서 PENDING으로 변경
         joined_at: new Date(),
