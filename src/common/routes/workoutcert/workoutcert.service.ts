@@ -160,7 +160,7 @@ export class WorkoutcertService {
 
       if (!selectedParticipant) {
         throw new ConflictException(
-          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.',
+          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 내일까지 기다려주세요.',
         );
       }
 
