@@ -1,32 +1,117 @@
+[ec2-user@ip-172-31-38-128 ~]$ sudo vi deploy-backend.sh
 #!/bin/bash
 set -euo pipefail
 
 echo "🚀 Challenfit Backend 블루-그린 배포 시작 (Nginx 연동)..."
 
-# 👉 0. 고아 이미지 정리 (조건부 실행)
-echo "🔍 Dangling 이미지 검사 중..."
-DANGLING_COUNT=$(docker images -f "dangling=true" -q | wc -l)
+# 프로젝트 디렉토리로 이동
+cd /home/ec2-user/challenfit_backend || { echo "❌ 디렉토리 이동 실패"; exit 1; }
 
-if [ "$DANGLING_COUNT" -gt 0 ]; then
-    echo "🧹 $DANGLING_COUNT개의 고아 이미지가 발견되었습니다. 정리합니다..."
-    docker image prune -f
-else
-    echo "✅ 고아 이미지가 없습니다. 정리 생략합니다."
+# .env 파일 존재 확인 및 Docker용 환경변수 설정
+if [ ! -f ".env" ]; then
+    echo "❌ .env 파일이 없습니다. 배포를 중단합니다."
+    exit 1
 fi
 
-# 프로젝트 디렉토리로 이동
-cd /home/ec2-user/challenfit_backend
+# Docker용 .env 파일 생성
+if [ ! -f ".env.docker" ]; then
+    cp .env .env.docker
+    sed -i 's/DB_HOST=localhost/DB_HOST=172.17.0.1/g' .env.docker
+    sed -i 's/REDIS_HOST=localhost/REDIS_HOST=172.17.0.1/g' .env.docker
+fi
 
-# PM2 프로세스 중지 (기존 PM2 방식과 충돌 방지)
+# 서비스 상태 확인
+echo "🔍 서비스 상태 확인..."
+docker-compose -p challenfit-backend ps
+
+# PM2 프로세스 중지
 if command -v pm2 &> /dev/null; then
     echo "🛑 기존 PM2 프로세스 중지..."
-    pm2 stop challenfit-backend || true
-    pm2 delete challenfit-backend || true
+    pm2 stop challenfit-backend 2>/dev/null || true
+    pm2 delete challenfit-backend 2>/dev/null || true
 fi
 
 # 디스크 정리
-docker builder prune -f --filter "until=168h"
-docker system prune -f --filter "until=168h"
+echo "🧹 디스크 정리 시작..."
+
+# 현재 실행 중인 컨테이너 ID 저장 (보호 대상)
+RUNNING_CONTAINERS=$(docker ps -q)
+echo "🔒 보호할 실행 중인 컨테이너: $(echo $RUNNING_CONTAINERS | wc -w)개"
+
+# 디스크 사용률 체크
+DISK_USAGE=$(df /var/lib/docker | awk 'NR==2 {print int($5)}')
+echo "💾 현재 Docker 디스크 사용률: ${DISK_USAGE}%"
+
+# 사용률에 따른 정리 강도 조절
+if [ "$DISK_USAGE" -gt 90 ]; then
+    echo "🚨 위험! 디스크 사용률 90% 초과 - 최대 강도 정리"
+    FILTER_TIME="1h"  # 1시간 이상 된 것 모두 삭제
+elif [ "$DISK_USAGE" -gt 70 ]; then
+    echo "⚠️ 경고! 디스크 사용률 70% 초과 - 강력 정리"
+    FILTER_TIME="24h"  # 24시간 이상 된 것 삭제
+else
+    echo "✅ 디스크 사용률 양호 - 일반 정리"
+FILTER_TIME="168h"  # 7일 이상 된 것만 삭제
+fi
+
+# 1단계: 종료된 컨테이너 삭제
+echo "📦 종료된 컨테이너 정리..."
+docker container prune -f
+
+# 2단계: 사용하지 않는 네트워크 정리
+echo "🌐 미사용 네트워크 정리..."
+docker network prune -f
+
+# 3단계: 사용하지 않는 볼륨 정리 (주의: 데이터 손실 가능)
+echo "💿 미사용 볼륨 정리..."
+docker volume prune -f
+
+# 4단계: 사용하지 않는 이미지 정리 (실행 중인 컨테이너 제외)
+echo "🖼️  미사용 이미지 정리 (${FILTER_TIME} 이상)..."
+# 실행 중인 컨테이너의 이미지는 보호됨
+docker image prune -a -f --filter "until=${FILTER_TIME}"
+
+# 5단계: 빌드 캐시 완전 정리 (가장 많은 공간 확보)
+echo "🔨 빌드 캐시 완전 정리..."
+docker builder prune -a -f --filter "until=${FILTER_TIME}"
+
+# 6단계: 디스크 사용률이 여전히 높으면 추가 정리
+DISK_USAGE_AFTER=$(df /var/lib/docker | awk 'NR==2 {print int($5)}')
+if [ "$DISK_USAGE_AFTER" -gt 85 ]; then
+    echo "🔥 추가 강력 정리 실행 (여전히 ${DISK_USAGE_AFTER}% 사용 중)..."
+
+    # 더 짧은 시간 필터로 재정리
+    docker image prune -a -f --filter "until=1h"
+    docker builder prune -a -f
+
+    # 로그 파일 정리 (큰 효과)
+    echo "📝 Docker 로그 파일 정리..."
+    sudo truncate -s 0 /var/lib/docker/containers/*/*-json.log 2>/dev/null || true
+fi
+
+# 7단계: 최종 시스템 정리 (중복 제거)
+echo "🎯 최종 시스템 정리..."
+docker system prune -f
+
+# 정리 결과 확인
+echo ""
+echo "📊 정리 완료! 디스크 상태:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+df -h /var/lib/docker | grep -v Filesystem
+echo ""
+docker system df
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# 확보된 공간 계산
+if [ -n "$DISK_USAGE" ] && [ -n "$DISK_USAGE_AFTER" ]; then
+    FREED=$((DISK_USAGE - DISK_USAGE_AFTER))
+    echo "✨ 확보된 공간: ${FREED}%"
+fi
+
+# 실행 중인 컨테이너 확인
+echo ""
+echo "✅ 실행 중인 컨테이너 (영향받지 않음):"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 ### 1. 이전 종료된 OLD 컨테이너 삭제
 for OLD_COLOR in backend-blue backend-green; do
@@ -35,94 +120,216 @@ for OLD_COLOR in backend-blue backend-green; do
     STATUS=$(docker inspect --format='{{.State.Status}}' "$CONTAINER_NAME")
     if [ "$STATUS" = "exited" ]; then
       echo "🗑   이전 종료된 컨테이너 삭제: $CONTAINER_NAME"
-      docker compose -p challenfit-backend rm -f "$OLD_COLOR"
+      docker-compose -p challenfit-backend rm -f "$OLD_COLOR" || true
     fi
   fi
 done
 
 ### 2. Blue-Green 배포 대상 판단
-CURRENT=$(docker compose -p challenfit-backend ps -q backend-blue 2>/dev/null | wc -l)
-if [ "$CURRENT" -gt 0 ]; then
-    NEW=backend-green
+ACTIVE_PORT=$(grep -E "server localhost:(3000|3002) max_fails" /etc/nginx/conf.d/challenfit.conf | grep -v "backup" | grep -oE "3000|3002" | head -1)
+
+if [ "$ACTIVE_PORT" = "3000" ]; then
     OLD=backend-blue
-    NEW_PORT=3002
+    NEW=backend-green
     OLD_PORT=3000
+    NEW_PORT=3002
 else
-    NEW=backend-blue
     OLD=backend-green
-    NEW_PORT=3000
+    NEW=backend-blue
     OLD_PORT=3002
+    NEW_PORT=3000
 fi
 
 echo "🔄 $OLD → $NEW 으로 전환합니다 (포트: $OLD_PORT → $NEW_PORT)"
 
 ### 3. 소스코드 갱신 및 빌드
 echo "📥 소스코드 업데이트 중..."
-git fetch --all
-git reset --hard origin/main
+git fetch --all || { echo "❌ git fetch 실패"; exit 1; }
+git reset --hard origin/main || { echo "❌ git reset 실패"; exit 1; }
 
+# .env 파일 백업 및 복원
+cp .env .env.backup
+if [ ! -f ".env" ] && [ -f ".env.backup" ]; then
+    cp .env.backup .env
+    echo "✅ .env 파일 복원됨"
+fi
+
+# 호스트의 PostgreSQL과 Redis 6 연결 테스트
+echo "⏳ 데이터베이스 서비스 연결 테스트 중..."
+export PGPASSWORD=postgres
+MAX_RETRIES=10
+COUNT=0
+while ! psql -h 172.17.0.1 -U postgres -d challenfit -c "SELECT 1;" >/dev/null 2>&1; do
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "❌ PostgreSQL 연결 실패"
+        exit 1
+    fi
+    echo "🟡 PostgreSQL 연결 대기 중... ($COUNT/$MAX_RETRIES)"
+    sleep 3
+    COUNT=$((COUNT + 1))
+done
+echo "✅ PostgreSQL 연결 성공"
+
+COUNT=0
+while ! redis6-cli -h 172.17.0.1 ping >/dev/null 2>&1; do
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "❌ Redis 6 연결 실패"
+        exit 1
+    fi
+    echo "🟡 Redis 6 연결 대기 중... ($COUNT/$MAX_RETRIES)"
+    sleep 3
+    COUNT=$((COUNT + 1))
+done
+echo "✅ Redis 6 연결 성공"
+
+### 4. 새 컨테이너 빌드 및 시작
 echo "🔨 $NEW 컨테이너 빌드 및 시작..."
-docker compose -p challenfit-backend build $NEW
-docker compose -p challenfit-backend up -d $NEW
+docker-compose -p challenfit-backend build "$NEW" || { echo "❌ 도커 빌드 실패: $NEW"; exit 1; }
+docker-compose -p challenfit-backend up -d "$NEW" || { echo "❌ 도커 시작 실패: $NEW"; exit 1; }
 
-### 4. Health Check 대기
+### 5. Health Check 대기
 echo "🏥 Health Check 진행 중..."
 MAX_RETRIES=30
 COUNT=0
-while [ "$(docker inspect --format='{{.State.Health.Status}}' challenfit-backend-$NEW-1 2>/dev/null || echo 'starting')" != "healthy" ]; do
+while true; do
+    HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' challenfit-backend-$NEW-1 2>/dev/null || echo 'starting')
+
+    if [ "$HEALTH_STATUS" = "healthy" ]; then
+        echo "✅ $NEW 컨테이너가 정상적으로 시작되었습니다!"
+        break
+    fi
+
     if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
         echo "❌ Health check 실패: $NEW 컨테이너가 정상 상태가 아닙니다."
-        docker logs challenfit-backend-$NEW-1
+        echo "📋 컨테이너 상태: $HEALTH_STATUS"
+        echo "📋 컨테이너 로그:"
+        docker logs --tail 100 challenfit-backend-$NEW-1
         exit 1
     fi
-    echo "🟡 Health check 대기 중... ($COUNT/$MAX_RETRIES)"
+
+    echo "🟡 Health check 대기 중... ($COUNT/$MAX_RETRIES) - 상태: $HEALTH_STATUS"
+    if [ $((COUNT % 10)) -eq 0 ] && [ "$COUNT" -gt 0 ]; then
+        echo "📋 현재 컨테이너 로그 (최근 10줄):"
+        docker logs --tail 10 challenfit-backend-$NEW-1
+    fi
+
     sleep 10
     COUNT=$((COUNT + 1))
 done
 
-echo "✅ $NEW 컨테이너가 정상적으로 시작되었습니다!"
-
-### 5. Nginx Upstream 설정 업데이트
+### 6. Nginx 설정 업데이트
 echo "🔀 Nginx upstream 설정 업데이트 중..."
-
-# Nginx 설정 파일 경로
 NGINX_CONFIG="/etc/nginx/conf.d/challenfit.conf"
 
+if [ ! -f "$NGINX_CONFIG" ]; then
+    echo "📝 Nginx 설정 파일 생성 중..."
+    sudo tee "$NGINX_CONFIG" > /dev/null <<EOF
+upstream challenfit_backend {
+    server localhost:3002 max_fails=3 fail_timeout=30s;
+    server localhost:3000 backup max_fails=3 fail_timeout=30s;
+}
+
+server {
+    listen 80;
+    server_name 43.200.3.200 localhost;
+
+    client_max_body_size 100M;
+
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    location /health {
+        proxy_pass http://challenfit_backend/health;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 5s;
+        proxy_read_timeout 5s;
+    }
+
+    location / {
+        proxy_pass http://challenfit_backend;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, Cookie, Origin, x-member-seq";
+
+if (\$request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+            add_header Access-Control-Allow-Headers "Content-Type, Authorization, Cookie, Origin, x-member-seq";
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+    }
+
+    location /Uploads/ {
+        proxy_pass http://challenfit_backend;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+
+        expires 1h;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /nginx_status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        allow 10.0.0.0/8;
+        deny all;
+    }
+
+    access_log /var/log/nginx/challenfit_access.log;
+    error_log /var/log/nginx/challenfit_error.log;
+}
+EOF
+fi
+
 if [ "$NEW" == "backend-green" ]; then
-    # Green 서버로 전환
-    sudo sed -i 's/server localhost:3000 max_fails=3 fail_timeout=30s;/server localhost:3000 backup max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
-    sudo sed -i 's/server localhost:3002 backup max_fails=3 fail_timeout=30s;/server localhost:3002 max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
+    sudo sed -i 's/server localhost:3000 max_fails=3 fail_timeout=30s;/server localhost:3000 backup max_fails=3 fail_timeout=30s;/g' "$NGINX_CONFIG"
+    sudo sed -i 's/server localhost:3002 backup max_fails=3 fail_timeout=30s;/server localhost:3002 max_fails=3 fail_timeout=30s;/g' "$NGINX_CONFIG"
     echo "🟢 Green 서버(포트 3002)로 트래픽 전환"
 else
-    # Blue 서버로 전환
-    sudo sed -i 's/server localhost:3002 max_fails=3 fail_timeout=30s;/server localhost:3002 backup max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
-    sudo sed -i 's/server localhost:3000 backup max_fails=3 fail_timeout=30s;/server localhost:3000 max_fails=3 fail_timeout=30s;/g' $NGINX_CONFIG
+    sudo sed -i 's/server localhost:3002 max_fails=3 fail_timeout=30s;/server localhost:3002 backup max_fails=3 fail_timeout=30s;/g' "$NGINX_CONFIG"
+    sudo sed -i 's/server localhost:3000 backup max_fails=3 fail_timeout=30s;/server localhost:3000 max_fails=3 fail_timeout=30s;/g' "$NGINX_CONFIG"
     echo "🔵 Blue 서버(포트 3000)로 트래픽 전환"
 fi
 
-### 6. Nginx 설정 테스트 및 리로드
+### 7. Nginx 설정 테스트 및 리로드
 echo "🔧 Nginx 설정 테스트 중..."
-sudo nginx -t
+sudo nginx -t || { echo "❌ Nginx 설정 오류"; exit 1; }
 
-if [ $? -eq 0 ]; then
-    echo "✅ Nginx 설정이 유효합니다. 리로드 진행..."
-    sudo nginx -s reload
-    echo "🔄 Nginx가 성공적으로 리로드되었습니다."
-else
-    echo "❌ Nginx 설정에 오류가 있습니다. 배포를 중단합니다."
-    exit 1
-fi
+echo "✅ Nginx 설정이 유효합니다. 리로드 진행..."
+sudo nginx -s reload || { echo "❌ Nginx 리로드 실패"; exit 1; }
+echo "🔄 Nginx가 성공적으로 리로드되었습니다."
 
-### 7. 새 서버 접속 테스트
+### 8. 새 서버 접속 테스트
 echo "🧪 새 서버 접속 테스트 중..."
 sleep 10
-
-# Nginx를 통한 접속 테스트
 MAX_RETRIES=10
 COUNT=0
-while ! curl -f http://localhost/health >/dev/null 2>&1; do
+while ! curl -f http://localhost:$NEW_PORT/health >/dev/null 2>&1; do
     if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
         echo "❌ 새 서버 접속 테스트 실패"
+        echo "📋 디버깅 정보:"
+        curl -v http://localhost:$NEW_PORT/health
+        docker-compose -p challenfit-backend ps
+        docker logs --tail 100 challenfit-backend-$NEW-1
         exit 1
     fi
     echo "🟡 접속 테스트 재시도 중... ($COUNT/$MAX_RETRIES)"
@@ -132,45 +339,21 @@ done
 
 echo "✅ 새 서버 접속 테스트 성공!"
 
-### 8. 기존 OLD 컨테이너 stop만 수행 (삭제하지 않음)
+### 9. 기존 OLD 컨테이너 중지
 if [ "$OLD" != "$NEW" ]; then
     echo "🛑 기존 $OLD 컨테이너 중지 중..."
     sleep 30
-    docker compose -p challenfit-backend stop $OLD || true
-
-    if docker inspect challenfit-backend-$OLD-1 >/dev/null 2>&1; then
-      echo "⏳ $OLD 컨테이너 종료 대기 중..."
-      MAX_RETRIES=30
-      COUNT=0
-      while [ "$(docker inspect --format='{{.State.Status}}' challenfit-backend-$OLD-1)" != "exited" ]; do
-        if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
-          echo "❌ 종료 실패: $OLD 컨테이너가 정상 종료되지 않았습니다."
-          docker logs challenfit-backend-$OLD-1
-          break
-        fi
-        sleep 2
-        COUNT=$((COUNT + 1))
-      done
-      echo "🔒 $OLD 컨테이너는 종료되었으나 삭제하지 않고 보관합니다."
-    else
-      echo "💡 컨테이너 $OLD 없음. 제거 스킵."
-    fi
+    docker-compose -p challenfit-backend stop "$OLD" || true
+    echo "🔒 $OLD 컨테이너는 종료되었으나 삭제하지 않고 보관합니다."
 fi
 
-### 9. 현재 Nginx upstream 상태 확인
-echo "📊 현재 Nginx upstream 상태:"
-curl -s http://localhost/nginx_status || echo "Nginx 상태 확인 실패"
-
+### 10. 배포 완료 메시지
+echo "🎉 배포 완료! 서비스가 http://43.200.3.200 에서 실행 중입니다."
+echo "📊 현재 실행 중인 컨테이너:"
+docker-compose -p challenfit-backend ps
 echo ""
-echo "🎉 배포 완료! 서비스가 http://3.34.199.169 에서 실행 중입니다."
-echo "📊 현재 실행 중인 컨테이너: $NEW (포트: $NEW_PORT)"
-echo "🌐 Nginx를 통한 로드 밸런싱이 활성화되었습니다."
-
-# 최종 상태 확인
-echo ""
-echo "📋 현재 컨테이너 상태:"
-docker compose -p challenfit-backend ps
-
-echo ""
-echo "🔍 Nginx upstream 설정:"
-grep -A 5 "upstream challenfit_backend" $NGINX_CONFIG
+echo "📝 유용한 명령어:"
+echo "  - 로그 확인: docker-compose -p challenfit-backend logs -f $NEW"
+echo "  - 상태 확인: docker-compose -p challenfit-backend ps"
+echo "  - 롤백: docker-compose -p challenfit-backend up -d $OLD && docker-compose -p challenfit-backend stop $NEW"
+                                     
