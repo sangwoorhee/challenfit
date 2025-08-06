@@ -119,12 +119,18 @@ export class AuthService {
 
   // 2. 회원가입 (E-mail, PassWord)
   async signup(signupDto: SignupReqDto) {
-    // const { email, password, name, nickname, phone } = signupDto;
     const { email, password, name, nickname, phone } = signupDto;
 
+    // 이메일 중복 체크
     const existing = await this.userRepository.findOne({ where: { email } });
     if (existing) {
       throw new HttpException('이미 가입된 이메일입니다.', HttpStatus.CONFLICT);
+    }
+
+    // 닉네임 중복 체크
+    const existingNickname = await this.userRepository.findOne({ where: { nickname } });
+    if (existingNickname) {
+      throw new HttpException('이미 사용 중인 닉네임입니다.', HttpStatus.CONFLICT);
     }
 
     const saltRounds = 10;
