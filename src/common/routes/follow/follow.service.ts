@@ -15,6 +15,7 @@ import {
   import { UserProfile } from 'src/common/entities/user_profile.entity';
   import { FollowRequest } from 'src/common/entities/follow_request.entity';
   import { FollowRequestStatus } from 'src/common/enum/enum';
+  import { Ranking } from 'src/common/entities/ranking.entity';
 
   interface FollowNotification {
     type: 'follow' | 'follow_request' | 'follow_accept' | 'follow_reject';
@@ -36,6 +37,8 @@ import {
       private readonly userProfileRepository: Repository<UserProfile>,
       @InjectRepository(FollowRequest)
       private readonly followRequestRepository: Repository<FollowRequest>,
+      @InjectRepository(Ranking)
+      private readonly rankingRepository: Repository<Ranking>,
       private readonly dataSource: DataSource,
       @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {}
@@ -94,7 +97,7 @@ import {
             (existingRequest.status === FollowRequestStatus.CANCELLED || 
              existingRequest.status === FollowRequestStatus.REJECTED ||
              existingRequest.status === FollowRequestStatus.ACCEPTED)) {
-          await this.followRequestRepository.remove(existingRequest);
+          await queryRunner.manager.remove(existingRequest);
         }
     
         let message: string;
@@ -105,19 +108,24 @@ import {
             follower: { idx: follower_idx },
             following: { idx: following_idx },
           });
-          await this.followRepository.save(follow);
+          await queryRunner.manager.save(follow);
     
           // 카운트 업데이트
-          await this.userRepository.increment(
+          await queryRunner.manager.increment(
+            User,
             { idx: follower_idx },
             'following_count',
             1,
           );
-          await this.userRepository.increment(
+          await queryRunner.manager.increment(
+            User,
             { idx: following_idx },
             'follower_count',
             1,
           );
+
+          // 팔로우 받은 유저의 포인트 15점 추가
+          await this.updateUserPoints(queryRunner, following_idx, 15);
     
           message = '팔로우했습니다.';
     
@@ -140,7 +148,7 @@ import {
             requested: { idx: following_idx },
             status: FollowRequestStatus.PENDING,
           });
-          await this.followRequestRepository.save(followRequest);
+          await queryRunner.manager.save(followRequest);
     
           message = '팔로우 요청을 보냈습니다.';
     
@@ -191,13 +199,14 @@ import {
             follower: { idx: follower_idx },
             following: { idx: following_idx },
           },
+          relations: ['following']
         });
         if (!follow) {
           throw new NotFoundException('팔로우 관계를 찾을 수 없습니다.');
         }
     
         // 팔로우 관계 삭제
-        await this.followRepository.remove(follow);
+        await queryRunner.manager.remove(follow);
     
         // 관련된 팔로우 요청도 삭제 (ACCEPTED 상태의 요청)
         const followRequest = await this.followRequestRepository.findOne({
@@ -209,20 +218,25 @@ import {
         });
         
         if (followRequest) {
-          await this.followRequestRepository.remove(followRequest);
+          await queryRunner.manager.remove(followRequest);
         }
     
         // 카운트 감소
-        await this.userRepository.decrement(
+        await queryRunner.manager.decrement(
+          User,
           { idx: follower_idx },
           'following_count',
           1,
         );
-        await this.userRepository.decrement(
+        await queryRunner.manager.decrement(
+          User,
           { idx: following_idx },
           'follower_count',
           1,
         );
+
+        // 팔로우 받던 유저의 포인트 15점 차감
+        await this.updateUserPoints(queryRunner, following_idx, -15);
     
         await queryRunner.commitTransaction();
         return { result: 'ok', message: '언팔로우했습니다.' };
@@ -262,26 +276,27 @@ import {
           follower: { idx: requester_idx },
           following: { idx: requested_idx },
         });
-        await this.followRepository.save(follow);
+        await queryRunner.manager.save(follow);
     
-        // 옵션 1: 요청 레코드 삭제 (권장)
-        await this.followRequestRepository.remove(request);
-        
-        // 옵션 2: 상태만 변경하려면 아래 코드 사용 (위의 remove 대신)
-        // request.status = FollowRequestStatus.ACCEPTED;
-        // await this.followRequestRepository.save(request);
+        // 요청 레코드 삭제
+        await queryRunner.manager.remove(request);
     
         // 카운트 업데이트
-        await this.userRepository.increment(
+        await queryRunner.manager.increment(
+          User,
           { idx: requester_idx },
           'following_count',
           1,
         );
-        await this.userRepository.increment(
+        await queryRunner.manager.increment(
+          User,
           { idx: requested_idx },
           'follower_count',
           1,
         );
+
+        // 팔로우 요청을 수락한 유저(비공개 유저)의 포인트 15점 추가
+        await this.updateUserPoints(queryRunner, requested_idx, 15);
     
         // 캐시에 수락 알림 메시지 저장
         await (this.cacheManager as any).set(
@@ -330,7 +345,7 @@ import {
   
         // 요청 상태를 거절로 변경
         request.status = FollowRequestStatus.REJECTED;
-        await this.followRequestRepository.save(request);
+        await queryRunner.manager.save(request);
   
         // 캐시에 거절 알림 메시지 저장
         await (this.cacheManager as any).set(
@@ -560,5 +575,32 @@ import {
       );
       
       return notifications;
+    }
+
+    // 헬퍼 메서드: 사용자 포인트 업데이트 또는 생성
+    private async updateUserPoints(queryRunner: any, userIdx: string, pointChange: number): Promise<void> {
+      // 기존 랭킹 레코드 조회
+      let ranking = await queryRunner.manager.findOne(Ranking, {
+        where: { user_idx: userIdx }
+      });
+
+      if (ranking) {
+        // 기존 레코드가 있으면 포인트 업데이트
+        const newPoints = Math.max(0, ranking.points + pointChange); // 0점 미만으로 내려가지 않도록
+        await queryRunner.manager.update(Ranking, 
+          { user_idx: userIdx }, 
+          { points: newPoints }
+        );
+      } else {
+        // 기존 레코드가 없으면 새로 생성 (양수일 때만)
+        if (pointChange > 0) {
+          const newRanking = queryRunner.manager.create(Ranking, {
+            user_idx: userIdx,
+            points: pointChange,
+            ranks: 0,
+          });
+          await queryRunner.manager.save(newRanking);
+        }
+      }
     }
   }
