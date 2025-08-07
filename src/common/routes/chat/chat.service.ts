@@ -224,7 +224,7 @@ export class ChatService {
         'sender.nickname',
         'profile.profile_image_url',
       ])
-      .orderBy('message.created_at', 'ASC') //'DESC'
+      .orderBy('message.created_at', 'DESC') //'DESC'
       .take(limit)
       .skip((page - 1) * limit);
 
@@ -511,7 +511,7 @@ export class ChatService {
         'sender.nickname',
         'profile.profile_image_url',
       ])
-      .orderBy('message.created_at', 'ASC') // 'DESC'
+      .orderBy('message.created_at', 'DESC') // 'DESC'
       .take(limit)
       .skip((page - 1) * limit);
 
