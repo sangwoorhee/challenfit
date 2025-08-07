@@ -6,9 +6,10 @@ import { Follow } from 'src/common/entities/follow.entity';
 import { User } from 'src/common/entities/user.entity';
 import { UserProfile } from 'src/common/entities/user_profile.entity';
 import { FollowRequest } from 'src/common/entities/follow_request.entity';
+import { Ranking } from 'src/common/entities/ranking.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Follow, User, UserProfile, FollowRequest])],
+  imports: [TypeOrmModule.forFeature([Follow, User, UserProfile, FollowRequest, Ranking])],
   controllers: [FollowController],
   providers: [FollowService],
   exports: [FollowService],

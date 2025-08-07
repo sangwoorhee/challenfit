@@ -23,6 +23,7 @@ import { JwtMiddleware } from './common/middleware/jwt.middleware';
 import { User } from './common/entities/user.entity';
 import { RefreshToken } from './common/entities/refresh_token.entity';
 import { EntryModule } from './common/routes/entry/entry.module';
+import { RankingModule } from './common/routes/ranking/ranking.module';
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { EntryModule } from './common/routes/entry/entry.module';
     ChatModule,
     HealthModule,
     EntryModule,
+    RankingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
