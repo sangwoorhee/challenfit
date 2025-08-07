@@ -223,17 +223,19 @@ export class ChatService {
         'sender.idx',
         'sender.nickname',
         'profile.profile_image_url',
-      ])
-      .orderBy('message.created_at', 'DESC') //'DESC'
-      .take(limit)
-      .skip((page - 1) * limit);
+      ]);
 
-    // 특정 시간 이전 메시지만 조회
+    // 특정 시간 이전 메시지만 조회 (take/skip 이전에 적용)
     if (beforeTimestamp) {
       queryBuilder.andWhere('message.created_at < :beforeTimestamp', {
         beforeTimestamp: new Date(beforeTimestamp),
       });
     }
+
+    queryBuilder
+      .orderBy('message.created_at', 'DESC')
+      .take(limit)
+      .skip((page - 1) * limit);
 
     const [messages, total] = await queryBuilder.getManyAndCount();
 
@@ -510,17 +512,19 @@ export class ChatService {
         'sender.idx',
         'sender.nickname',
         'profile.profile_image_url',
-      ])
-      .orderBy('message.created_at', 'DESC') // 'DESC'
-      .take(limit)
-      .skip((page - 1) * limit);
+      ]);
 
-    // 특정 시간 이전 메시지만 조회
+    // 특정 시간 이전 메시지만 조회 (take/skip 이전에 적용)
     if (beforeTimestamp) {
       queryBuilder.andWhere('message.created_at < :beforeTimestamp', {
         beforeTimestamp: new Date(beforeTimestamp),
       });
     }
+
+    queryBuilder
+      .orderBy('message.created_at', 'DESC')
+      .take(limit)
+      .skip((page - 1) * limit);
 
     const [messages, total] = await queryBuilder.getManyAndCount();
 
