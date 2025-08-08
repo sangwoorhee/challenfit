@@ -239,6 +239,7 @@ export class ChatService {
 
     const [messages, total] = await queryBuilder.getManyAndCount();
 
+    // 응답 형식 변환
     const formattedMessages = messages.reverse().map((message) => ({
       idx: message.idx,
       message: message.message,
