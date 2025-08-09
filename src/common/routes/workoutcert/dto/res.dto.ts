@@ -17,6 +17,13 @@ export class WorkoutCertWithStatsDto extends WorkoutCert {
 
   @ApiProperty({ description: '현재 유저가 같은 도전방 참여자인지 여부', required: false })
   is_same_challenge_participant?: boolean;
+
+  @ApiProperty({ 
+    description: '도전방 상태', 
+    enum: ChallengeStatus,
+    required: false 
+  })
+  challenge_status?: ChallengeStatus;
 }
 
 // 유저 통계 정보 DTO
