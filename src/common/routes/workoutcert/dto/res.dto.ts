@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
+import { ChallengeStatus } from 'src/common/enum/enum'
 
 export class WorkoutCertWithStatsDto extends WorkoutCert {
   @ApiProperty({ description: '좋아요 수' })
