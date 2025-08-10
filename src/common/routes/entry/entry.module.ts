@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { RedisPubSubService } from 'src/common/services/redis-pubsub.service';
 import { WsJwtGuard } from 'src/common/guard/ws-jwt.guard';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
+import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
@@ -32,12 +33,13 @@ import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
   ],
   controllers: [EntryController],
   providers: [
+    RedisModule,
     EntryGateway,
     EntryService,
     RedisPubSubService,
     WsJwtGuard,
     WsThrottlerGuard,
   ],
-  exports: [EntryService],
+  exports: [EntryService, RedisModule],
 })
 export class EntryModule {}
