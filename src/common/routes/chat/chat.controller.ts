@@ -168,7 +168,7 @@ export class ChatController {
       result: 'ok',
       message: 'Chat service is running',
       socketUrl: `ws://${process.env.EC2_PUBLIC_IP || 'localhost'}:3000/chat`,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 }

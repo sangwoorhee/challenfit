@@ -4,4 +4,10 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 export class CreateCertApprovalReqDto {
   @IsUUID()
   workout_cert_idx: string;
+
+  @IsString()
+  stamp_img: string;
+
+  @IsString()
+  nickname: string;
 }

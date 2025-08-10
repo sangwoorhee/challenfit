@@ -223,7 +223,10 @@ export class ChatService {
         'sender.idx',
         'sender.nickname',
         'profile.profile_image_url',
-      ]);
+      ])
+      .orderBy('message.created_at', 'ASC')
+      .take(limit)
+      .skip((page - 1) * limit);
 
     // 특정 시간 이전 메시지만 조회 (take/skip 이전에 적용)
     if (beforeTimestamp) {
@@ -575,7 +578,7 @@ export class ChatService {
       .leftJoinAndSelect('sender.profile', 'profile')
       .where('message.challenge_room = :challengeRoomIdx', { challengeRoomIdx })
       .andWhere('message.is_deleted = :isDeleted', { isDeleted: false })
-      .orderBy('message.created_at', 'ASC');
+      .orderBy('message.created_at', 'DESC');
 
     if (startDate) {
       queryBuilder.andWhere('message.created_at >= :startDate', { startDate });
