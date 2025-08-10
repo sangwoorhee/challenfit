@@ -12,12 +12,20 @@ import { WsJwtGuard } from 'src/common/guard/ws-jwt.guard';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
 import { UserProfile } from 'src/common/entities/user_profile.entity';
 import { ChatController } from './chat.controller';
+import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
+    RedisModule.forRoot({
+      type: 'single',
+      options: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
+    }),
     TypeOrmModule.forFeature([
-      ChatMessage, 
-      ChallengeParticipant, 
+      ChatMessage,
+      ChallengeParticipant,
       User,
       UserProfile,
     ]),
