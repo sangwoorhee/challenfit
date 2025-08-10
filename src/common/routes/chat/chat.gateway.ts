@@ -141,7 +141,7 @@ export class ChatGateway
   }
 
   // 1. 채팅방 (도전방)에 참가
-  @UseGuards(WsJwtGuard, WsThrottlerGuard)
+  @UseGuards(WsJwtGuard)
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -154,19 +154,19 @@ export class ChatGateway
     const roomName = `room-${challengeRoomIdx}`;
 
     try {
-      // 참가자 확인
-      const isParticipant = await this.chatService.checkParticipant(
-        userIdx,
-        challengeRoomIdx,
-      );
+      // // 참가자 확인
+      // const isParticipant = await this.chatService.checkParticipant(
+      //   userIdx,
+      //   challengeRoomIdx,
+      // );
 
-      if (!isParticipant) {
-        client.emit('error', {
-          code: 'NOT_PARTICIPANT',
-          message: '도전방 참가자가 아닙니다.',
-        });
-        return;
-      }
+      // if (!isParticipant) {
+      //   client.emit('error', {
+      //     code: 'NOT_PARTICIPANT',
+      //     message: '도전방 참가자가 아닙니다.',
+      //   });
+      //   return;
+      // }
 
       // 룸 참가
       client.join(roomName);
