@@ -224,7 +224,7 @@ export class ChatService {
         'sender.nickname',
         'profile.profile_image_url',
       ])
-      .orderBy('message.created_at', 'DESC')
+      .orderBy('message.created_at', 'ASC')
       .take(limit)
       .skip((page - 1) * limit);
 
@@ -570,7 +570,7 @@ export class ChatService {
       .leftJoinAndSelect('sender.profile', 'profile')
       .where('message.challenge_room = :challengeRoomIdx', { challengeRoomIdx })
       .andWhere('message.is_deleted = :isDeleted', { isDeleted: false })
-      .orderBy('message.created_at', 'ASC');
+      .orderBy('message.created_at', 'DESC');
 
     if (startDate) {
       queryBuilder.andWhere('message.created_at >= :startDate', { startDate });

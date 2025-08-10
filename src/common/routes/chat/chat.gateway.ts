@@ -40,21 +40,10 @@ interface PaginationDto {
   cors: {
     origin: process.env.FRONTEND_ORIGIN?.split(',') || [
       'http://localhost:3000',
-      'http://localhost:3001',
-      'http://3.34.199.169:3000',
-      'http://3.34.199.169:3002',
-      'http://10.0.2.2:3000',
-      'http://localhost:7357',  // 플러터 웹 기본 포트
-      'http://localhost:8080',  // 대체 포트
-      'http://10.0.2.2:3000',   // Android 에뮬레이터
-      'http://127.0.0.1:3000',  // iOS 시뮬레이터
-      'http://43.200.3.200:3000',
-      'http://43.200.3.200:3002',
-      'http://43.200.3.200',
     ],
     credentials: true,
   },
-  namespace: '/chat',
+  namespace: 'chat',
   transports: ['websocket', 'polling'], // 폴백 지원
 })
 @UseInterceptors(WebSocketLoggingInterceptor)
@@ -99,10 +88,7 @@ export class ChatGateway
   }
 
   async handleConnection(client: Socket) {
-    this.logger.log(`=== New connection attempt ===`);
-    this.logger.log(`Client ID: ${client.id}`);
-    this.logger.log(`Headers: ${JSON.stringify(client.handshake.headers)}`);
-    this.logger.log(`Auth: ${JSON.stringify(client.handshake.auth)}`);
+    this.logger.debug(`Client attempting to connect: ${client.id}`);
     try {
       const token =
         client.handshake.headers.authorization?.replace('Bearer ', '') ||
@@ -168,19 +154,19 @@ export class ChatGateway
     const roomName = `room-${challengeRoomIdx}`;
 
     try {
-      // // 참가자 확인
-      // const isParticipant = await this.chatService.checkParticipant(
-      //   userIdx,
-      //   challengeRoomIdx,
-      // );
+      // 참가자 확인
+      const isParticipant = await this.chatService.checkParticipant(
+        userIdx,
+        challengeRoomIdx,
+      );
 
-      // if (!isParticipant) {
-      //   client.emit('error', {
-      //     code: 'NOT_PARTICIPANT',
-      //     message: '도전방 참가자가 아닙니다.',
-      //   });
-      //   return;
-      // }
+      if (!isParticipant) {
+        client.emit('error', {
+          code: 'NOT_PARTICIPANT',
+          message: '도전방 참가자가 아닙니다.',
+        });
+        return;
+      }
 
       // 룸 참가
       client.join(roomName);
@@ -192,7 +178,7 @@ export class ChatGateway
       }
 
       // 채팅 내역 전송 (페이지네이션)
-      const messages = await this.chatService.getChatHistoryWithProfile(
+      const messages = await this.chatService.getChatHistory(
         challengeRoomIdx,
         1,
         50,
@@ -204,7 +190,7 @@ export class ChatGateway
 
       // 현재 접속자 목록 전송
       const onlineUsers =
-        await this.chatService.getChatHistoryWithProfile(challengeRoomIdx);
+        await this.chatService.getRoomOnlineUsers(challengeRoomIdx);
       client.emit('onlineUsers', onlineUsers);
 
       // 다른 서버의 클라이언트에게도 알림
@@ -315,7 +301,7 @@ export class ChatGateway
     const { challengeRoomIdx, page = 1, limit = 50, beforeTimestamp } = data;
 
     try {
-      const messages = await this.chatService.getChatHistoryWithProfile(
+      const messages = await this.chatService.getChatHistory(
         challengeRoomIdx,
         page,
         limit,

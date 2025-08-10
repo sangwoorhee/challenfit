@@ -23,9 +23,17 @@ import { JwtMiddleware } from './common/middleware/jwt.middleware';
 import { User } from './common/entities/user.entity';
 import { RefreshToken } from './common/entities/refresh_token.entity';
 import { EntryModule } from './common/routes/entry/entry.module';
+import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
+    RedisModule.forRoot({
+      type: 'single',
+      options: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
+    }),
     // 스케쥴러 크론 탭
     ScheduleModule.forRoot(),
     // 환경변수 로딩
@@ -107,12 +115,9 @@ import { EntryModule } from './common/routes/entry/entry.module';
   controllers: [AppController],
   providers: [AppService],
 })
-
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     // JWT 미들웨어를 모든 경로에 적용
-    consumer
-      .apply(JwtMiddleware)
-      .forRoutes('*');
+    consumer.apply(JwtMiddleware).forRoutes('*');
   }
 }

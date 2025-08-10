@@ -9,5 +9,5 @@ export class CreateCertApprovalReqDto {
   stamp_img: string;
 
   @IsString()
-  comment: string;
+  nickname: string;
 }
