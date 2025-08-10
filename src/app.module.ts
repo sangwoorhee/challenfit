@@ -24,6 +24,7 @@ import { User } from './common/entities/user.entity';
 import { RefreshToken } from './common/entities/refresh_token.entity';
 import { EntryModule } from './common/routes/entry/entry.module';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { RankingModule } from './common/routes/ranking/ranking.module';
 
 @Module({
   imports: [
