@@ -23,6 +23,10 @@ export class CertApproval {
   @ApiProperty({ description: '승인 생성일시', required: false })
   created_at: Date;
 
+  @Column({ type: 'varchar', length: 500 })
+  @ApiProperty({ description: '스탬프 이미지 URL' })
+  stamp_img: string;
+
   // 관계설정
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_idx' })
