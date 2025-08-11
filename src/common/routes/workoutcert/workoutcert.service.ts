@@ -161,7 +161,7 @@ export class WorkoutcertService {
 
       if (!selectedParticipant) {
         throw new ConflictException(
-          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.',
+          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 내일까지 기다려주세요.',
         );
       }
 
@@ -612,10 +612,14 @@ export class WorkoutcertService {
     return certs.map((cert) => {
       // 현재 도전방의 참가자 수를 동적으로 계산
       let dynamicTargetApprovalCount = cert.target_approval_count; // 기본값
-      
+      let challengeStatus: ChallengeStatus | undefined; // 도전방 상태 변수
+
       if (cert.challenge_participant && cert.challenge_participant.challenge) {
         const challengeRoom = cert.challenge_participant.challenge;
         
+        // 도전방 상태 할당
+        challengeStatus = challengeRoom.status;
+
         // challenge_participants가 로드되어 있으면 정확한 카운트 사용
         if (challengeRoom.challenge_participants) {
           // ONGOING 또는 PENDING 상태의 참가자만 카운트
