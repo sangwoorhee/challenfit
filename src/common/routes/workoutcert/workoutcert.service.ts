@@ -317,7 +317,7 @@ export class WorkoutcertService {
     };
   }
 
-  // 5. 인증글 단일 조회 - challenge_status 포함
+  // 5. 인증글 단일 조회
   async getWorkoutCertDetail(
     idx: string,
     currentUserIdx?: string,
@@ -339,8 +339,10 @@ export class WorkoutcertService {
     });
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
 
-    // getWorkoutCertDetail만 challenge_status를 포함시킴
-    const enrichedCerts = this.enrichWorkoutCerts([cert], currentUserIdx, true);
+    const enrichedCerts = this.enrichWorkoutCerts([cert], currentUserIdx);
+    
+    // 팔로잉/팔로워 수는 프론트엔드에서 사용하지 않으면 무시하면 됨
+    // 백엔드에서 제거하지 않고 프론트엔드에서 사용하지 않는 방식 권장
     
     return enrichedCerts[0];
   }
@@ -588,26 +590,24 @@ export class WorkoutcertService {
     };
   }
 
+  // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
+  // 기존 deleteImageFile 메서드는 제거하거나 주석 처리
+  // private async deleteImageFile(imageUrl: string): Promise<void> {
+  //   // 이 메서드는 더 이상 사용하지 않음 - deleteS3File 함수로 대체
+  // }
+
   // 헬퍼 메서드: WorkoutCert에 좋아요/댓글 정보 추가
-  // includeChallengeStatus 파라미터 추가 - 기본값 false
   private enrichWorkoutCerts(
     certs: WorkoutCert[],
     currentUserIdx?: string,
-    includeChallengeStatus: boolean = false,
   ): WorkoutCertWithStatsDto[] {
     return certs.map((cert) => {
       // 현재 도전방의 참가자 수를 동적으로 계산
       let dynamicTargetApprovalCount = cert.target_approval_count; // 기본값
-      let challengeStatus: ChallengeStatus | undefined; // 도전방 상태 변수
-
+      
       if (cert.challenge_participant && cert.challenge_participant.challenge) {
         const challengeRoom = cert.challenge_participant.challenge;
         
-        // includeChallengeStatus가 true일 때만 도전방 상태 할당
-        if (includeChallengeStatus) {
-          challengeStatus = challengeRoom.status;
-        }
-
         // challenge_participants가 로드되어 있으면 정확한 카운트 사용
         if (challengeRoom.challenge_participants) {
           // ONGOING 또는 PENDING 상태의 참가자만 카운트
@@ -623,27 +623,20 @@ export class WorkoutcertService {
         }
       }
 
-      const enrichedCert: WorkoutCertWithStatsDto = {
-        ...cert,  // 기존 cert의 모든 필드 유지
-        target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
-        like_count: cert.likes?.length || 0,
-        comment_count: cert.comments?.length || 0,
-        is_liked: currentUserIdx
-          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
-          : false,
-        is_commented: currentUserIdx
-          ? cert.comments?.some(
-              (comment) => comment.user?.idx === currentUserIdx,
-            ) || false
-          : false,
-      };
-
-      // includeChallengeStatus가 true일 때만 challenge_status 추가
-      if (includeChallengeStatus && challengeStatus !== undefined) {
-        enrichedCert.challenge_status = challengeStatus;
+    return {
+      ...cert,  // 기존 cert의 모든 필드 유지
+      target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
+      like_count: cert.likes?.length || 0,
+      comment_count: cert.comments?.length || 0,
+      is_liked: currentUserIdx
+        ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
+        : false,
+      is_commented: currentUserIdx
+        ? cert.comments?.some(
+            (comment) => comment.user?.idx === currentUserIdx,
+          ) || false
+        : false,
       }
-
-      return enrichedCert;
     });
   }
 }
