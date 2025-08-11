@@ -78,7 +78,6 @@ export class WorkoutcertService {
         'challenge_participant.challenge',
         'challenge_participant.challenge.challenge_participants', 
         'cert_approval',
-        'cert_approval.user',
         'likes',
         'likes.user',
         'comments',
@@ -161,7 +160,7 @@ export class WorkoutcertService {
 
       if (!selectedParticipant) {
         throw new ConflictException(
-          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 내일까지 기다려주세요.',
+          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.',
         );
       }
 
@@ -254,7 +253,6 @@ export class WorkoutcertService {
         'challenge_participant.challenge',
         'challenge_participant.challenge.challenge_participants',
         'cert_approval',
-        'cert_approval.user',
         'likes',
         'likes.user',
         'comments',
@@ -298,7 +296,6 @@ export class WorkoutcertService {
         'user.profile',
         'challenge_participant',
         'cert_approval',
-        'cert_approval.user',
         'likes',
         'likes.user',
         'comments',
@@ -320,7 +317,7 @@ export class WorkoutcertService {
     };
   }
 
-  // 5. 인증글 단일 조회
+  // 5. 인증글 단일 조회 - 수정 후 코드 형식 유지
   async getWorkoutCertDetail(
     idx: string,
     currentUserIdx?: string,
@@ -343,10 +340,8 @@ export class WorkoutcertService {
     });
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
 
-    const enrichedCerts = this.enrichWorkoutCerts([cert], currentUserIdx);
-    
-    // 팔로잉/팔로워 수는 프론트엔드에서 사용하지 않으면 무시하면 됨
-    // 백엔드에서 제거하지 않고 프론트엔드에서 사용하지 않는 방식 권장
+    // getWorkoutCertDetail 전용 enrich 메서드 사용
+    const enrichedCerts = this.enrichWorkoutCertsForDetail([cert], currentUserIdx);
     
     return enrichedCerts[0];
   }
@@ -472,7 +467,6 @@ export class WorkoutcertService {
         'challenge_participant',
         'challenge_participant.challenge',
         'cert_approval',
-        'cert_approval.user',
         'likes',
         'likes.user',
         'comments',
@@ -512,7 +506,6 @@ export class WorkoutcertService {
         'challenge_participant',
         'challenge_participant.challenge',
         'cert_approval',
-        'cert_approval.user',
         'likes',
         'likes.user',
         'comments',
@@ -576,8 +569,6 @@ export class WorkoutcertService {
         'challenge_participant',
         'challenge_participant.challenge',
         'challenge_participant.challenge.challenge_participants',
-        'cert_approval',
-        'cert_approval.user',
         'likes',
         'likes.user',
         'comments',
@@ -598,14 +589,52 @@ export class WorkoutcertService {
     };
   }
 
-  // -------------------------------------- 헬퍼 메서드: 이미지 파일 삭제
-  // 기존 deleteImageFile 메서드는 제거하거나 주석 처리
-  // private async deleteImageFile(imageUrl: string): Promise<void> {
-  //   // 이 메서드는 더 이상 사용하지 않음 - deleteS3File 함수로 대체
-  // }
-
-  // 헬퍼 메서드: WorkoutCert에 좋아요/댓글 정보 추가
+  // 헬퍼 메서드: WorkoutCert에 좋아요/댓글 정보 추가 (수정 전 코드 형식 - 대부분의 API용)
   private enrichWorkoutCerts(
+    certs: WorkoutCert[],
+    currentUserIdx?: string,
+  ): WorkoutCertWithStatsDto[] {
+    return certs.map((cert) => {
+      // 현재 도전방의 참가자 수를 동적으로 계산
+      let dynamicTargetApprovalCount = cert.target_approval_count; // 기본값
+      
+      if (cert.challenge_participant && cert.challenge_participant.challenge) {
+        const challengeRoom = cert.challenge_participant.challenge;
+        
+        // challenge_participants가 로드되어 있으면 정확한 카운트 사용
+        if (challengeRoom.challenge_participants) {
+          // ONGOING 또는 PENDING 상태의 참가자만 카운트
+          const activeParticipants = challengeRoom.challenge_participants.filter(
+            participant => 
+              participant.status === ChallengerStatus.ONGOING || 
+              participant.status === ChallengerStatus.PENDING
+          );
+          dynamicTargetApprovalCount = activeParticipants.length - 1;
+        } else {
+          // challenge_participants가 로드되지 않았으면 current_participants 사용
+          dynamicTargetApprovalCount = challengeRoom.current_participants - 1;
+        }
+      }
+
+      return {
+        ...cert,  // 기존 cert의 모든 필드 유지 (수정 전 코드 방식)
+        target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
+        like_count: cert.likes?.length || 0,
+        comment_count: cert.comments?.length || 0,
+        is_liked: currentUserIdx
+          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
+          : false,
+        is_commented: currentUserIdx
+          ? cert.comments?.some(
+              (comment) => comment.user?.idx === currentUserIdx,
+            ) || false
+          : false,
+      }
+    });
+  }
+
+  // 헬퍼 메서드: getWorkoutCertDetail 전용 (수정 후 코드 형식)
+  private enrichWorkoutCertsForDetail(
     certs: WorkoutCert[],
     currentUserIdx?: string,
   ): WorkoutCertWithStatsDto[] {
@@ -635,49 +664,49 @@ export class WorkoutcertService {
         }
       }
 
-    // cert_approval 정보 가공
-    const certApprovalData = cert.cert_approval?.map(approval => ({
-      idx: approval.idx,
-      created_at: approval.created_at,
-      stamp_img: approval.stamp_img,
-      user: {
-        idx: approval.user?.idx,
-        nickname: approval.user?.nickname,
-      }
-    })) || [];
+      // cert_approval 정보 가공
+      const certApprovalData = cert.cert_approval?.map(approval => ({
+        idx: approval.idx,
+        created_at: approval.created_at,
+        stamp_img: approval.stamp_img,
+        user: {
+          idx: approval.user?.idx,
+          nickname: approval.user?.nickname,
+        }
+      })) || [];
 
-    // user 정보 가공
-    const userData = cert.user ? {
-      idx: cert.user.idx,
-      nickname: cert.user.nickname,
-      challenge_mode: cert.user.challenge_mode,
-      profile: cert.user.profile ? {
-        profile_image_url: cert.user.profile.profile_image_url
-      } : null
-    } : null;
+      // user 정보 가공
+      const userData = cert.user ? {
+        idx: cert.user.idx,
+        nickname: cert.user.nickname,
+        challenge_mode: cert.user.challenge_mode,
+        profile: cert.user.profile ? {
+          profile_image_url: cert.user.profile.profile_image_url
+        } : null
+      } : null;
 
-    return {
-      idx: cert.idx,
-      image_url: cert.image_url,
-      caption: cert.caption,
-      is_rest: cert.is_rest,
-      target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
-      is_completed: cert.is_completed,
-      created_at: cert.created_at,
-      challenge_status: challengeStatus,
-      user: userData, // 가공된 user 데이터
-      cert_approval: certApprovalData, // 가공된 cert_approval 데이터
-      challenge_participant: cert.challenge_participant,
-      like_count: cert.likes?.length || 0,
-      comment_count: cert.comments?.length || 0,
-      is_liked: currentUserIdx
-        ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
-        : false,
-      is_commented: currentUserIdx
-        ? cert.comments?.some(
-            (comment) => comment.user?.idx === currentUserIdx,
-          ) || false
-        : false,
+      return {
+        idx: cert.idx,
+        image_url: cert.image_url,
+        caption: cert.caption,
+        is_rest: cert.is_rest,
+        target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
+        is_completed: cert.is_completed,
+        created_at: cert.created_at,
+        challenge_status: challengeStatus,
+        user: userData, // 가공된 user 데이터
+        cert_approval: certApprovalData, // 가공된 cert_approval 데이터
+        challenge_participant: cert.challenge_participant,
+        like_count: cert.likes?.length || 0,
+        comment_count: cert.comments?.length || 0,
+        is_liked: currentUserIdx
+          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
+          : false,
+        is_commented: currentUserIdx
+          ? cert.comments?.some(
+              (comment) => comment.user?.idx === currentUserIdx,
+            ) || false
+          : false,
       }
     });
   }
