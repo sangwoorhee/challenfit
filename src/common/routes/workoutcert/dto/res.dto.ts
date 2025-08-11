@@ -3,7 +3,45 @@ import { ChallengeParticipant } from 'src/common/entities/challenge_participant.
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { ChallengeStatus } from 'src/common/enum/enum'
 
-export class WorkoutCertWithStatsDto extends WorkoutCert {
+export class CertApprovalSimpleDto {
+  @ApiProperty({ description: 'PK - 고유 식별자' })
+  idx: string;
+
+  @ApiProperty({ description: '승인 생성일시' })
+  created_at: Date;
+
+  @ApiProperty({ description: '스탬프 이미지 URL' })
+  stamp_img: string;
+
+  @ApiProperty({ description: '승인한 사용자 정보' })
+  user: {
+    idx: string;
+    nickname: string;
+  };
+}
+
+export class WorkoutCertWithStatsDto {
+  @ApiProperty({ description: 'PK', format: 'uuid' })
+  idx: string;
+
+  @ApiProperty({ description: '이미지 URL' })
+  image_url: string;
+
+  @ApiProperty({ description: '캡션' })
+  caption: string;
+
+  @ApiProperty({ description: '쉬는날인지 여부' })
+  is_rest: boolean;
+
+  @ApiProperty({ description: '목표 승인 수' })
+  target_approval_count: number;
+
+  @ApiProperty({ description: '인증 완료 여부' })
+  is_completed: boolean;
+
+  @ApiProperty({ description: '생성 시간' })
+  created_at: Date;
+
   @ApiProperty({ description: '좋아요 수' })
   like_count: number;
 
@@ -25,6 +63,29 @@ export class WorkoutCertWithStatsDto extends WorkoutCert {
     required: false 
   })
   challenge_status?: ChallengeStatus;
+
+  @ApiProperty({ 
+    description: '인증글 작성자 정보',
+    required: false 
+  })
+  user?: {
+    idx: string;
+    nickname: string;
+    challenge_mode: boolean;
+    profile?: {
+      profile_image_url?: string;
+    } | null;
+  } | null;
+
+  @ApiProperty({ 
+    description: '인증 승인 목록',
+    type: [CertApprovalSimpleDto],
+    required: false 
+  })
+  cert_approval?: CertApprovalSimpleDto[];
+
+  @ApiProperty({ description: '도전 참가자 정보', required: false })
+  challenge_participant?: ChallengeParticipant;
 }
 
 // 유저 통계 정보 DTO
