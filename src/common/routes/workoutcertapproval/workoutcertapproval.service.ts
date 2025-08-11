@@ -74,6 +74,7 @@ export class WorkoutcertapprovalService {
       approval.user = { idx: userIdx } as User;
       approval.workout_cert = { idx: dto.workout_cert_idx } as WorkoutCert;
       approval.challenge_participant = { idx: participant.idx } as ChallengeParticipant;
+      approval.stamp_img = dto.stamp_img;
       
       const savedApproval = await queryRunner.manager.save(approval);
 
@@ -101,16 +102,27 @@ export class WorkoutcertapprovalService {
   }
 
   // 2. 인증 승인 목록 조회
-  async getApprovalsByCert(workoutCertIdx: string): Promise<CertApproval[]> {
+  async getApprovalsByCert(workoutCertIdx: string): Promise<any[]> {
     const cert = await this.workoutCertRepository.findOne({
       where: { idx: workoutCertIdx },
     });
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
 
-    return await this.approvalRepository.find({
+    const approvals = await this.approvalRepository.find({
       where: { workout_cert: { idx: workoutCertIdx } },
-      relations: ['user', 'challenge_participant'],
+      relations: ['user', 'user.profile', 'challenge_participant'],
       order: { created_at: 'DESC' },
     });
+
+    // 필요한 데이터만 추출하여 반환
+    return approvals.map(approval => ({
+      idx: approval.idx,
+      created_at: approval.created_at,
+      stamp_img: approval.stamp_img,
+      user: {
+        idx: approval.user.idx,
+        nickname: approval.user.nickname,
+      }
+    }));
   }
 }
