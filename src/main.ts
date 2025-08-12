@@ -54,6 +54,7 @@ async function bootstrap() {
     //     res.set('X-Content-Type-Options', 'nosniff');
     //   },
     // });
+    // 
   
   // cookie-parser 추가
   app.use(cookieParser());

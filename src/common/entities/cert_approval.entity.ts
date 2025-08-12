@@ -19,17 +19,13 @@ export class CertApproval {
   @ApiProperty({ description: 'PK - 고유 식별자', format: 'uuid' })
   idx: string;
 
-  @Column({ type: 'varchar', nullable: false })
-  @ApiProperty({ description: '도장 이미지 URL' })
-  stamp_img: string;
-
-  // @Column({ type: 'varchar', nullable: false })
-  // @ApiProperty({ description: '코멘트' })
-  // comment: string;
-
   @CreateDateColumn({ type: 'timestamp' })
   @ApiProperty({ description: '승인 생성일시', required: false })
   created_at: Date;
+
+  @Column({ type: 'varchar', length: 500 })
+  @ApiProperty({ description: '스탬프 이미지 URL' })
+  stamp_img: string;
 
   // 관계설정
   @ManyToOne(() => User, { onDelete: 'CASCADE' })

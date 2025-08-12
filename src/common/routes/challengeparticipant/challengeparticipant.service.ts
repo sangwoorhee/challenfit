@@ -86,6 +86,32 @@ export class ChallengeparticipantService {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
+      // 사용자가 현재 다른 도전방에 참가중인지 확인
+      const activeParticipant = await queryRunner.manager.findOne(
+        ChallengeParticipant,
+        {
+          where: {
+            user: { idx: userIdx },
+            status: In([ChallengerStatus.PENDING, ChallengerStatus.ONGOING]),
+          },
+          relations: ['challenge'],
+        },
+      );
+
+      if (activeParticipant) {
+        const activeChallenge = await queryRunner.manager.findOne(ChallengeRoom, {
+          where: { idx: activeParticipant.challenge.idx },
+        });
+        
+        if (
+          activeChallenge &&
+          (activeChallenge.status === ChallengeStatus.PENDING ||
+            activeChallenge.status === ChallengeStatus.ONGOING)
+        ) {
+          throw new ConflictException('이미 진행 중인 도전이 있습니다. 한 번에 하나의 도전만 참가할 수 있습니다.');
+        }
+      }
+
       // 이미 참가한 도전방인지 확인
       const existingParticipant = await queryRunner.manager.findOne(
         ChallengeParticipant,
@@ -99,6 +125,11 @@ export class ChallengeparticipantService {
 
       if (existingParticipant) {
         throw new ConflictException('이미 참가한 도전방입니다.');
+      }
+
+      // 현재 참여자 수 확인 (최대 인원 초과 방지)
+      if (challengeRoom.current_participants >= challengeRoom.max_participants) {
+        throw new ConflictException('도전방 최대 인원을 초과했습니다.');
       }
 
       // 현재 참여자 수 증가

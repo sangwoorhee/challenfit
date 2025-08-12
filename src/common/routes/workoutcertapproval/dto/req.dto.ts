@@ -7,7 +7,4 @@ export class CreateCertApprovalReqDto {
 
   @IsString()
   stamp_img: string;
-
-  @IsString()
-  nickname: string;
 }

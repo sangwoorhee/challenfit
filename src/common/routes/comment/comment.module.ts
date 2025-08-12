@@ -5,9 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Comment } from 'src/common/entities/comment.entity';
 import { WorkoutCert } from 'src/common/entities/workout_cert.entity';
 import { User } from 'src/common/entities/user.entity';
+import { Ranking } from 'src/common/entities/ranking.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Comment, WorkoutCert, User])],
+  imports: [TypeOrmModule.forFeature([Comment, WorkoutCert, User, Ranking])],
   controllers: [CommentController],
   providers: [CommentService],
 })
