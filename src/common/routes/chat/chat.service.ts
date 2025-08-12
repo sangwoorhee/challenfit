@@ -250,7 +250,7 @@ export class ChatService {
         profileImageUrl: message.sender.profile?.profile_image_url || null,
       },
     }));
-
+    console.log('여긴가?????-------------------------------------------');
     const result: PaginatedResponse<any> = {
       data: formattedMessages,
       pagination: {
