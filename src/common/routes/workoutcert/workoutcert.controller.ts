@@ -85,7 +85,7 @@ export class WorkoutcertController {
       if (!file) {
         throw new BadRequestException('이미지 파일이 필요합니다.');
       }
-      console.log(`충격과 공포--------${dto.is_rest}`);
+
       // S3에 업로드된 파일의 URL 사용
       const imageUrl = file.location;
       return await this.workoutcertService.createWorkoutCert(user.idx, {

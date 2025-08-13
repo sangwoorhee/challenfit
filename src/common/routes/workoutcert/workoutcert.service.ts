@@ -108,6 +108,7 @@ export class WorkoutcertService {
   ): Promise<WorkoutCertResDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
+    await queryRunner.startTransaction();
 
     try {
       const user = await this.userRepository.findOne({
@@ -124,13 +125,7 @@ export class WorkoutcertService {
         relations: ['challenge'],
       });
 
-      // 진행 중인 도전이 있는지 확인
-      const ongoingChallenges = ongoingParticipants.filter(
-        (participant) =>
-          participant.challenge.status === ChallengeStatus.ONGOING,
-      );
-
-      if (ongoingChallenges.length === 0) {
+      if (ongoingParticipants.length === 0) {
         throw new ForbiddenException(
           '진행 중인 도전이 없습니다. 인증글을 생성할 수 없습니다.',
         );
@@ -146,7 +141,7 @@ export class WorkoutcertService {
       // 오늘 인증글을 올리지 않은 도전 찾기
       let selectedParticipant: ChallengeParticipant | null = null;
 
-      for (const participant of ongoingChallenges) {
+      for (const participant of ongoingParticipants) {
         const existingCert = await this.workoutCertRepository.findOne({
           where: {
             challenge_participant: { idx: participant.idx },
@@ -673,6 +668,13 @@ export class WorkoutcertService {
           dynamicTargetApprovalCount = challengeRoom.current_participants - 1;
         }
       }
+      const isParticipant =
+        cert.challenge_participant.challenge.challenge_participants.some(
+          (item) => item.user?.idx == currentUserIdx,
+        );
+      const isEnded =
+        cert.challenge_participant.challenge.status ==
+        ChallengeStatus.COMPLETED;
 
       // cert_approval 정보 가공
       const certApprovalData =
@@ -707,6 +709,8 @@ export class WorkoutcertService {
         is_rest: cert.is_rest,
         target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
         is_completed: cert.is_completed,
+        is_participanted: isParticipant,
+        is_ended: isEnded,
         created_at: cert.created_at,
         challenge_status: challengeStatus,
         user: userData, // 가공된 user 데이터
