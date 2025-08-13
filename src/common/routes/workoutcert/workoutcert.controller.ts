@@ -41,9 +41,7 @@ import {
 @ApiTags('운동 인증')
 @Controller('workoutcert')
 export class WorkoutcertController {
-  constructor(
-    private readonly workoutcertService: WorkoutcertService,
-  ) {}
+  constructor(private readonly workoutcertService: WorkoutcertService) {}
 
   // 1. 내가 참가한 모든 도전방에서의 인증글을 최신순으로 조회
   // GET : http://localhost:3000/workoutcert/my
@@ -59,7 +57,6 @@ export class WorkoutcertController {
     @User() user: UserAfterAuth,
     @Query() pageReqDto: PageReqDto,
   ): Promise<PageResDto<WorkoutCertWithStatsDto>> {
-    console.log('alsdkfqhrszkqmrszhkqmsrhzkqmsrhzkqms');
     const { page, size } = pageReqDto;
     return await this.workoutcertService.getWorkoutCertsByUser(
       user.idx,
@@ -88,7 +85,7 @@ export class WorkoutcertController {
       if (!file) {
         throw new BadRequestException('이미지 파일이 필요합니다.');
       }
-
+      console.log(`충격과 공포--------${dto.is_rest}`);
       // S3에 업로드된 파일의 URL 사용
       const imageUrl = file.location;
       return await this.workoutcertService.createWorkoutCert(user.idx, {
@@ -96,7 +93,7 @@ export class WorkoutcertController {
         image_url: imageUrl,
       });
     } catch (error) {
-      console.log(error.message)
+      console.log(error.message);
       throw error;
     }
   }
@@ -336,15 +333,14 @@ export class WorkoutcertController {
 //     intercept: async (context, next) => {
 //       const ctx = context.switchToHttp();
 //       const req = ctx.getRequest();
-      
+
 //       // Controller에서 설정한 s3MulterConfig 사용
 //       const controller = context.getClass();
 //       const instance = await context['target'];
 //       const config = instance.s3MulterConfig;
-      
+
 //       const interceptor = new (FileInterceptor as any)(fieldName, config);
 //       return interceptor.intercept(context, next);
 //     },
 //   });
 // }
-

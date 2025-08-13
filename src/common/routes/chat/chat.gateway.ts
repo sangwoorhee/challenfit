@@ -177,16 +177,16 @@ export class ChatGateway
         clientInfo.rooms.add(roomName);
       }
 
-      // 채팅 내역 전송 (페이지네이션)
-      const messages = await this.chatService.getChatHistory(
-        challengeRoomIdx,
-        1,
-        50,
-      );
-      client.emit('chatHistory', {
-        messages: messages.data,
-        pagination: messages.pagination,
-      });
+      // // 채팅 내역 전송 (페이지네이션)
+      // const messages = await this.chatService.getChatHistory(
+      //   challengeRoomIdx,
+      //   1,
+      //   50,
+      // );
+      // client.emit('chatHistory', {
+      //   messages: messages.data,
+      //   pagination: messages.pagination,
+      // });
 
       // 현재 접속자 목록 전송
       const onlineUsers =
@@ -291,35 +291,35 @@ export class ChatGateway
     }
   }
 
-  // 3. 이전 메시지 로드
-  @UseGuards(WsJwtGuard)
-  @SubscribeMessage('loadMoreMessages')
-  async handleLoadMoreMessages(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: PaginationDto,
-  ) {
-    const { challengeRoomIdx, page = 1, limit = 50, beforeTimestamp } = data;
+  // // 3. 이전 메시지 로드
+  // @UseGuards(WsJwtGuard)
+  // @SubscribeMessage('loadMoreMessages')
+  // async handleLoadMoreMessages(
+  //   @ConnectedSocket() client: Socket,
+  //   @MessageBody() data: PaginationDto,
+  // ) {
+  //   const { challengeRoomIdx, page = 1, limit = 50, beforeTimestamp } = data;
 
-    try {
-      const messages = await this.chatService.getChatHistory(
-        challengeRoomIdx,
-        page,
-        limit,
-        beforeTimestamp,
-      );
+  //   try {
+  //     const messages = await this.chatService.getChatHistory(
+  //       challengeRoomIdx,
+  //       page,
+  //       limit,
+  //       beforeTimestamp,
+  //     );
 
-      client.emit('moreMessages', {
-        messages: messages.data,
-        pagination: messages.pagination,
-      });
-    } catch (error) {
-      this.logger.error(`Load more messages error: ${error.message}`);
-      client.emit('error', {
-        code: 'LOAD_ERROR',
-        message: '메시지 로드 중 오류가 발생했습니다.',
-      });
-    }
-  }
+  //     client.emit('moreMessages', {
+  //       messages: messages.data,
+  //       pagination: messages.pagination,
+  //     });
+  //   } catch (error) {
+  //     this.logger.error(`Load more messages error: ${error.message}`);
+  //     client.emit('error', {
+  //       code: 'LOAD_ERROR',
+  //       message: '메시지 로드 중 오류가 발생했습니다.',
+  //     });
+  //   }
+  // }
 
   // 4. 메시지 삭제
   @UseGuards(WsJwtGuard)
