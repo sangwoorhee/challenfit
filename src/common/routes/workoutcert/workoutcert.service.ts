@@ -29,7 +29,10 @@ import {
 } from './dto/res.dto';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { createS3Client, deleteS3File } from 'src/common/config/multer-s3-config';
+import {
+  createS3Client,
+  deleteS3File,
+} from 'src/common/config/multer-s3-config';
 
 // 확장된 DTO 타입 (내부에서만 사용)
 interface CreateWorkoutCertWithImageDto extends CreateWorkoutCertReqDto {
@@ -76,7 +79,7 @@ export class WorkoutcertService {
         'user.profile',
         'challenge_participant',
         'challenge_participant.challenge',
-        'challenge_participant.challenge.challenge_participants', 
+        'challenge_participant.challenge.challenge_participants',
         'cert_approval',
         'likes',
         'likes.user',
@@ -105,7 +108,6 @@ export class WorkoutcertService {
   ): Promise<WorkoutCertResDto> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
       const user = await this.userRepository.findOne({
@@ -159,9 +161,7 @@ export class WorkoutcertService {
       }
 
       if (!selectedParticipant) {
-        throw new ConflictException(
-          '모든 진행 중인 도전에서 오늘 이미 인증글을 올렸습니다. 다음 자정(00:00 KST)까지 기다려주세요.',
-        );
+        throw new ConflictException('오늘은 이미 인증글을 올렸습니다.');
       }
 
       const challengeRoom = selectedParticipant.challenge;
@@ -178,9 +178,13 @@ export class WorkoutcertService {
         );
       }
 
-      const calculatedTargetApprovalCount = challengeRoom.current_participants - 1;
-      console.log('calculatedTargetApprovalCount:', calculatedTargetApprovalCount)
-
+      const calculatedTargetApprovalCount =
+        challengeRoom.current_participants - 1;
+      console.log(
+        'calculatedTargetApprovalCount:',
+        calculatedTargetApprovalCount,
+      );
+      console.log(dto.is_rest);
       const workoutCert = this.workoutCertRepository.create({
         user,
         challenge_participant: selectedParticipant,
@@ -341,8 +345,11 @@ export class WorkoutcertService {
     if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
 
     // getWorkoutCertDetail 전용 enrich 메서드 사용
-    const enrichedCerts = this.enrichWorkoutCertsForDetail([cert], currentUserIdx);
-    
+    const enrichedCerts = this.enrichWorkoutCertsForDetail(
+      [cert],
+      currentUserIdx,
+    );
+
     return enrichedCerts[0];
   }
 
@@ -371,7 +378,7 @@ export class WorkoutcertService {
       // 새로운 이미지가 업로드된 경우 기존 이미지 파일 삭제
       if (dto.image_url && cert.image_url !== dto.image_url) {
         cert.image_url = dto.image_url;
-        
+
         // 트랜잭션 커밋 후 비동기적으로 기존 이미지 삭제
         setImmediate(async () => {
           try {
@@ -597,18 +604,19 @@ export class WorkoutcertService {
     return certs.map((cert) => {
       // 현재 도전방의 참가자 수를 동적으로 계산
       let dynamicTargetApprovalCount = cert.target_approval_count; // 기본값
-      
+
       if (cert.challenge_participant && cert.challenge_participant.challenge) {
         const challengeRoom = cert.challenge_participant.challenge;
-        
+
         // challenge_participants가 로드되어 있으면 정확한 카운트 사용
         if (challengeRoom.challenge_participants) {
           // ONGOING 또는 PENDING 상태의 참가자만 카운트
-          const activeParticipants = challengeRoom.challenge_participants.filter(
-            participant => 
-              participant.status === ChallengerStatus.ONGOING || 
-              participant.status === ChallengerStatus.PENDING
-          );
+          const activeParticipants =
+            challengeRoom.challenge_participants.filter(
+              (participant) =>
+                participant.status === ChallengerStatus.ONGOING ||
+                participant.status === ChallengerStatus.PENDING,
+            );
           dynamicTargetApprovalCount = activeParticipants.length - 1;
         } else {
           // challenge_participants가 로드되지 않았으면 current_participants 사용
@@ -617,19 +625,20 @@ export class WorkoutcertService {
       }
 
       return {
-        ...cert,  // 기존 cert의 모든 필드 유지 (수정 전 코드 방식)
+        ...cert, // 기존 cert의 모든 필드 유지 (수정 전 코드 방식)
         target_approval_count: dynamicTargetApprovalCount, // 동적으로 계산된 값으로 덮어쓰기
         like_count: cert.likes?.length || 0,
         comment_count: cert.comments?.length || 0,
         is_liked: currentUserIdx
-          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
+          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) ||
+            false
           : false,
         is_commented: currentUserIdx
           ? cert.comments?.some(
               (comment) => comment.user?.idx === currentUserIdx,
             ) || false
           : false,
-      }
+      };
     });
   }
 
@@ -645,18 +654,19 @@ export class WorkoutcertService {
 
       if (cert.challenge_participant && cert.challenge_participant.challenge) {
         const challengeRoom = cert.challenge_participant.challenge;
-        
+
         // 도전방 상태 할당
         challengeStatus = challengeRoom.status;
 
         // challenge_participants가 로드되어 있으면 정확한 카운트 사용
         if (challengeRoom.challenge_participants) {
           // ONGOING 또는 PENDING 상태의 참가자만 카운트
-          const activeParticipants = challengeRoom.challenge_participants.filter(
-            participant => 
-              participant.status === ChallengerStatus.ONGOING || 
-              participant.status === ChallengerStatus.PENDING
-          );
+          const activeParticipants =
+            challengeRoom.challenge_participants.filter(
+              (participant) =>
+                participant.status === ChallengerStatus.ONGOING ||
+                participant.status === ChallengerStatus.PENDING,
+            );
           dynamicTargetApprovalCount = activeParticipants.length - 1;
         } else {
           // challenge_participants가 로드되지 않았으면 current_participants 사용
@@ -665,25 +675,30 @@ export class WorkoutcertService {
       }
 
       // cert_approval 정보 가공
-      const certApprovalData = cert.cert_approval?.map(approval => ({
-        idx: approval.idx,
-        created_at: approval.created_at,
-        stamp_img: approval.stamp_img,
-        user: {
-          idx: approval.user?.idx,
-          nickname: approval.user?.nickname,
-        }
-      })) || [];
+      const certApprovalData =
+        cert.cert_approval?.map((approval) => ({
+          idx: approval.idx,
+          created_at: approval.created_at,
+          stamp_img: approval.stamp_img,
+          user: {
+            idx: approval.user?.idx,
+            nickname: approval.user?.nickname,
+          },
+        })) || [];
 
       // user 정보 가공
-      const userData = cert.user ? {
-        idx: cert.user.idx,
-        nickname: cert.user.nickname,
-        challenge_mode: cert.user.challenge_mode,
-        profile: cert.user.profile ? {
-          profile_image_url: cert.user.profile.profile_image_url
-        } : null
-      } : null;
+      const userData = cert.user
+        ? {
+            idx: cert.user.idx,
+            nickname: cert.user.nickname,
+            challenge_mode: cert.user.challenge_mode,
+            profile: cert.user.profile
+              ? {
+                  profile_image_url: cert.user.profile.profile_image_url,
+                }
+              : null,
+          }
+        : null;
 
       return {
         idx: cert.idx,
@@ -700,14 +715,15 @@ export class WorkoutcertService {
         like_count: cert.likes?.length || 0,
         comment_count: cert.comments?.length || 0,
         is_liked: currentUserIdx
-          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) || false
+          ? cert.likes?.some((like) => like.user?.idx === currentUserIdx) ||
+            false
           : false,
         is_commented: currentUserIdx
           ? cert.comments?.some(
               (comment) => comment.user?.idx === currentUserIdx,
             ) || false
           : false,
-      }
+      };
     });
   }
 }

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { CertApproval } from 'src/common/entities/cert_approval.entity';
@@ -21,7 +25,10 @@ export class WorkoutcertapprovalService {
   ) {}
 
   // 1. 인증 승인 생성
-  async createApproval(userIdx: string, dto: CreateCertApprovalReqDto): Promise<CertApproval> {
+  async createApproval(
+    userIdx: string,
+    dto: CreateCertApprovalReqDto,
+  ): Promise<CertApproval> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -30,9 +37,9 @@ export class WorkoutcertapprovalService {
       const cert = await this.workoutCertRepository.findOne({
         where: { idx: dto.workout_cert_idx },
         relations: [
-          'challenge_participant', 
+          'challenge_participant',
           'challenge_participant.challenge',
-          'challenge_participant.challenge.challenge_participants'
+          'challenge_participant.challenge.challenge_participants',
         ],
       });
       if (!cert) throw new NotFoundException('인증글을 찾을 수 없습니다.');
@@ -48,44 +55,47 @@ export class WorkoutcertapprovalService {
       });
       if (!participant) throw new ForbiddenException('도전 참가자가 아닙니다.');
 
-      // 동적으로 target_approval_count 계산
-      let dynamicTargetApprovalCount = cert.target_approval_count; // 기본값
-      
-      if (cert.challenge_participant && cert.challenge_participant.challenge) {
-        const challengeRoom = cert.challenge_participant.challenge;
-        
-        // challenge_participants가 로드되어 있으면 정확한 카운트 사용
-        if (challengeRoom.challenge_participants) {
-          // ONGOING 또는 PENDING 상태의 참가자만 카운트
-          const activeParticipants = challengeRoom.challenge_participants.filter(
-            participant => 
-              participant.status === ChallengerStatus.ONGOING || 
-              participant.status === ChallengerStatus.PENDING
-          );
-          dynamicTargetApprovalCount = activeParticipants.length - 1;
-        } else {
-          // challenge_participants가 로드되지 않았으면 current_participants 사용
-          dynamicTargetApprovalCount = challengeRoom.current_participants - 1;
-        }
-      }
+      // if (cert.challenge_participant && cert.challenge_participant.challenge) {
+      //   const challengeRoom = cert.challenge_participant.challenge;
+
+      //   // challenge_participants가 로드되어 있으면 정확한 카운트 사용
+      //   if (challengeRoom.challenge_participants) {
+      //     // ONGOING 또는 PENDING 상태의 참가자만 카운트
+      //     const activeParticipants =
+      //       challengeRoom.challenge_participants.filter(
+      //         (participant) =>
+      //           participant.status === ChallengerStatus.ONGOING ||
+      //           participant.status === ChallengerStatus.PENDING,
+      //       );
+      //     dynamicTargetApprovalCount = activeParticipants.length - 1;
+      //   } else {
+      //     // challenge_participants가 로드되지 않았으면 current_participants 사용
+      //     dynamicTargetApprovalCount = challengeRoom.current_participants - 1;
+      //   }
+      // }
 
       // 승인 생성
       const approval = new CertApproval();
       approval.user = { idx: userIdx } as User;
       approval.workout_cert = { idx: dto.workout_cert_idx } as WorkoutCert;
-      approval.challenge_participant = { idx: participant.idx } as ChallengeParticipant;
+      approval.challenge_participant = {
+        idx: participant.idx,
+      } as ChallengeParticipant;
       approval.stamp_img = dto.stamp_img;
-      
+
       const savedApproval = await queryRunner.manager.save(approval);
 
-      // 승인 수 체크 및 인증 완료 처리 - 동적으로 계산된 값 사용
-      const approvalCount = await this.approvalRepository.count({
-        where: { workout_cert: { idx: dto.workout_cert_idx } },
-      });
-      
-      console.log(`인증글 ${dto.workout_cert_idx}: 현재 승인 수 ${approvalCount}, 목표 승인 수 ${dynamicTargetApprovalCount}`);
-      
-      if (approvalCount >= dynamicTargetApprovalCount && !cert.is_completed) {
+      // 기존 스탬프 개수에 1개 추가
+      const approvalCount =
+        (await this.approvalRepository.count({
+          where: { workout_cert: { idx: dto.workout_cert_idx } },
+        })) + 1;
+
+      console.log(
+        `인증글 ${dto.workout_cert_idx}: 현재 승인 수 ${approvalCount}, 목표 승인 수 ${cert.target_approval_count}`,
+      );
+
+      if (approvalCount >= cert.target_approval_count && !cert.is_completed) {
         cert.is_completed = true;
         await queryRunner.manager.save(cert);
         console.log(`인증글 ${dto.workout_cert_idx} 완료 처리됨`);
@@ -115,14 +125,14 @@ export class WorkoutcertapprovalService {
     });
 
     // 필요한 데이터만 추출하여 반환
-    return approvals.map(approval => ({
+    return approvals.map((approval) => ({
       idx: approval.idx,
       created_at: approval.created_at,
       stamp_img: approval.stamp_img,
       user: {
         idx: approval.user.idx,
         nickname: approval.user.nickname,
-      }
+      },
     }));
   }
 }
