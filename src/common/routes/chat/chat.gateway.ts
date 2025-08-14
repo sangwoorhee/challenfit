@@ -413,7 +413,7 @@ export class ChatGateway
   ) {
     const { challengeRoomIdx, userIdx } = data;
     const roomName = `room-${challengeRoomIdx}`;
-    console.log(userIdx);
+
     try {
       const participanted =
         await this.challengeParticipangeService.participateChallengeRoom(
@@ -425,7 +425,7 @@ export class ChatGateway
         await this.redisPubSub.publish('chat:broadcast', {
           room: roomName,
           event: 'newParticipant',
-          payload: participanted,
+          payload: data,
         });
       } else {
         this.server.to(roomName).emit('newParticipant', participanted);
