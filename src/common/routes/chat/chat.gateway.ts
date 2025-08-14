@@ -26,10 +26,12 @@ import { RedisPubSubService } from '../../services/redis-pubsub.service';
 import { WebSocketLoggingInterceptor } from 'src/common/interceptor/ws-logging.interceptor';
 import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
 import { ChallengeparticipantService } from '../challengeparticipant/challengeparticipant.service';
+import { ChatMessageType } from 'src/common/enum/enum';
 
 interface JoinRoomDto {
   challengeRoomIdx: string;
   userIdx: string;
+  nickname: string;
 }
 
 interface SendMessageDto {
@@ -173,20 +175,6 @@ export class ChatGateway
     const roomName = `room-${challengeRoomIdx}`;
 
     try {
-      // // 참가자 확인
-      // const isParticipant = await this.chatService.checkParticipant(
-      //   userIdx,
-      //   challengeRoomIdx,
-      // );
-
-      // if (!isParticipant) {
-      //   client.emit('error', {
-      //     code: 'NOT_PARTICIPANT',
-      //     message: '도전방 참가자가 아닙니다.',
-      //   });
-      //   return;
-      // }
-
       // 룸 참가
       client.join(roomName);
 
@@ -196,21 +184,20 @@ export class ChatGateway
         clientInfo.rooms.add(roomName);
       }
 
-      // // 채팅 내역 전송 (페이지네이션)
-      // const messages = await this.chatService.getChatHistory(
-      //   challengeRoomIdx,
-      //   1,
-      //   50,
-      // );
-      // client.emit('chatHistory', {
-      //   messages: messages.data,
-      //   pagination: messages.pagination,
-      // });
-
       // 현재 접속자 목록 전송
       const onlineUsers =
         await this.chatService.getRoomOnlineUsers(challengeRoomIdx);
       client.emit('onlineUsers', onlineUsers);
+
+      const message = `${data.nickname}님이 입장하였습니다.`;
+      // 메시지 저장
+      const savedMessage = await this.chatService.saveMessage({
+        userIdx,
+        challengeRoomIdx,
+        message,
+        messageType: ChatMessageType.SYSTEM_PARTICIPATE,
+        attachmentUrl: undefined,
+      });
 
       // 다른 서버의 클라이언트에게도 알림
       if (this.isRedisAvailable) {
@@ -218,9 +205,10 @@ export class ChatGateway
           room: roomName,
           event: 'userJoined',
           payload: {
-            userIdx,
-            nickname: client.data.user.nickname,
+            userIdx: '',
+            nickname: '',
             timestamp: new Date(),
+            savedMessage,
           },
         });
       } else {
@@ -411,7 +399,7 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: JoinChallengeEntryDto,
   ) {
-    const { challengeRoomIdx, userIdx } = data;
+    const { challengeRoomIdx, userIdx, nickname } = data;
     const roomName = `room-${challengeRoomIdx}`;
 
     try {
@@ -428,7 +416,7 @@ export class ChatGateway
           payload: data,
         });
       } else {
-        this.server.to(roomName).emit('newParticipant', participanted);
+        this.server.to(roomName).emit('newParticipant', data);
       }
       return { ok: true };
     } catch (error) {
