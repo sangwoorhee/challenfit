@@ -421,21 +421,40 @@ export class ChatGateway
           userIdx,
         );
 
-      this.server.to(roomName).emit('newParticipant', participanted);
+      if (this.isRedisAvailable) {
+        await this.redisPubSub.publish('chat:broadcast', {
+          room: roomName,
+          event: 'newParticipant',
+          payload: participanted,
+        });
+      } else {
+        this.server.to(roomName).emit('newParticipant', participanted);
+      }
       return { ok: true };
     } catch (error) {
-      if (
-        error instanceof ConflictException &&
-        String(error.message).includes('이미 진행 중인 도전')
-      ) {
-        client.emit('joinChallengeEntryError', {
-          code: 'ALREADY_ACTIVE_CHALLENGE',
-          message:
-            '이미 다른 도전을 진행 중이에요. 완료하거나 나가면 참여할 수 있어요.',
-          status: 409,
-        });
-        return;
+      if (error instanceof HttpException) {
+        const status = error.getStatus();
+        const resp = error.getResponse();
+        const msg =
+          typeof resp === 'string'
+            ? resp
+            : ((resp as any)?.message ?? error.message ?? '');
+
+        if (
+          status === 409 &&
+          (String(msg).includes('이미 진행 중인 도전') ||
+            String(msg).includes('ALREADY_ACTIVE_CHALLENGE'))
+        ) {
+          client.emit('joinChallengeEntryError', {
+            code: 'ALREADY_ACTIVE_CHALLENGE',
+            message:
+              '이미 다른 도전을 진행 중이에요. 완료하거나 나가면 참여할 수 있어요.',
+            status: 409,
+          });
+          return;
+        }
       }
+
       this.logger.error(
         `joinChallengeEntry error: ${error?.message}`,
         error?.stack,
