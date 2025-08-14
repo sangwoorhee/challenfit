@@ -8,12 +8,24 @@ import { User } from 'src/common/entities/user.entity';
 import { UserProfile } from 'src/common/entities/user_profile.entity';
 import { ChallengeScheduler } from './challengeroom.scheduler';
 import { Ranking } from 'src/common/entities/ranking.entity';
+import { ChallengeparticipantModule } from '../challengeparticipant/challengeparticipant.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChallengeRoom, ChallengeParticipant, User, UserProfile, Ranking]),
+    TypeOrmModule.forFeature([
+      ChallengeRoom,
+      ChallengeParticipant,
+      User,
+      UserProfile,
+      Ranking,
+      ChallengeParticipant,
+    ]),
   ],
   controllers: [ChallengeroomController],
-  providers: [ChallengeroomService, ChallengeScheduler],
+  providers: [
+    ChallengeroomService,
+    ChallengeScheduler,
+    ChallengeparticipantModule,
+  ],
 })
 export class ChallengeroomModule {}

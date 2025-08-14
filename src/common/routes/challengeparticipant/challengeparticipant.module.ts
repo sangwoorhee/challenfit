@@ -8,9 +8,10 @@ import { ChallengeParticipant } from 'src/common/entities/challenge_participant.
 
 @Module({
   imports: [
-      TypeOrmModule.forFeature([ChallengeRoom, ChallengeParticipant, User]),
-    ],
+    TypeOrmModule.forFeature([ChallengeRoom, ChallengeParticipant, User]),
+  ],
   controllers: [ChallengeparticipantController],
   providers: [ChallengeparticipantService],
+  exports: [ChallengeparticipantService, TypeOrmModule],
 })
 export class ChallengeparticipantModule {}
