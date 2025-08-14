@@ -9,6 +9,7 @@ import { Cache } from 'cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserProfile } from 'src/common/entities/user_profile.entity';
+import { ChatMessageType } from 'src/common/enum/enum';
 
 interface SaveMessageDto {
   userIdx: string;
@@ -16,6 +17,13 @@ interface SaveMessageDto {
   message: string;
   messageType: string;
   attachmentUrl?: string;
+}
+
+interface SaveSystemMessageDto {
+  challengeRoomIdx: string;
+  message: string;
+  messageType: ChatMessageType;
+  userIdx: string;
 }
 
 interface PaginatedResponse<T> {
@@ -151,7 +159,7 @@ export class ChatService {
       dto;
     const chatMessage = this.chatMessageRepository.create({
       message,
-      message_type: messageType,
+      message_type: messageType as ChatMessageType,
       attachment_url: attachmentUrl,
       sender: { idx: userIdx },
       challenge_room: { idx: challengeRoomIdx },
@@ -185,6 +193,46 @@ export class ChatService {
     });
 
     return messageWithSender;
+  }
+
+  // 시스템 메시지 저장
+  async saveSystemMessage(dto: SaveSystemMessageDto): Promise<any> {
+    const { challengeRoomIdx, message, messageType, userIdx } = dto;
+    
+    const chatMessage = this.chatMessageRepository.create({
+      message,
+      message_type: messageType,
+      sender: { idx: userIdx },
+      challenge_room: { idx: challengeRoomIdx },
+      is_deleted: false,
+    });
+
+    const saved = await this.chatMessageRepository.save(chatMessage);
+
+    // 캐시 무효화
+    await this.invalidateMessageCache(challengeRoomIdx);
+
+    // 시스템 메시지 정보 반환
+    const systemMessage = await this.chatMessageRepository.findOne({
+      where: { idx: saved.idx },
+      relations: ['sender', 'sender.profile'],
+      select: {
+        idx: true,
+        message: true,
+        message_type: true,
+        created_at: true,
+        is_deleted: true,
+        sender: {
+          idx: true,
+          nickname: true,
+          profile: {
+            profile_image_url: true,
+          },
+        },
+      },
+    });
+
+    return systemMessage;
   }
 
   // 채팅 내역 조회 (페이지네이션 + 캐싱)

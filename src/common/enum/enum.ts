@@ -82,3 +82,14 @@ export enum FollowRequestStatus {
   REJECTED = 'rejected',
   CANCELLED = 'cancelled',
 }
+
+// 채팅 메시지 타입
+export enum ChatMessageType {
+  TEXT = 'text',
+  IMAGE = 'image',
+  FILE = 'file',
+  SYSTEM_PARTICIPATE = 'system_participate', // 참여 시스템 메시지
+  SYSTEM_LEAVE = 'system_leave', // 나감 시스템 메시지
+  SYSTEM_START = 'system_start', // 도전 시작 시스템 메시지
+  SYSTEM_END = 'system_end', // 도전 종료 시스템 메시지
+}
