@@ -217,6 +217,7 @@ export class ChatGateway
           userIdx,
           nickname: client.data.user.nickname,
           timestamp: new Date(),
+          savedMessage,
         });
       }
 
