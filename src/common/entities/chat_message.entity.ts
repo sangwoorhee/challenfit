@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { ChallengeRoom } from './challenge_room.entity';
+import { ChatMessageType } from '../enum/enum';
 
 @Entity({ name: 'chat_message' })
 @Index(['challenge_room', 'created_at']) // 복합 인덱스 (방별 메시지 조회 최적화)
@@ -24,9 +25,17 @@ export class ChatMessage {
   @ApiProperty({ description: '메시지 내용' })
   message: string;
 
-  @Column({ type: 'varchar', length: 20, default: 'text' })
-  @ApiProperty({ description: '메시지 타입 (text, image, file)', default: 'text' })
-  message_type: string;
+  @Column({ 
+    type: 'enum', 
+    enum: ChatMessageType, 
+    default: ChatMessageType.TEXT 
+  })
+  @ApiProperty({ 
+    description: '메시지 타입', 
+    enum: ChatMessageType,
+    default: ChatMessageType.TEXT 
+  })
+  message_type: ChatMessageType;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   @ApiProperty({ description: '첨부 파일 URL', nullable: true })

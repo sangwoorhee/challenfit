@@ -9,7 +9,8 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { ChallengeStatus, ChallengerStatus } from 'src/common/enum/enum';
+import { ChallengeStatus, ChallengerStatus, ChatMessageType } from 'src/common/enum/enum';
+import { ChatService } from '../chat/chat.service';
 
 interface ParticipantInfo {
   userIdx: string;
@@ -36,6 +37,7 @@ export class EntryService {
     private cacheManager: Cache,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private chatService: ChatService,
   ) {}
 
   // 토큰 검증
@@ -99,6 +101,9 @@ export class EntryService {
       await this.challengeRoomRepository.save(challengeRoom);
       await this.invalidateParticipantsCache(challengeRoomIdx);
 
+      // 참여 시스템 메시지 생성
+      await this.createParticipateSystemMessage(challengeRoomIdx, userIdx);
+
       const participantWithUser = await this.challengeParticipantRepository.findOne({
         where: { idx: savedParticipant.idx },
         relations: ['user', 'user.profile', 'challenge'],
@@ -132,6 +137,9 @@ export class EntryService {
         throw new HttpException('진행중이거나 종료된 도전은 참여 취소할 수 없습니다.', HttpStatus.BAD_REQUEST);
       }
 
+      // 나감 시스템 메시지 생성 (참여자 정보가 삭제되기 전에)
+      await this.createLeaveSystemMessage(challengeRoomIdx, userIdx);
+
       await this.challengeParticipantRepository.remove(participant);
       const challengeRoom = await this.challengeRoomRepository.findOne({ where: { idx: challengeRoomIdx } });
       if (challengeRoom) {
@@ -144,6 +152,52 @@ export class EntryService {
     } catch (error) {
       this.logger.error(`Remove participant error: ${error.message}`);
       throw error;
+    }
+  }
+
+  // 참여 시스템 메시지 생성
+  private async createParticipateSystemMessage(challengeRoomIdx: string, userIdx: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { idx: userIdx },
+        select: ['idx', 'nickname'],
+      });
+
+      if (user) {
+        await this.chatService.saveSystemMessage({
+          challengeRoomIdx,
+          message: `${user.nickname}님이 참여했습니다.`,
+          messageType: ChatMessageType.SYSTEM_PARTICIPATE,
+          userIdx: userIdx,
+        });
+        this.logger.log(`Created participate system message for user ${userIdx} in room ${challengeRoomIdx}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to create participate system message: ${error.message}`);
+      // 시스템 메시지 생성 실패는 참여 기능에 영향을 주지 않도록 처리
+    }
+  }
+
+  // 나감 시스템 메시지 생성
+  private async createLeaveSystemMessage(challengeRoomIdx: string, userIdx: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { idx: userIdx },
+        select: ['idx', 'nickname'],
+      });
+
+      if (user) {
+        await this.chatService.saveSystemMessage({
+          challengeRoomIdx,
+          message: `${user.nickname}님이 나갔습니다.`,
+          messageType: ChatMessageType.SYSTEM_LEAVE,
+          userIdx: userIdx,
+        });
+        this.logger.log(`Created leave system message for user ${userIdx} in room ${challengeRoomIdx}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to create leave system message: ${error.message}`);
+      // 시스템 메시지 생성 실패는 나감 기능에 영향을 주지 않도록 처리
     }
   }
 

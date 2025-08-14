@@ -14,6 +14,7 @@ import { RedisPubSubService } from 'src/common/services/redis-pubsub.service';
 import { WsJwtGuard } from 'src/common/guard/ws-jwt.guard';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
         signOptions: { expiresIn: '7d' },
       }),
     }),
+    ChatModule, // ChatService를 사용하기 위해 ChatModule import
   ],
   controllers: [EntryController],
   providers: [
