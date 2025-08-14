@@ -9,12 +9,23 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  HttpException,
+  Logger,
+  NotFoundException,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { WsJwtGuard } from 'src/common/guard/ws-jwt.guard';
 import { WsThrottlerGuard } from 'src/common/guard/ws-throttler.guard';
 import { RedisPubSubService } from '../../services/redis-pubsub.service';
 import { WebSocketLoggingInterceptor } from 'src/common/interceptor/ws-logging.interceptor';
+import { ChallengeParticipant } from 'src/common/entities/challenge_participant.entity';
+import { ChallengeparticipantService } from '../challengeparticipant/challengeparticipant.service';
 
 interface JoinRoomDto {
   challengeRoomIdx: string;
@@ -27,6 +38,13 @@ interface SendMessageDto {
   userIdx: string;
   messageType?: string;
   attachmentUrl?: string;
+}
+
+interface JoinChallengeEntryDto {
+  challengeRoomIdx: string;
+  nickname: string;
+  userIdx: string;
+  imgUrl: string;
 }
 
 interface PaginationDto {
@@ -63,6 +81,7 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly redisPubSub: RedisPubSubService,
+    private readonly challengeParticipangeService: ChallengeparticipantService,
   ) {}
 
   afterInit(server: Server) {
@@ -291,37 +310,7 @@ export class ChatGateway
     }
   }
 
-  // // 3. 이전 메시지 로드
-  // @UseGuards(WsJwtGuard)
-  // @SubscribeMessage('loadMoreMessages')
-  // async handleLoadMoreMessages(
-  //   @ConnectedSocket() client: Socket,
-  //   @MessageBody() data: PaginationDto,
-  // ) {
-  //   const { challengeRoomIdx, page = 1, limit = 50, beforeTimestamp } = data;
-
-  //   try {
-  //     const messages = await this.chatService.getChatHistory(
-  //       challengeRoomIdx,
-  //       page,
-  //       limit,
-  //       beforeTimestamp,
-  //     );
-
-  //     client.emit('moreMessages', {
-  //       messages: messages.data,
-  //       pagination: messages.pagination,
-  //     });
-  //   } catch (error) {
-  //     this.logger.error(`Load more messages error: ${error.message}`);
-  //     client.emit('error', {
-  //       code: 'LOAD_ERROR',
-  //       message: '메시지 로드 중 오류가 발생했습니다.',
-  //     });
-  //   }
-  // }
-
-  // 4. 메시지 삭제
+  // 3. 메시지 삭제
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('deleteMessage')
   async handleDeleteMessage(
@@ -360,7 +349,7 @@ export class ChatGateway
     }
   }
 
-  // 5. 타이핑 상태 브로드캐스트
+  // 4. 타이핑 상태 브로드캐스트
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('typing')
   async handleTyping(
@@ -379,7 +368,7 @@ export class ChatGateway
     });
   }
 
-  // 6. 채팅방 나가기
+  // 5. 채팅방 나가기
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
@@ -412,6 +401,45 @@ export class ChatGateway
       this.logger.log(`User ${userIdx} left room ${challengeRoomIdx}`);
     } catch (error) {
       this.logger.error(`Leave room error: ${error.message}`);
+    }
+  }
+
+  // 6. 도전방 참여하기
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('joinChallengeEntry')
+  async handleJoinChallenge(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: JoinChallengeEntryDto,
+  ) {
+    const { challengeRoomIdx, userIdx } = data;
+    const roomName = `room-${challengeRoomIdx}`;
+
+    try {
+      const participanted =
+        await this.challengeParticipangeService.participateChallengeRoom(
+          challengeRoomIdx,
+          userIdx,
+        );
+
+      this.server.to(roomName).emit('newParticipant', participanted);
+      return { ok: true };
+    } catch (error) {
+      if (
+        error instanceof ConflictException &&
+        String(error.message).includes('이미 진행 중인 도전')
+      ) {
+        client.emit('joinChallengeEntryError', {
+          code: 'ALREADY_ACTIVE_CHALLENGE',
+          message:
+            '이미 다른 도전을 진행 중이에요. 완료하거나 나가면 참여할 수 있어요.',
+          status: 409,
+        });
+        return;
+      }
+      this.logger.error(
+        `joinChallengeEntry error: ${error?.message}`,
+        error?.stack,
+      );
     }
   }
 }

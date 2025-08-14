@@ -198,7 +198,7 @@ export class ChatService {
   // 시스템 메시지 저장
   async saveSystemMessage(dto: SaveSystemMessageDto): Promise<any> {
     const { challengeRoomIdx, message, messageType, userIdx } = dto;
-    
+
     const chatMessage = this.chatMessageRepository.create({
       message,
       message_type: messageType,
