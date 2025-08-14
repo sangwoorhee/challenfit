@@ -413,7 +413,7 @@ export class ChatGateway
   ) {
     const { challengeRoomIdx, userIdx } = data;
     const roomName = `room-${challengeRoomIdx}`;
-
+    console.log(userIdx);
     try {
       const participanted =
         await this.challengeParticipangeService.participateChallengeRoom(
@@ -432,27 +432,19 @@ export class ChatGateway
       }
       return { ok: true };
     } catch (error) {
+      // HttpException이면 그대로 클라이언트로 보냄
       if (error instanceof HttpException) {
-        const status = error.getStatus();
-        const resp = error.getResponse();
-        const msg =
-          typeof resp === 'string'
-            ? resp
-            : ((resp as any)?.message ?? error.message ?? '');
-
-        if (
-          status === 409 &&
-          (String(msg).includes('이미 진행 중인 도전') ||
-            String(msg).includes('ALREADY_ACTIVE_CHALLENGE'))
-        ) {
-          client.emit('joinChallengeEntryError', {
-            code: 'ALREADY_ACTIVE_CHALLENGE',
-            message:
-              '이미 다른 도전을 진행 중이에요. 완료하거나 나가면 참여할 수 있어요.',
-            status: 409,
-          });
-          return;
-        }
+        client.emit('joinChallengeEntryError', {
+          status: error.getStatus(),
+          response: error.getResponse(),
+          message: error.message,
+        });
+      } else {
+        // 예기치 않은 오류
+        client.emit('joinChallengeEntryError', {
+          status: 500,
+          message: '서버 오류가 발생했습니다.',
+        });
       }
 
       this.logger.error(
