@@ -329,8 +329,10 @@ export class WorkoutcertService {
         'challenge_participant',
         'challenge_participant.challenge',
         'challenge_participant.challenge.challenge_participants',
+        'challenge_participant.challenge.challenge_participants.user',
         'cert_approval',
         'cert_approval.user',
+        'cert_approval.user.profile',
         'likes',
         'likes.user',
         'comments',
@@ -672,6 +674,7 @@ export class WorkoutcertService {
         cert.challenge_participant.challenge.challenge_participants.some(
           (item) => item.user?.idx == currentUserIdx,
         );
+
       const isEnded =
         cert.challenge_participant.challenge.status ==
         ChallengeStatus.COMPLETED;
@@ -685,6 +688,7 @@ export class WorkoutcertService {
           user: {
             idx: approval.user?.idx,
             nickname: approval.user?.nickname,
+            profile: approval.user?.profile,
           },
         })) || [];
 
