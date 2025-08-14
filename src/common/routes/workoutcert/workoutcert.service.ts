@@ -329,6 +329,7 @@ export class WorkoutcertService {
         'challenge_participant',
         'challenge_participant.challenge',
         'challenge_participant.challenge.challenge_participants',
+        'challenge_participant.challenge.challenge_participants.user',
         'cert_approval',
         'cert_approval.user',
         'likes',
