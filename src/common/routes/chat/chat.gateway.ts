@@ -173,6 +173,7 @@ export class ChatGateway
     console.log('client.handshake.auth:', client.handshake.auth);
     const { challengeRoomIdx, userIdx } = data;
     const roomName = `room-${challengeRoomIdx}`;
+    console.log(this.isRedisAvailable);
 
     try {
       // 룸 참가
@@ -369,23 +370,37 @@ export class ChatGateway
 
     try {
       client.leave(roomName);
-
-      // 클라이언트 룸 정보 업데이트
       const clientInfo = this.connectedClients.get(client.id);
-      if (clientInfo) {
-        clientInfo.rooms.delete(roomName);
-      }
+      if (clientInfo) clientInfo.rooms.delete(roomName);
 
-      // 다른 서버의 클라이언트에게도 알림
-      await this.redisPubSub.publish('chat:broadcast', {
-        room: roomName,
-        event: 'userLeft',
-        payload: {
+      const message = `${client.data.user.nickname}님이 방을 나갔습니다.`;
+      const savedMessage = await this.chatService.saveMessage({
+        userIdx,
+        challengeRoomIdx,
+        message,
+        messageType: ChatMessageType.SYSTEM_LEAVE,
+        attachmentUrl: undefined,
+      });
+
+      if (this.isRedisAvailable) {
+        await this.redisPubSub.publish('chat:broadcast', {
+          room: roomName,
+          event: 'userLeft',
+          payload: {
+            userIdx,
+            nickname: client.data.user.nickname,
+            timestamp: new Date(),
+            savedMessage,
+          },
+        });
+      } else {
+        this.server.to(roomName).emit('userLeft', {
           userIdx,
           nickname: client.data.user.nickname,
           timestamp: new Date(),
-        },
-      });
+          savedMessage,
+        });
+      }
 
       this.logger.log(`User ${userIdx} left room ${challengeRoomIdx}`);
     } catch (error) {
