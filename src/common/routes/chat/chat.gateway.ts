@@ -191,6 +191,7 @@ export class ChatGateway
       client.emit('onlineUsers', onlineUsers);
 
       const message = `${data.nickname}님이 입장하였습니다.`;
+
       // 메시지 저장
       const savedMessage = await this.chatService.saveMessage({
         userIdx,
@@ -408,7 +409,7 @@ export class ChatGateway
     }
   }
 
-  // 6. 도전방 참여하기
+  // 6. 도전 참여하기
   @UseGuards(WsJwtGuard)
   @SubscribeMessage('joinChallengeEntry')
   async handleJoinChallenge(

@@ -99,16 +99,21 @@ export class ChallengeparticipantService {
       );
 
       if (activeParticipant) {
-        const activeChallenge = await queryRunner.manager.findOne(ChallengeRoom, {
-          where: { idx: activeParticipant.challenge.idx },
-        });
-        
+        const activeChallenge = await queryRunner.manager.findOne(
+          ChallengeRoom,
+          {
+            where: { idx: activeParticipant.challenge.idx },
+          },
+        );
+
         if (
           activeChallenge &&
           (activeChallenge.status === ChallengeStatus.PENDING ||
             activeChallenge.status === ChallengeStatus.ONGOING)
         ) {
-          throw new ConflictException('이미 진행 중인 도전이 있습니다. 한 번에 하나의 도전만 참가할 수 있습니다.');
+          throw new ConflictException(
+            '이미 진행 중인 도전이 있습니다. 한 번에 하나의 도전만 참가할 수 있습니다.',
+          );
         }
       }
 
@@ -128,7 +133,9 @@ export class ChallengeparticipantService {
       }
 
       // 현재 참여자 수 확인 (최대 인원 초과 방지)
-      if (challengeRoom.current_participants >= challengeRoom.max_participants) {
+      if (
+        challengeRoom.current_participants >= challengeRoom.max_participants
+      ) {
         throw new ConflictException('도전방 최대 인원을 초과했습니다.');
       }
 
@@ -192,9 +199,7 @@ export class ChallengeparticipantService {
     } catch (error) {
       console.log(error);
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
-        `도전 방 입장 실패: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`${error.message}`);
     } finally {
       await queryRunner.release();
     }

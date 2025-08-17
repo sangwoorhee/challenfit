@@ -9,7 +9,7 @@ import {
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { TransformInterceptor } from './common/interceptor/transform.interceptor'
+import { TransformInterceptor } from './common/interceptor/transform.interceptor';
 import { RedisIoAdapter } from './common/config/redis.adapter';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -24,38 +24,41 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
 
-    // Redis Adapter 설정 (WebSocket 수평 확장용) - 선택적 활성화
+  // Redis Adapter 설정 (WebSocket 수평 확장용) - 선택적 활성화
   try {
     const redisIoAdapter = await RedisIoAdapter.create(app);
     app.useWebSocketAdapter(redisIoAdapter);
     logger.log('Redis adapter successfully initialized');
   } catch (error) {
-    logger.error('Failed to initialize Redis adapter. Running without Redis.', error.message);
+    logger.error(
+      'Failed to initialize Redis adapter. Running without Redis.',
+      error.message,
+    );
     logger.warn('WebSocket will work but without horizontal scaling support');
     // Redis 없이도 WebSocket은 작동하지만 수평 확장은 불가능
   }
 
-    // uploads 폴더 생성 (이미지 업로드용)
-    // const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
-    // if (!fs.existsSync(uploadDir)) {
-    //   fs.mkdirSync(uploadDir, { recursive: true });
-    // }
-  
-    // // 정적 파일 서빙 설정
-    // app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    //   prefix: '/uploads/',
-    //   index: false, // 디렉토리 인덱싱 비활성화
-    //   redirect: false, // 디렉토리 리다이렉션 비활성화
-    //   dotfiles: 'deny', // 숨김 파일 접근 차단
-    //   setHeaders: (res, path, stat) => {
-    //     // 캐시 설정
-    //     res.set('Cache-Control', 'public, max-age=3600'); // 1시간 캐시
-    //     // 보안 헤더 추가
-    //     res.set('X-Content-Type-Options', 'nosniff');
-    //   },
-    // });
-    // 
-  
+  // uploads 폴더 생성 (이미지 업로드용)
+  // const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
+  // if (!fs.existsSync(uploadDir)) {
+  //   fs.mkdirSync(uploadDir, { recursive: true });
+  // }
+
+  // // 정적 파일 서빙 설정
+  // app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  //   prefix: '/uploads/',
+  //   index: false, // 디렉토리 인덱싱 비활성화
+  //   redirect: false, // 디렉토리 리다이렉션 비활성화
+  //   dotfiles: 'deny', // 숨김 파일 접근 차단
+  //   setHeaders: (res, path, stat) => {
+  //     // 캐시 설정
+  //     res.set('Cache-Control', 'public, max-age=3600'); // 1시간 캐시
+  //     // 보안 헤더 추가
+  //     res.set('X-Content-Type-Options', 'nosniff');
+  //   },
+  // });
+  //
+
   // cookie-parser 추가
   app.use(cookieParser());
 
@@ -71,35 +74,35 @@ async function bootstrap() {
     'http://3.34.199.169:3000',
     'http://3.34.199.169:3002',
     'http://10.0.2.2:3000',
-    'http://localhost:7357',  // 플러터 웹 기본 포트
-    'http://localhost:8080',  // 대체 포트
-    'http://10.0.2.2:3000',   // Android 에뮬레이터
-    'http://127.0.0.1:3000',  // iOS 시뮬레이터
+    'http://localhost:7357', // 플러터 웹 기본 포트
+    'http://localhost:8080', // 대체 포트
+    'http://10.0.2.2:3000', // Android 에뮬레이터
+    'http://127.0.0.1:3000', // iOS 시뮬레이터
     'http://43.200.3.200:3000',
     'http://43.200.3.200:3002',
     'http://43.200.3.200',
   ].filter(Boolean); // undefined 값 제거
 
   app.enableCors({
-  origin: (origin, callback) => {
-    // 개발 환경에서는 모든 origin 허용
-    if (isDevelopment) {
-      return callback(null, true);
-    }
-    
-    // origin이 없는 경우 (같은 도메인 요청) 허용
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // 허용된 origin 목록에 있는지 확인
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    logger.warn(`CORS blocked origin: ${origin}`);
-    callback(new Error('Not allowed by CORS'));
-  },
+    origin: (origin, callback) => {
+      // 개발 환경에서는 모든 origin 허용
+      if (isDevelopment) {
+        return callback(null, true);
+      }
+
+      // origin이 없는 경우 (같은 도메인 요청) 허용
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // 허용된 origin 목록에 있는지 확인
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true, // 쿠키 전송 허용
     methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -144,13 +147,17 @@ async function bootstrap() {
   );
 
   const PORT = configService.get<number>('PORT') ?? 3000;
-  await app.listen(PORT);
+  await app.listen(PORT, '0.0.0.0');
 
   // 디버깅 로그 추가
   logger.log(`AWS_S3_REGION: ${configService.get<string>('AWS_S3_REGION')}`);
-  logger.log(`AWS_ACCESS_KEY_ID: ${configService.get<string>('AWS_ACCESS_KEY_ID') ? '****' : 'undefined'}`);
-  logger.log(`AWS_SECRET_ACCESS_KEY: ${configService.get<string>('AWS_SECRET_ACCESS_KEY') ? '****' : 'undefined'}`);
-  
+  logger.log(
+    `AWS_ACCESS_KEY_ID: ${configService.get<string>('AWS_ACCESS_KEY_ID') ? '****' : 'undefined'}`,
+  );
+  logger.log(
+    `AWS_SECRET_ACCESS_KEY: ${configService.get<string>('AWS_SECRET_ACCESS_KEY') ? '****' : 'undefined'}`,
+  );
+
   logger.log(`Server running on port ${PORT}`);
   logger.log(`DB Host: ${configService.get<string>('DB_HOST')}`);
   logger.log(`Redis Host: ${configService.get<string>('REDIS_HOST')}`);
