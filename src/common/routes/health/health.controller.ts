@@ -10,7 +10,6 @@ export class HealthController {
     private health: HealthCheckService,
     private healthService: HealthService,
   ) {}
-
   // 1. 시스템 헬스체크
   // GET : http://localhost:3000/health
   @Get()
@@ -23,7 +22,7 @@ export class HealthController {
     return this.health.check([
       // Redis 헬스체크
       () => this.healthService.checkRedis('redis'),
-      
+
       // 시스템 상태 기본 체크
       () => this.healthService.checkSystem('system'),
     ]);
@@ -53,9 +52,7 @@ export class HealthController {
     description: '서버 시스템 상태 (메모리, 업타임 등)를 확인합니다.',
   })
   checkSystemStatus() {
-    return this.health.check([
-      () => this.healthService.checkSystem('system'),
-    ]);
+    return this.health.check([() => this.healthService.checkSystem('system')]);
   }
 
   // 4. Redis 연결 상태 확인
@@ -67,8 +64,6 @@ export class HealthController {
     description: 'Redis 캐시 서버 연결 상태를 확인합니다.',
   })
   checkRedis() {
-    return this.health.check([
-      () => this.healthService.checkRedis('redis'),
-    ]);
+    return this.health.check([() => this.healthService.checkRedis('redis')]);
   }
 }
