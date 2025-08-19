@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ChallengeroomService } from './challengeroom.service';
 import { ChallengeroomController } from './challengeroom.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -19,7 +19,7 @@ import { ChallengeparticipantModule } from '../challengeparticipant/challengepar
       UserProfile,
       Ranking,
     ]),
-    ChallengeparticipantModule
+    forwardRef(() => ChallengeparticipantModule)
   ],
   controllers: [ChallengeroomController],
   providers: [
