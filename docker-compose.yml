@@ -72,7 +72,7 @@ services:
     ports:
       - '7880:7880'
       - '7881:7881/tcp'
-      - '50000-50100:50000-50100/udp'
+      - '50000-50099:50000-50099/udp'  # 50099까지로 변경
     networks:
       - backend-net
 
@@ -83,7 +83,7 @@ services:
     env_file:
       - .env
     environment:
-      - LIVEKIT_PORT=7882  # 다른 포트
+      - LIVEKIT_PORT=7882
       - LIVEKIT_TCP_PORT=7883
       - BACKEND_SERVICE=backend-green:3000
     volumes:
@@ -92,7 +92,7 @@ services:
     ports:
       - '7882:7882'
       - '7883:7883/tcp'
-      - '50100-50200:50100-50200/udp'  # 다른 UDP 포트 범위
+      - '50100-50199:50100-50199/udp'  # 50199까지로 변경
     networks:
       - backend-net
 
