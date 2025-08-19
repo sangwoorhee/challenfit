@@ -1,11 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RoomServiceClient } from 'livekit-server-sdk';
 import { LivekitService } from './livekit.service';
 import { LivekitController } from './livekit.controller';
+import { ChallengeroomModule } from '../../routes/challengeroom/challengeroom.module';
+import { ChallengeparticipantModule } from '../challengeparticipant/challengeparticipant.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true })],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }), 
+    forwardRef(() => ChallengeroomModule), 
+    forwardRef(() => ChallengeparticipantModule)
+  ],
   providers: [
     LivekitService,
     {

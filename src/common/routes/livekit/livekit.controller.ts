@@ -16,7 +16,7 @@ export class LivekitController {
   constructor(
     private readonly livekit: LivekitService,
     private readonly challengeService: ChallengeroomService,
-    private readonly particiapntService: ChallengeparticipantService,
+    private readonly participantService: ChallengeparticipantService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
