@@ -38,6 +38,7 @@ async function bootstrap() {
     // Redis 없이도 WebSocket은 작동하지만 수평 확장은 불가능
   }
 
+  // 
   // uploads 폴더 생성 (이미지 업로드용)
   // const uploadDir = join(process.cwd(), 'uploads', 'workout-images');
   // if (!fs.existsSync(uploadDir)) {
