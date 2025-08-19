@@ -25,6 +25,7 @@ import { RefreshToken } from './common/entities/refresh_token.entity';
 import { EntryModule } from './common/routes/entry/entry.module';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RankingModule } from './common/routes/ranking/ranking.module';
+import { LivekitModule } from './common/routes/livekit/livekit.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { RankingModule } from './common/routes/ranking/ranking.module';
     HealthModule,
     EntryModule,
     RankingModule,
+    LivekitModule,
   ],
   controllers: [AppController],
   providers: [AppService],
