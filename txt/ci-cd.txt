@@ -186,6 +186,10 @@ echo "🔨 $NEW 컨테이너 빌드 및 시작..."
 docker-compose -p challenfit-backend build "$NEW" || { echo "❌ 도커 빌드 실패: $NEW"; exit 1; }
 docker-compose -p challenfit-backend up -d "$NEW" || { echo "❌ 도커 시작 실패: $NEW"; exit 1; }
 
+echo "🔨 $NEW 컨테이너 빌드 및 시작..."
+docker-compose -p challenfit-backend build "$NEW" || { echo "❌ 도커 빌드 실패: $NEW"; exit 1; }
+docker-compose -p challenfit-backend up -d "$NEW" || { echo "❌ 도커 시작 실패: $NEW"; exit 1; }
+
 ### 4-1. LiveKit 서비스 처리
 echo "📡 LiveKit 서비스 처리 중..."
 
@@ -202,31 +206,49 @@ fi
 
 echo "🔄 $OLD_LIVEKIT → $NEW_LIVEKIT 으로 전환합니다"
 
-# 새 LiveKit 컨테이너 시작
-echo "🔨 $NEW_LIVEKIT 컨테이너 시작..."
-docker-compose -p challenfit-backend up -d "$NEW_LIVEKIT" || {
-    echo "❌ LiveKit 시작 실패: $NEW_LIVEKIT";
-    exit 1;
+# 기존 LiveKit 컨테이너들 모두 정리
+echo "🧹 기존 LiveKit 컨테이너 정리..."
+docker-compose -p challenfit-backend stop livekit-blue livekit-green 2>/dev/null || true
+docker-compose -p challenfit-backend rm -f livekit-blue livekit-green 2>/dev/null || true
+
+# 모든 LiveKit 서비스를 다시 생성 및 시작
+echo "🔨 모든 LiveKit 서비스 재생성..."
+docker-compose -p challenfit-backend up -d livekit-blue livekit-green || {
+    echo "❌ LiveKit 서비스 생성 실패"
+    echo "📋 디버깅 정보:"
+    docker-compose -p challenfit-backend config --services
+    exit 1
 }
+
+# 새로운 LiveKit만 실행하고 기존 것은 중지
+echo "⏸️  $OLD_LIVEKIT 중지..."
+docker-compose -p challenfit-backend stop "$OLD_LIVEKIT" 2>/dev/null || true
+
+echo "✅ $NEW_LIVEKIT 활성화 완료!"
 
 # LiveKit Health Check
 echo "🏥 LiveKit Health Check 진행 중..."
 MAX_RETRIES=20
 COUNT=0
 while true; do
-    if curl -f "http://localhost:$NEW_LIVEKIT_PORT" >/dev/null 2>&1; then
+    if curl -f "http://localhost:$NEW_LIVEKIT_PORT" >/dev/null 2>&1 && \
+       docker ps | grep -q "challenfit-backend-$NEW_LIVEKIT-1.*Up"; then
         echo "✅ $NEW_LIVEKIT 서비스가 정상적으로 시작되었습니다!"
         break
     fi
 
     if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
         echo "❌ LiveKit Health check 실패: $NEW_LIVEKIT"
+        echo "📋 컨테이너 상태:"
+        docker ps | grep livekit || echo "LiveKit 컨테이너를 찾을 수 없습니다"
         echo "📋 LiveKit 로그:"
-        docker logs --tail 50 challenfit-backend-$NEW_LIVEKIT-1
+        docker logs --tail 50 "challenfit-backend-$NEW_LIVEKIT-1" 2>/dev/null || echo "로그를 가져올 수 없습니다"
         exit 1
     fi
 
     echo "🟡 LiveKit Health check 대기 중... ($COUNT/$MAX_RETRIES)"
+    echo "   - HTTP 체크: curl http://localhost:$NEW_LIVEKIT_PORT"
+    echo "   - 컨테이너 상태: $(docker ps --filter name=challenfit-backend-$NEW_LIVEKIT-1 --format '{{.Status}}' 2>/dev/null || echo '없음')"
     sleep 5
     COUNT=$((COUNT + 1))
 done
