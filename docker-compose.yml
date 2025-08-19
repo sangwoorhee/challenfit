@@ -10,6 +10,8 @@ services:
       - NODE_ENV=production
       - DB_HOST=172.17.0.1
       - REDIS_HOST=172.17.0.1
+      - BACKEND_SERVICE=backend-blue
+      - LIVEKIT_ENVIRONMENT=blue
     ports:
       - '3000:3000'
     restart: always
@@ -35,6 +37,8 @@ services:
       - NODE_ENV=production
       - DB_HOST=172.17.0.1
       - REDIS_HOST=172.17.0.1
+      - BACKEND_SERVICE=backend-green
+      - LIVEKIT_ENVIRONMENT=green
     ports:
       - '3002:3000'
     restart: always
@@ -51,20 +55,44 @@ services:
     volumes:
       - ./.env:/app/.env:ro
 
-  # LiveKit SFU
-  livekit:
+  # LiveKit SFU - Blue와 Green 각각 별도 인스턴스
+  livekit-blue:
     image: livekit/livekit-server:latest
-    container_name: livekit
+    container_name: livekit-blue
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - LIVEKIT_PORT=7880
+      - LIVEKIT_TCP_PORT=7881
+      - BACKEND_SERVICE=backend-blue:3000
     volumes:
-      - ./livekit.yaml:/etc/livekit.yaml:ro
+      - ./livekit-blue.yaml:/etc/livekit.yaml:ro
     command: ['--config', '/etc/livekit.yaml']
     ports:
-      - '7880:7880' # 시그널링(HTTP/WS)
-      - '7881:7881/tcp' # TCP 미디어(옵션)
-      - '50000-50100:50000-50100/udp' # 미디어 UDP
+      - '7880:7880'
+      - '7881:7881/tcp'
+      - '50000-50100:50000-50100/udp'
+    networks:
+      - backend-net
+
+  livekit-green:
+    image: livekit/livekit-server:latest
+    container_name: livekit-green
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - LIVEKIT_PORT=7882  # 다른 포트
+      - LIVEKIT_TCP_PORT=7883
+      - BACKEND_SERVICE=backend-green:3000
+    volumes:
+      - ./livekit-green.yaml:/etc/livekit.yaml:ro
+    command: ['--config', '/etc/livekit.yaml']
+    ports:
+      - '7882:7882'
+      - '7883:7883/tcp'
+      - '50100-50200:50100-50200/udp'  # 다른 UDP 포트 범위
     networks:
       - backend-net
 

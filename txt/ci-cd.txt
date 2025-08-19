@@ -187,6 +187,51 @@ echo "🔨 $NEW 컨테이너 빌드 및 시작..."
 docker-compose -p challenfit-backend build "$NEW" || { echo "❌ 도커 빌드 실패: $NEW"; exit 1; }
 docker-compose -p challenfit-backend up -d "$NEW" || { echo "❌ 도커 시작 실패: $NEW"; exit 1; }
 
+### 4-1. LiveKit 서비스 처리
+echo "📡 LiveKit 서비스 처리 중..."
+
+# LiveKit 서비스명 결정
+if [ "$NEW" = "backend-blue" ]; then
+    NEW_LIVEKIT="livekit-blue"
+    OLD_LIVEKIT="livekit-green"
+    NEW_LIVEKIT_PORT=7880
+else
+    NEW_LIVEKIT="livekit-green"
+    OLD_LIVEKIT="livekit-blue"
+    NEW_LIVEKIT_PORT=7882
+fi
+
+echo "🔄 $OLD_LIVEKIT → $NEW_LIVEKIT 으로 전환합니다"
+
+# 새 LiveKit 컨테이너 시작
+echo "🔨 $NEW_LIVEKIT 컨테이너 시작..."
+docker-compose -p challenfit-backend up -d "$NEW_LIVEKIT" || { 
+    echo "❌ LiveKit 시작 실패: $NEW_LIVEKIT"; 
+    exit 1; 
+}
+
+# LiveKit Health Check
+echo "🏥 LiveKit Health Check 진행 중..."
+MAX_RETRIES=20
+COUNT=0
+while true; do
+    if curl -f "http://localhost:$NEW_LIVEKIT_PORT" >/dev/null 2>&1; then
+        echo "✅ $NEW_LIVEKIT 서비스가 정상적으로 시작되었습니다!"
+        break
+    fi
+
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "❌ LiveKit Health check 실패: $NEW_LIVEKIT"
+        echo "📋 LiveKit 로그:"
+        docker logs --tail 50 challenfit-backend-$NEW_LIVEKIT-1
+        exit 1
+    fi
+
+    echo "🟡 LiveKit Health check 대기 중... ($COUNT/$MAX_RETRIES)"
+    sleep 5
+    COUNT=$((COUNT + 1))
+done
+
 ### 5. Health Check 대기
 echo "🏥 Health Check 진행 중..."
 MAX_RETRIES=30
