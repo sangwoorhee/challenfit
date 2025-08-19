@@ -8,7 +8,9 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
   constructor(private configService: ConfigService) {
     super({
       clientID: configService.get('KAKAO_CLIENT_ID'),
+      clientSecret: configService.get('KAKAO_CLIENT_SECRET'), // Client Secret 추가
       callbackURL: configService.get('KAKAO_CALLBACK_URL'),
+      scope: ['account_email', 'profile_nickname'], // 필요한 scope 추가
     });
   }
 

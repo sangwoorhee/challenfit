@@ -25,7 +25,6 @@ import { ChallengeparticipantModule } from '../challengeparticipant/challengepar
   providers: [
     ChallengeroomService,
     ChallengeScheduler,
-    // ChallengeparticipantModule,
   ],
   exports: [ChallengeroomService],
 })
