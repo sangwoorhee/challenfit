@@ -1,4 +1,3 @@
-[ec2-user@ip-172-31-38-128 ~]$ sudo vi deploy-backend.sh
 #!/bin/bash
 set -euo pipefail
 
@@ -51,7 +50,7 @@ elif [ "$DISK_USAGE" -gt 70 ]; then
     FILTER_TIME="24h"  # 24시간 이상 된 것 삭제
 else
     echo "✅ 디스크 사용률 양호 - 일반 정리"
-FILTER_TIME="168h"  # 7일 이상 된 것만 삭제
+    FILTER_TIME="168h"  # 7일 이상 된 것만 삭제
 fi
 
 # 1단계: 종료된 컨테이너 삭제
@@ -205,9 +204,9 @@ echo "🔄 $OLD_LIVEKIT → $NEW_LIVEKIT 으로 전환합니다"
 
 # 새 LiveKit 컨테이너 시작
 echo "🔨 $NEW_LIVEKIT 컨테이너 시작..."
-docker-compose -p challenfit-backend up -d "$NEW_LIVEKIT" || { 
-    echo "❌ LiveKit 시작 실패: $NEW_LIVEKIT"; 
-    exit 1; 
+docker-compose -p challenfit-backend up -d "$NEW_LIVEKIT" || {
+    echo "❌ LiveKit 시작 실패: $NEW_LIVEKIT";
+    exit 1;
 }
 
 # LiveKit Health Check
@@ -295,7 +294,6 @@ server {
         proxy_send_timeout 5s;
         proxy_read_timeout 5s;
     }
-
     location / {
         proxy_pass http://challenfit_backend;
         proxy_set_header Host \$host;
@@ -311,7 +309,7 @@ server {
         add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
         add_header Access-Control-Allow-Headers "Content-Type, Authorization, Cookie, Origin, x-member-seq";
 
-if (\$request_method = 'OPTIONS') {
+        if (\$request_method = 'OPTIONS') {
             add_header Access-Control-Allow-Origin *;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
             add_header Access-Control-Allow-Headers "Content-Type, Authorization, Cookie, Origin, x-member-seq";
@@ -392,6 +390,14 @@ if [ "$OLD" != "$NEW" ]; then
     echo "🔒 $OLD 컨테이너는 종료되었으나 삭제하지 않고 보관합니다."
 fi
 
+### 9-1. 기존 OLD LiveKit 컨테이너 중지
+if [ "$OLD_LIVEKIT" != "$NEW_LIVEKIT" ]; then
+    echo "🛑 기존 $OLD_LIVEKIT 컨테이너 중지 중..."
+    sleep 30  # 기존 연결이 완전히 종료될 때까지 대기
+    docker-compose -p challenfit-backend stop "$OLD_LIVEKIT" || true
+    echo "🔒 $OLD_LIVEKIT 컨테이너는 종료되었으나 삭제하지 않고 보관합니다."
+fi
+
 ### 10. 배포 완료 메시지
 echo "🎉 배포 완료! 서비스가 http://43.200.3.200 에서 실행 중입니다."
 echo "📊 현재 실행 중인 컨테이너:"
@@ -401,4 +407,3 @@ echo "📝 유용한 명령어:"
 echo "  - 로그 확인: docker-compose -p challenfit-backend logs -f $NEW"
 echo "  - 상태 확인: docker-compose -p challenfit-backend ps"
 echo "  - 롤백: docker-compose -p challenfit-backend up -d $OLD && docker-compose -p challenfit-backend stop $NEW"
-                                     

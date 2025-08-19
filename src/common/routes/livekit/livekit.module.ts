@@ -17,10 +17,24 @@ import { ChallengeparticipantModule } from '../challengeparticipant/challengepar
     {
       provide: RoomServiceClient,
       useFactory: (cfg: ConfigService) => {
-        const host = cfg.get<string>('LIVEKIT_HOST_URL');
+        // 🔄 Blue/Green 환경에 따라 동적으로 HOST URL 선택
+        const environment = cfg.get<string>('LIVEKIT_ENVIRONMENT');
+        let hostUrl: string;
+        
+        if (environment === 'blue') {
+          hostUrl = cfg.get<string>('LIVEKIT_HOST_URL_BLUE') || 'http://43.200.3.200:7880';
+        } else if (environment === 'green') {
+          hostUrl = cfg.get<string>('LIVEKIT_HOST_URL_GREEN') || 'http://43.200.3.200:7882';
+        } else {
+          // 기본값: Blue
+          hostUrl = cfg.get<string>('LIVEKIT_HOST_URL_BLUE') || 'http://43.200.3.200:7880';
+        }
+        
         const key = cfg.get<string>('LIVEKIT_API_KEY');
         const sec = cfg.get<string>('LIVEKIT_API_SECRET');
-        return new RoomServiceClient(host!, key!, sec!);
+        
+        console.log(`[LiveKit Module] Environment: ${environment}, Host URL: ${hostUrl}`);
+        return new RoomServiceClient(hostUrl, key!, sec!);
       },
       inject: [ConfigService],
     },
