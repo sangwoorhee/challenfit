@@ -18,14 +18,15 @@ import { ChallengeparticipantModule } from '../challengeparticipant/challengepar
       User,
       UserProfile,
       Ranking,
-      ChallengeParticipant,
     ]),
+    ChallengeparticipantModule
   ],
   controllers: [ChallengeroomController],
   providers: [
     ChallengeroomService,
     ChallengeScheduler,
-    ChallengeparticipantModule,
+    // ChallengeparticipantModule,
   ],
+  exports: [ChallengeroomService],
 })
 export class ChallengeroomModule {}
