@@ -1,3 +1,7 @@
+
+// 수정 : sudo vi deploy-backend.sh
+// 수정후 적용 : sudo chmod +x deploy-backend.sh
+
 #!/bin/bash
 set -euo pipefail
 
@@ -198,13 +202,29 @@ if [ "$NEW" = "backend-blue" ]; then
     NEW_LIVEKIT="livekit-blue"
     OLD_LIVEKIT="livekit-green"
     NEW_LIVEKIT_PORT=7880
+    NEW_LIVEKIT_CONFIG="livekit-blue.yaml"
 else
     NEW_LIVEKIT="livekit-green"
     OLD_LIVEKIT="livekit-blue"
     NEW_LIVEKIT_PORT=7882
+    NEW_LIVEKIT_CONFIG="livekit-green.yaml"
 fi
 
 echo "🔄 $OLD_LIVEKIT → $NEW_LIVEKIT 으로 전환합니다"
+
+# LiveKit 설정 파일 검증
+echo "🔍 LiveKit 설정 파일 검증 중..."
+if [ ! -f "$NEW_LIVEKIT_CONFIG" ]; then
+    echo "❌ LiveKit 설정 파일이 없습니다: $NEW_LIVEKIT_CONFIG"
+    exit 1
+fi
+
+# 환경변수 치환 테스트 (임시 파일로 생성하여 확인)
+echo "📝 환경변수 치환 확인..."
+envsubst < "$NEW_LIVEKIT_CONFIG" > "/tmp/${NEW_LIVEKIT_CONFIG}.test"
+echo "LiveKit 설정 파일 미리보기 (처음 30줄):"
+head -n 30 "/tmp/${NEW_LIVEKIT_CONFIG}.test"
+rm -f "/tmp/${NEW_LIVEKIT_CONFIG}.test"
 
 # 기존 LiveKit 컨테이너들 모두 정리
 echo "🧹 기존 LiveKit 컨테이너 정리..."
