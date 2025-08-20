@@ -56,9 +56,9 @@ services:
       - ./.env:/app/.env:ro
 
   # LiveKit SFU - Blue와 Green 각각 별도 인스턴스
+  # container_name 제거하여 docker-compose 프로젝트 이름 기반으로 자동 생성
   livekit-blue:
     image: livekit/livekit-server:latest
-    container_name: livekit-blue
     restart: unless-stopped
     env_file:
       - .env
@@ -72,13 +72,18 @@ services:
     ports:
       - '7880:7880'
       - '7881:7881/tcp'
-      - '50000-50099:50000-50099/udp'  # 50099까지로 변경
+      - '50000-50099:50000-50099/udp'
     networks:
       - backend-net
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:7880']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   livekit-green:
     image: livekit/livekit-server:latest
-    container_name: livekit-green
     restart: unless-stopped
     env_file:
       - .env
@@ -92,9 +97,15 @@ services:
     ports:
       - '7882:7882'
       - '7883:7883/tcp'
-      - '50100-50199:50100-50199/udp'  # 50199까지로 변경
+      - '50100-50199:50100-50199/udp'
     networks:
       - backend-net
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:7882']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # TURN 서버 (coturn)
   coturn:

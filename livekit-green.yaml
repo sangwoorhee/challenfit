@@ -31,15 +31,11 @@ logging:
   level: info
   pion_level: warn
 
-# Green 백엔드와 연동을 위한 설정 (필요시)
-webhook:
-  api_key: ${LIVEKIT_API_KEY}
-  urls:
-    - http://backend-green:3000/webhook/livekit
+# Green 백엔드와 연동을 위한 설정 (선택사항)
+# webhook:
+#   api_key: ${LIVEKIT_API_KEY}
+#   urls:
+#     - http://backend-green:3000/webhook/livekit
 
-# Redis 설정 (선택사항 - 멀티 인스턴스 동기화용)
-redis:
-  address: ${REDIS_HOST}:${REDIS_PORT}
-  username: ${REDIS_USERNAME}
-  password: ${REDIS_PASSWORD}
-  db: 0
+# Redis 설정 제거 (비밀번호가 없어서 연결 실패할 수 있음)
+# 필요시 별도 Redis 인스턴스 구성 후 활성화
