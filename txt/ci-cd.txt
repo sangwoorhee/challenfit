@@ -1,4 +1,5 @@
 
+// 도커 블루-그린 컨테이너 무중단 배포 쉘 스크립트 (/home/ec2-user/deploy-backend.sh)
 // 수정 : sudo vi deploy-backend.sh
 // 수정후 적용 : sudo chmod +x deploy-backend.sh
 
