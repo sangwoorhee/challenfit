@@ -219,12 +219,8 @@ if [ ! -f "$NEW_LIVEKIT_CONFIG" ]; then
     exit 1
 fi
 
-# 환경변수 치환 테스트 (임시 파일로 생성하여 확인)
-echo "📝 환경변수 치환 확인..."
-envsubst < "$NEW_LIVEKIT_CONFIG" > "/tmp/${NEW_LIVEKIT_CONFIG}.test"
-echo "LiveKit 설정 파일 미리보기 (처음 30줄):"
-head -n 30 "/tmp/${NEW_LIVEKIT_CONFIG}.test"
-rm -f "/tmp/${NEW_LIVEKIT_CONFIG}.test"
+echo "📝 LiveKit 설정 파일 확인 ($NEW_LIVEKIT_CONFIG):"
+head -n 20 "$NEW_LIVEKIT_CONFIG"
 
 # 기존 LiveKit 컨테이너들 모두 정리
 echo "🧹 기존 LiveKit 컨테이너 정리..."
