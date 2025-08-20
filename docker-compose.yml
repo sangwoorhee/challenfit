@@ -56,20 +56,9 @@ services:
       - ./.env:/app/.env:ro
 
   # LiveKit SFU - Blue와 Green 각각 별도 인스턴스
-  # container_name 제거하여 docker-compose 프로젝트 이름 기반으로 자동 생성
   livekit-blue:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    environment:
-      - LIVEKIT_PORT=7880
-      - LIVEKIT_TCP_PORT=7881
-      - BACKEND_SERVICE=backend-blue:3000
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - TURN_HOST=${TURN_HOST}
-      - TURN_USERNAME=${TURN_USERNAME}
-      - TURN_PASSWORD=${TURN_PASSWORD}
-      - PUBLIC_IP=${PUBLIC_IP}
     volumes:
       - ./livekit-blue.yaml:/etc/livekit.yaml:ro
     command: ['--config', '/etc/livekit.yaml']
@@ -89,16 +78,6 @@ services:
   livekit-green:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    environment:
-      - LIVEKIT_PORT=7882
-      - LIVEKIT_TCP_PORT=7883
-      - BACKEND_SERVICE=backend-green:3000
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - TURN_HOST=${TURN_HOST}
-      - TURN_USERNAME=${TURN_USERNAME}
-      - TURN_PASSWORD=${TURN_PASSWORD}
-      - PUBLIC_IP=${PUBLIC_IP}
     volumes:
       - ./livekit-green.yaml:/etc/livekit.yaml:ro
     command: ['--config', '/etc/livekit.yaml']
