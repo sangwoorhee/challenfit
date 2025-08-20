@@ -8,25 +8,14 @@ rtc:
   port_range_start: 50100
   port_range_end: 50199
   use_external_ip: true
-  # STUN/TURN servers for NAT traversal
+  # STUN servers for NAT traversal (프로토콜 제거)
   stun_servers:
-    - "stun:stun.l.google.com:19302"
-    - "stun:stun1.l.google.com:19302"
-  turn_servers:
-    - host: 43.200.3.200
-      port: 3478
-      protocol: udp
-      username: lkturn
-      credential: SuperStr0ngPass!
-    - host: 43.200.3.200
-      port: 3478
-      protocol: tcp
-      username: lkturn
-      credential: SuperStr0ngPass!
+    - "stun.l.google.com:19302"
+    - "stun1.l.google.com:19302"
 
-# API keys for authentication
+# API keys for authentication (32자 이상)
 keys:
-  lk_test_key_123: lk_test_secret_456
+  lk_test_key_123: lk_test_secret_456_extended_to_32_characters_for_security
 
 # Logging configuration
 logging:
