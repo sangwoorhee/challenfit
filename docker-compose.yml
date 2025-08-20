@@ -60,12 +60,16 @@ services:
   livekit-blue:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - LIVEKIT_PORT=7880
       - LIVEKIT_TCP_PORT=7881
       - BACKEND_SERVICE=backend-blue:3000
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - TURN_HOST=${TURN_HOST}
+      - TURN_USERNAME=${TURN_USERNAME}
+      - TURN_PASSWORD=${TURN_PASSWORD}
+      - PUBLIC_IP=${PUBLIC_IP}
     volumes:
       - ./livekit-blue.yaml:/etc/livekit.yaml:ro
     command: ['--config', '/etc/livekit.yaml']
@@ -77,20 +81,24 @@ services:
       - backend-net
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:7880']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   livekit-green:
     image: livekit/livekit-server:latest
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - LIVEKIT_PORT=7882
       - LIVEKIT_TCP_PORT=7883
       - BACKEND_SERVICE=backend-green:3000
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - TURN_HOST=${TURN_HOST}
+      - TURN_USERNAME=${TURN_USERNAME}
+      - TURN_PASSWORD=${TURN_PASSWORD}
+      - PUBLIC_IP=${PUBLIC_IP}
     volumes:
       - ./livekit-green.yaml:/etc/livekit.yaml:ro
     command: ['--config', '/etc/livekit.yaml']
@@ -102,10 +110,10 @@ services:
       - backend-net
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:7882']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   # TURN 서버 (coturn)
   coturn:

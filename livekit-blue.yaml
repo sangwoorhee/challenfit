@@ -12,19 +12,13 @@ rtc:
 keys:
   ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
 
-turn:
-  enabled: true
-  servers:
-    - host: ${TURN_HOST}
-      port: 3478
-      protocol: udp
-      username: '${TURN_USERNAME}'
-      credential: '${TURN_PASSWORD}'
-    - host: ${TURN_HOST}
-      port: 3478
-      protocol: tcp
-      username: '${TURN_USERNAME}'
-      credential: '${TURN_PASSWORD}'
+# ICE servers 설정 (TURN/STUN)
+ice_servers:
+  - urls: 
+      - "turn:${TURN_HOST}:3478?transport=udp"
+      - "turn:${TURN_HOST}:3478?transport=tcp"
+    username: ${TURN_USERNAME}
+    credential: ${TURN_PASSWORD}
 
 # Blue 환경 전용 설정
 logging:
