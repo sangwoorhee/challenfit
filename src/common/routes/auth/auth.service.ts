@@ -272,6 +272,8 @@ export class AuthService {
       user = this.userRepository.create({
         email: oauthUser.email,
         nickname: oauthUser.nickname,
+        name: oauthUser.name || oauthUser.nickname, // name 필드에 카카오 이름 매핑
+        phone: '', // 카카오에서는 전화번호를 기본 제공하지 않으므로 빈값
         provider: provider,
         provider_uid: oauthUser.providerId,
         status: UserStatus.ACTIVE,
@@ -283,7 +285,21 @@ export class AuthService {
       await queryRunner.startTransaction();
 
       try {
-        const profile = queryRunner.manager.create(UserProfile, { user });
+        // 카카오 생년월일 조합 (birthyear + birthday)
+        let birth_date: Date | undefined = undefined;
+        if (oauthUser.birthyear && oauthUser.birthday) {
+          const year = oauthUser.birthyear;
+          const monthDay = oauthUser.birthday; // MMDD 형태
+          const month = monthDay.substring(0, 2);
+          const day = monthDay.substring(2, 4);
+          birth_date = new Date(`${year}-${month}-${day}`);
+        }
+
+        const profile = queryRunner.manager.create(UserProfile, { 
+          user,
+          profile_image_url: oauthUser.profile_image_url,
+          birth_date: birth_date,
+        });
         await queryRunner.manager.save(profile);
 
         const setting = queryRunner.manager.create(UserSetting, { user });
