@@ -26,6 +26,7 @@ import { EntryModule } from './common/routes/entry/entry.module';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RankingModule } from './common/routes/ranking/ranking.module';
 import { LivekitModule } from './common/routes/livekit/livekit.module';
+import { PrivateChatModule } from './common/routes/private-chat/private-chat.module';
 
 @Module({
   imports: [
@@ -95,7 +96,7 @@ import { LivekitModule } from './common/routes/livekit/livekit.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: false, // 프로덕션에선 false
+        synchronize: true, // 프로덕션에선 false
       }),
     }),
     // TypeORM 연결 설정
@@ -115,6 +116,7 @@ import { LivekitModule } from './common/routes/livekit/livekit.module';
     EntryModule,
     RankingModule,
     LivekitModule,
+    PrivateChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -6,3 +6,94 @@ https://chatgpt.com/share/e/68675d53-aa78-8008-a454-4b943f484978
 - 레디스 웹소켓 채팅
 https://claude.ai/public/artifacts/275b604e-177e-4f86-9f6b-f351630ccbc2
 
+
+// S3 : ChallenFitS3Policy
+// Lambda : ChallenFitLambdaS3Policy
+
+// CloudFront Name : ChallenFitImageDistribution
+// 배포도메인이름 : d1jsnd5e3k2qq8.cloudfront.net
+// arn:aws:cloudfront::231224359108:distribution/E1MIIGQM1IMEFR
+
+// ViewerRequest ARN: arn:aws:lambda:us-east-1:YOUR_ACCOUNT:function:ChallenFitImageResize-ViewerRequest:1
+// OriginResponse ARN: arn:aws:lambda:us-east-1:YOUR_ACCOUNT:function:ChallenFitImageResize-OriginResponse:1
+
+
+/// images.challenfit.com
+
+
+/// S3 버킷 정책
+
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowCloudFrontServicePrincipal",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::challenfit-image/*",
+            "Condition": {
+                "StringEquals": {
+                    "AWS:SourceArn": "arn:aws:cloudfront::231224359108:distribution/E1MIIGQM1IMEFR"
+                }
+            }
+        },
+        {
+            "Sid": "AllowLambdaEdge",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "lambda.amazonaws.com"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::challenfit-image/*"
+        },
+        {
+            "Sid": "ExistingIAMUser",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::231224359108:user/challenfit-s3-user"
+            },
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::challenfit-image/*",
+                "arn:aws:s3:::challenfit-image"
+            ]
+        }
+    ]
+    
+     CORS (Cross-Origin 리소스 공유)
+
+     [
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE"
+        ],
+        "AllowedOrigins": [
+            "*"
+        ],
+        "ExposeHeaders": [
+            "ETag"
+        ]
+    }
+]
+
+피부여자 
+1. 버킷 소유자 (AWS 계정) : f92f858568eb172ca5eca89c54ec7782ca0f2b1c7d3eec24d4c5a85f5650a60c
+2. 모든 사람 (퍼블릭 엑세스) : http://acs.amazonaws.com/groups/global/AllUsers
+3. 인증된 사용자 그룹(AWS 계정이 있는 모든 사용자) : http://acs.amazonaws.com/groups/global/AuthenticatedUsers
+4. S3 로그 전달 그룹 : http://acs.amazonaws.com/groups/s3/LogDelivery
