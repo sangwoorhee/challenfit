@@ -1,6 +1,12 @@
-import { Injectable, Inject, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { PrivateChatRoom } from 'src/common/entities/private_chat_room.entity';
 import { PrivateChatMessage } from 'src/common/entities/private_chat_message.entity';
 import { PrivateChatMessageRead } from 'src/common/entities/private_chat_message_read.entity';
@@ -101,7 +107,10 @@ export class PrivateChatService {
   }
 
   // 일대일 채팅방 생성 또는 조회
-  async createOrGetPrivateChatRoom(user1Idx: string, user2Idx: string): Promise<{ chatRoom: any; isNewRoom: boolean }> {
+  async createOrGetPrivateChatRoom(
+    user1Idx: string,
+    user2Idx: string,
+  ): Promise<{ chatRoom: any; isNewRoom: boolean }> {
     if (user1Idx === user2Idx) {
       throw new BadRequestException('자기 자신과는 채팅할 수 없습니다.');
     }
@@ -111,9 +120,7 @@ export class PrivateChatService {
 
     // 기존 채팅방 조회
     let chatRoom = await this.privateChatRoomRepository.findOne({
-      where: [
-        { user1: { idx: userA }, user2: { idx: userB } },
-      ],
+      where: [{ user1: { idx: userA }, user2: { idx: userB } }],
       relations: ['user1', 'user1.profile', 'user2', 'user2.profile'],
     });
 
@@ -121,8 +128,12 @@ export class PrivateChatService {
 
     if (!chatRoom) {
       // 새 채팅방 생성
-      const user1 = await this.userRepository.findOne({ where: { idx: userA } });
-      const user2 = await this.userRepository.findOne({ where: { idx: userB } });
+      const user1 = await this.userRepository.findOne({
+        where: { idx: userA },
+      });
+      const user2 = await this.userRepository.findOne({
+        where: { idx: userB },
+      });
 
       if (!user1 || !user2) {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
@@ -136,7 +147,7 @@ export class PrivateChatService {
       });
 
       chatRoom = await this.privateChatRoomRepository.save(chatRoom);
-      
+
       // 관계 다시 로드
       const reloadedChatRoom = await this.privateChatRoomRepository.findOne({
         where: { idx: chatRoom.idx },
@@ -153,8 +164,9 @@ export class PrivateChatService {
 
     // 응답 형식 변환
     const currentUserIdx = user1Idx;
-    const participant = chatRoom.user1.idx === currentUserIdx ? chatRoom.user2 : chatRoom.user1;
-    
+    const participant =
+      chatRoom.user1.idx === currentUserIdx ? chatRoom.user2 : chatRoom.user1;
+
     const formattedChatRoom = {
       idx: chatRoom.idx,
       participant: {
@@ -194,7 +206,10 @@ export class PrivateChatService {
       .leftJoinAndSelect('user1.profile', 'user1Profile')
       .leftJoinAndSelect('user2.profile', 'user2Profile')
       .where('(room.user1 = :userIdx OR room.user2 = :userIdx)', { userIdx })
-      .andWhere('((room.user1 = :userIdx AND room.user1_deleted = false) OR (room.user2 = :userIdx AND room.user2_deleted = false))', { userIdx })
+      .andWhere(
+        '((room.user1 = :userIdx AND room.user1_deleted = false) OR (room.user2 = :userIdx AND room.user2_deleted = false))',
+        { userIdx },
+      )
       .orderBy('room.last_message_at', 'DESC')
       .addOrderBy('room.created_at', 'DESC')
       .take(limit)
@@ -205,8 +220,9 @@ export class PrivateChatService {
     // 읽지 않은 메시지 수 계산
     const formattedChatRooms = await Promise.all(
       chatRooms.map(async (room) => {
-        const participant = room.user1.idx === userIdx ? room.user2 : room.user1;
-        
+        const participant =
+          room.user1.idx === userIdx ? room.user2 : room.user1;
+
         // 읽지 않은 메시지 수 계산
         const unreadCount = await this.getUnreadMessageCount(room.idx, userIdx);
 
@@ -222,7 +238,7 @@ export class PrivateChatService {
           unreadCount,
           createdAt: room.created_at,
         };
-      })
+      }),
     );
 
     const result: PaginatedResponse<any> = {
@@ -299,7 +315,8 @@ export class PrivateChatService {
     const [messages, total] = await queryBuilder.getManyAndCount();
 
     // 읽음 상태 조회
-    const messageIds = messages.map(msg => msg.idx);
+    const messageIds = messages.map((msg) => msg.idx);
+
     const readStatus = await this.getMessageReadStatus(messageIds, userIdx);
 
     // 응답 형식 변환
@@ -371,7 +388,7 @@ export class PrivateChatService {
         {
           last_message: message,
           last_message_at: savedMessage.created_at,
-        }
+        },
       );
 
       await queryRunner.commitTransaction();
@@ -380,25 +397,27 @@ export class PrivateChatService {
       await this.invalidateMessageCache(chatRoomIdx);
 
       // 발신자 정보와 프로필 정보 포함해서 반환
-      const messageWithSender = await this.privateChatMessageRepository.findOne({
-        where: { idx: savedMessage.idx },
-        relations: ['sender', 'sender.profile'],
-        select: {
-          idx: true,
-          message: true,
-          message_type: true,
-          attachment_url: true,
-          created_at: true,
-          is_deleted: true,
-          sender: {
+      const messageWithSender = await this.privateChatMessageRepository.findOne(
+        {
+          where: { idx: savedMessage.idx },
+          relations: ['sender', 'sender.profile'],
+          select: {
             idx: true,
-            nickname: true,
-            profile: {
-              profile_image_url: true,
+            message: true,
+            message_type: true,
+            attachment_url: true,
+            created_at: true,
+            is_deleted: true,
+            sender: {
+              idx: true,
+              nickname: true,
+              profile: {
+                profile_image_url: true,
+              },
             },
           },
         },
-      });
+      );
 
       return messageWithSender;
     } catch (error) {
@@ -431,7 +450,10 @@ export class PrivateChatService {
   }
 
   // 채팅방 메시지들 일괄 읽음 처리
-  async markChatRoomMessagesAsRead(chatRoomIdx: string, userIdx: string): Promise<void> {
+  async markChatRoomMessagesAsRead(
+    chatRoomIdx: string,
+    userIdx: string,
+  ): Promise<void> {
     // 읽지 않은 메시지들 조회
     const unreadMessages = await this.privateChatMessageRepository
       .createQueryBuilder('message')
@@ -443,11 +465,11 @@ export class PrivateChatService {
       .getMany();
 
     if (unreadMessages.length > 0) {
-      const messageReads = unreadMessages.map(message => 
+      const messageReads = unreadMessages.map((message) =>
         this.privateChatMessageReadRepository.create({
           message: { idx: message.idx },
           user: { idx: userIdx },
-        })
+        }),
       );
 
       await this.privateChatMessageReadRepository.save(messageReads);
@@ -455,7 +477,10 @@ export class PrivateChatService {
   }
 
   // 메시지 삭제 (소프트 삭제)
-  async deletePrivateMessage(messageIdx: string, userIdx: string): Promise<any> {
+  async deletePrivateMessage(
+    messageIdx: string,
+    userIdx: string,
+  ): Promise<any> {
     const message = await this.privateChatMessageRepository.findOne({
       where: { idx: messageIdx },
       relations: ['sender', 'chat_room'],
@@ -475,7 +500,10 @@ export class PrivateChatService {
   }
 
   // 채팅방 접근 권한 확인
-  private async checkChatRoomAccess(chatRoomIdx: string, userIdx: string): Promise<boolean> {
+  private async checkChatRoomAccess(
+    chatRoomIdx: string,
+    userIdx: string,
+  ): Promise<boolean> {
     const chatRoom = await this.privateChatRoomRepository.findOne({
       where: { idx: chatRoomIdx },
       relations: ['user1', 'user2'],
@@ -504,7 +532,10 @@ export class PrivateChatService {
   }
 
   // 읽지 않은 메시지 수 계산
-  private async getUnreadMessageCount(chatRoomIdx: string, userIdx: string): Promise<number> {
+  private async getUnreadMessageCount(
+    chatRoomIdx: string,
+    userIdx: string,
+  ): Promise<number> {
     return await this.privateChatMessageRepository
       .createQueryBuilder('message')
       .leftJoin('message.reads', 'read', 'read.user = :userIdx', { userIdx })
@@ -516,24 +547,27 @@ export class PrivateChatService {
   }
 
   // 메시지들의 읽음 상태 조회
-  private async getMessageReadStatus(messageIds: string[], userIdx: string): Promise<{ [key: string]: boolean }> {
-    if (messageIds.length === 0) {
-      return {};
-    }
+  private async getMessageReadStatus(
+    messageIds: string[],
+    userIdx: string,
+  ): Promise<Record<string, boolean>> {
+    if (!messageIds?.length) return {};
+
+    // 중복/빈값 제거 (선택)
+    const ids = Array.from(new Set(messageIds.filter(Boolean)));
 
     const reads = await this.privateChatMessageReadRepository.find({
       where: {
-        message: { idx: messageIds as any },
+        message: { idx: In(ids) }, // ✅ 핵심
         user: { idx: userIdx },
       },
-      relations: ['message'],
+      relations: { message: true }, // 문자열 배열보다 객체 표기를 권장
     });
 
-    const readStatus: { [key: string]: boolean } = {};
-    reads.forEach(read => {
-      readStatus[read.message.idx] = true;
-    });
-
+    const readStatus: Record<string, boolean> = {};
+    for (const r of reads) {
+      if (r.message?.idx) readStatus[r.message.idx] = true;
+    }
     return readStatus;
   }
 
@@ -545,7 +579,9 @@ export class PrivateChatService {
         `${this.ROOM_CACHE_PREFIX}`,
       ];
 
-      this.logger.debug(`Invalidating cache for patterns: ${patterns.join(', ')}`);
+      this.logger.debug(
+        `Invalidating cache for patterns: ${patterns.join(', ')}`,
+      );
 
       // 각 패턴에 대해 캐시 삭제
       for (const pattern of patterns) {
@@ -574,9 +610,15 @@ export class PrivateChatService {
     }
   }
 
-  private async safeSetCache(key: string, value: any, ttl?: number): Promise<void> {
+  private async safeSetCache(
+    key: string,
+    value: any,
+    ttl?: number,
+  ): Promise<void> {
     try {
-      await (this.cacheManager as any).set(key, value, { ttl: ttl || this.CACHE_TTL });
+      await (this.cacheManager as any).set(key, value, {
+        ttl: ttl || this.CACHE_TTL,
+      });
     } catch (error) {
       this.logger.warn(`Cache set failed for key ${key}:`, error.message);
     }
