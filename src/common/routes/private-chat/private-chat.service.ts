@@ -558,10 +558,10 @@ export class PrivateChatService {
 
     const reads = await this.privateChatMessageReadRepository.find({
       where: {
-        message: { idx: In(ids) }, // ✅ 핵심
+        message: { idx: In(ids) },
         user: { idx: userIdx },
       },
-      relations: { message: true }, // 문자열 배열보다 객체 표기를 권장
+      relations: { message: true },
     });
 
     const readStatus: Record<string, boolean> = {};
