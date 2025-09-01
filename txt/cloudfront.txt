@@ -1,0 +1,3 @@
+challenfit-image-distribution
+배포도메인 이름 : d3o1t6du33hy7h.cloudfront.net
+ARN : arn:aws:cloudfront::231224359108:distribution/E1KJJK73CSM05J
