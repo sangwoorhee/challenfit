@@ -63,9 +63,11 @@ export class ChallengeroomService {
           status: In([ChallengeStatus.PENDING, ChallengeStatus.ONGOING]),
         },
       });
-      
+
       if (existingChallenge) {
-        throw new ConflictException('이미 진행 중이거나 대기 중인 도전방이 있습니다. 한 번에 하나의 도전방만 생성할 수 있습니다.');
+        throw new ConflictException(
+          '이미 진행 중이거나 대기 중인 도전방이 있습니다. 한 번에 하나의 도전방만 생성할 수 있습니다.',
+        );
       }
 
       // 도전방 중복 참여 방지 - 수정: 사용자가 이미 진행중인 도전이 있는지 확인
@@ -191,6 +193,7 @@ export class ChallengeroomService {
     }
 
     const challengeRoom = {
+      ownerIdx: room.user.idx,
       roomId: room.idx,
       title: room.title,
       status: room.status,

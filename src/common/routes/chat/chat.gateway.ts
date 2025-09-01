@@ -14,6 +14,7 @@ import {
   ConflictException,
   ForbiddenException,
   HttpException,
+  HttpStatus,
   Logger,
   NotFoundException,
   UseGuards,
@@ -47,6 +48,11 @@ interface JoinChallengeEntryDto {
   nickname: string;
   userIdx: string;
   imgUrl: string;
+}
+
+interface CancelChallengeEntryDto {
+  challengeRoomIdx: string;
+  userIdx: string;
 }
 
 interface PaginationDto {
@@ -456,6 +462,61 @@ export class ChatGateway
         `joinChallengeEntry error: ${error?.message}`,
         error?.stack,
       );
+    }
+  }
+
+  // 7. 도전 취소하기
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('cancelChallengeEntry')
+  async handleCancelChallenge(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: CancelChallengeEntryDto,
+  ) {
+    const { challengeRoomIdx, userIdx } = data || ({} as any);
+    const roomName = `room-${challengeRoomIdx}`;
+
+    try {
+      if (!challengeRoomIdx || !userIdx) {
+        throw new HttpException(
+          'challengeRoomIdx와 userIdx가 필요합니다.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      // 프런트에서는 이 payload만 보고 멤버 엔트리에서 제거하면 됨
+      const payload = { challengeRoomIdx, userIdx };
+
+      if (this.isRedisAvailable) {
+        await this.redisPubSub.publish('chat:broadcast', {
+          room: roomName,
+          event: 'participantCancelled', // ✅ 취소 브로드캐스트
+          payload,
+        });
+      } else {
+        this.server.to(roomName).emit('participantCancelled', payload); // ✅ 소켓 브로드캐스트
+      }
+
+      return { ok: true };
+    } catch (error) {
+      const err =
+        error instanceof HttpException
+          ? {
+              status: error.getStatus(),
+              response: error.getResponse(),
+              message: error.message,
+            }
+          : {
+              status: 500,
+              message: '서버 오류가 발생했습니다.',
+            };
+
+      client.emit('cancelChallengeEntryError', err);
+      this.logger.error(
+        `cancelChallengeEntry error: ${error?.message}`,
+        error?.stack,
+      );
+
+      return { ok: false, ...(err.status ? { status: err.status } : {}) };
     }
   }
 }
