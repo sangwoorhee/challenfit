@@ -483,17 +483,17 @@ export class ChatGateway
         );
       }
 
-      // 프런트에서는 이 payload만 보고 멤버 엔트리에서 제거하면 됨
       const payload = { challengeRoomIdx, userIdx };
 
+      this.server.to(roomName).emit('participantCancelled', payload);
+
+      // (선택) Redis도 함께 발행하고 싶다면 남겨두기 — 없어도 됨
       if (this.isRedisAvailable) {
         await this.redisPubSub.publish('chat:broadcast', {
           room: roomName,
-          event: 'participantCancelled', // ✅ 취소 브로드캐스트
+          event: 'participantCancelled',
           payload,
         });
-      } else {
-        this.server.to(roomName).emit('participantCancelled', payload); // ✅ 소켓 브로드캐스트
       }
 
       return { ok: true };
@@ -505,17 +505,13 @@ export class ChatGateway
               response: error.getResponse(),
               message: error.message,
             }
-          : {
-              status: 500,
-              message: '서버 오류가 발생했습니다.',
-            };
+          : { status: 500, message: '서버 오류가 발생했습니다.' };
 
       client.emit('cancelChallengeEntryError', err);
       this.logger.error(
         `cancelChallengeEntry error: ${error?.message}`,
         error?.stack,
       );
-
       return { ok: false, ...(err.status ? { status: err.status } : {}) };
     }
   }

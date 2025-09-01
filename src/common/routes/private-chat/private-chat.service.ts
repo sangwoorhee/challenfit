@@ -631,4 +631,18 @@ export class PrivateChatService {
       this.logger.warn(`Cache delete failed for key ${key}:`, error.message);
     }
   }
+
+  // 채팅방 정보를 가져오는 헬퍼 메서드
+  async getChatRoomInfo(chatRoomIdx: string): Promise<PrivateChatRoom> {
+    const chatRoom = await this.privateChatRoomRepository.findOne({
+      where: { idx: chatRoomIdx },
+      relations: ['user1', 'user2', 'user1.profile', 'user2.profile'],
+    });
+  
+    if (!chatRoom) {
+      throw new NotFoundException('채팅방을 찾을 수 없습니다.');
+    }
+  
+    return chatRoom;
+  }
 }

@@ -67,6 +67,10 @@ export class PrivateChatGateway
     string,
     { userIdx: string; rooms: Set<string> }
   > = new Map();
+
+  // 온라인 사용자 추적을 위한 Map 추가
+  private onlineUsers: Map<string, Set<string>> = new Map(); // userIdx -> Set<socketId>
+  private userRooms: Map<string, Set<string>> = new Map(); // userIdx -> Set<roomName>
   private isRedisAvailable = true;
 
   constructor(
@@ -117,6 +121,15 @@ export class PrivateChatGateway
         rooms: new Set(),
       });
 
+      // 온라인 사용자 추가
+      if (!this.onlineUsers.has(userInfo.idx)) {
+        this.onlineUsers.set(userInfo.idx, new Set());
+      }
+      const userSocketSet = this.onlineUsers.get(userInfo.idx);
+      if (userSocketSet) {
+        userSocketSet.add(client.id);
+      }
+
       this.logger.log(`Private chat client connected: ${client.id}, User: ${userInfo.idx}`);
     } catch (error) {
       this.logger.error(
@@ -130,12 +143,15 @@ export class PrivateChatGateway
     const clientInfo = this.connectedClients.get(client.id);
 
     if (clientInfo) {
-      // 모든 룸에서 나가기
-      for (const room of clientInfo.rooms) {
-        await this.handleLeavePrivateRoom(client, {
-          chatRoomIdx: room.replace('private-room-', ''),
-          userIdx: clientInfo.userIdx,
-        });
+      // 온라인 사용자에서 제거
+      const userSockets = this.onlineUsers.get(clientInfo.userIdx);
+      if (userSockets) {
+        userSockets.delete(client.id);
+        if (userSockets.size === 0) {
+          this.onlineUsers.delete(clientInfo.userIdx);
+          // 유저가 완전히 오프라인이 되면 userRooms에서도 제거
+          this.userRooms.delete(clientInfo.userIdx);
+        }
       }
 
       this.connectedClients.delete(client.id);
@@ -164,9 +180,35 @@ export class PrivateChatGateway
         clientInfo.rooms.add(roomName);
       }
 
+      // 유저의 현재 룸 추적
+      if (!this.userRooms.has(userIdx)) {
+        this.userRooms.set(userIdx, new Set());
+      }
+      const currentUserRooms = this.userRooms.get(userIdx);
+      if (currentUserRooms) {
+        currentUserRooms.add(chatRoomIdx);
+      }
+
+      // 채팅방 정보 가져오기
+      const roomInfo = await this.privateChatService.getChatRoomInfo(chatRoomIdx);
+      const otherUserIdx = roomInfo.user1.idx === userIdx ? roomInfo.user2.idx : roomInfo.user1.idx;
+
+      // 상대방이 같은 방에 있는지 확인
+      const otherUserRooms = this.userRooms.get(otherUserIdx);
+      const isOtherUserInRoom = otherUserRooms ? otherUserRooms.has(chatRoomIdx) : false;
+
       // 채팅방 메시지 읽음 처리
       await this.privateChatService.markChatRoomMessagesAsRead(chatRoomIdx, userIdx);
 
+      // 상대방이 같은 방에 있으면 실시간 읽음 처리 알림
+      if (isOtherUserInRoom) {
+        client.to(roomName).emit('messagesMarkedAsRead', {
+          userIdx,
+          chatRoomIdx,
+          timestamp: new Date(),
+        });
+      }
+      
       // 상대방에게 온라인 상태 알림
       if (this.isRedisAvailable) {
         await this.redisPubSub.publish('private-chat:broadcast', {
@@ -189,6 +231,7 @@ export class PrivateChatGateway
       client.emit('joinedPrivateRoom', {
         chatRoomIdx,
         message: '채팅방에 입장하였습니다.',
+        isOtherUserOnline: isOtherUserInRoom, // 상대방 온라인 상태 추가
       });
 
       this.logger.log(`User ${userIdx} joined private room ${chatRoomIdx}`);
@@ -241,6 +284,21 @@ export class PrivateChatGateway
         attachmentUrl,
       });
 
+      // 채팅방 정보 가져오기
+      const roomInfo = await this.privateChatService.getChatRoomInfo(chatRoomIdx);
+      const receiverIdx = roomInfo.user1.idx === userIdx ? roomInfo.user2.idx : roomInfo.user1.idx;
+
+      // 상대방이 같은 방에 있는지 확인
+      const receiverRooms = this.userRooms.get(receiverIdx);
+      const isReceiverInRoom = receiverRooms ? receiverRooms.has(chatRoomIdx) : false;
+
+      // 상대방이 방에 있으면 즉시 읽음 처리
+      let isRead = false;
+      if (isReceiverInRoom) {
+        await this.privateChatService.markMessageAsRead(savedMessage.idx, receiverIdx);
+        isRead = true;
+      }
+
       // 저장된 메시지 로그 출력 (디버깅용)
       this.logger.debug(`Private message saved: ${JSON.stringify(savedMessage)}`);
 
@@ -251,6 +309,7 @@ export class PrivateChatGateway
         messageType: savedMessage.message_type,
         attachmentUrl: savedMessage.attachment_url,
         isDeleted: false,
+        isRead: isRead, // 실시간 읽음 상태 반영
         createdAt: savedMessage.created_at,
         sender: {
           idx: savedMessage.sender.idx,
@@ -387,6 +446,15 @@ export class PrivateChatGateway
       client.leave(roomName);
       const clientInfo = this.connectedClients.get(client.id);
       if (clientInfo) clientInfo.rooms.delete(roomName);
+
+      // userRooms에서 제거
+      const userRoomSet = this.userRooms.get(userIdx);
+      if (userRoomSet) {
+        userRoomSet.delete(chatRoomIdx);
+        if (userRoomSet.size === 0) {
+          this.userRooms.delete(userIdx);
+        }
+      }
 
       // 상대방에게 오프라인 상태 알림
       if (this.isRedisAvailable) {
