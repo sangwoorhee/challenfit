@@ -92,7 +92,7 @@ https://claude.ai/public/artifacts/275b604e-177e-4f86-9f6b-f351630ccbc2
     }
 ]
 
-피부여자 
+// 피부여자 
 1. 버킷 소유자 (AWS 계정) : f92f858568eb172ca5eca89c54ec7782ca0f2b1c7d3eec24d4c5a85f5650a60c
 2. 모든 사람 (퍼블릭 엑세스) : http://acs.amazonaws.com/groups/global/AllUsers
 3. 인증된 사용자 그룹(AWS 계정이 있는 모든 사용자) : http://acs.amazonaws.com/groups/global/AuthenticatedUsers
