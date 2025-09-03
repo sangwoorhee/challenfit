@@ -160,12 +160,28 @@ fi
 
 # 호스트의 PostgreSQL과 Redis 6 연결 테스트
 echo "⏳ 데이터베이스 서비스 연결 테스트 중..."
-export PGPASSWORD=postgres
+
+# .env 파일에서 DB 설정 읽기
+DB_PASSWORD=$(grep "^DB_PASSWORD=" .env | cut -d'=' -f2)
+DB_HOST=$(grep "^DB_HOST=" .env | cut -d'=' -f2)
+DB_USERNAME=$(grep "^DB_USERNAME=" .env | cut -d'=' -f2)
+DB_NAME=$(grep "^DB_NAME=" .env | cut -d'=' -f2)
+
+export PGPASSWORD="$DB_PASSWORD"
+
+echo "🔍 연결 정보: Host=$DB_HOST, User=$DB_USERNAME, DB=$DB_NAME"
+
 MAX_RETRIES=10
 COUNT=0
-while ! psql -h 172.17.0.1 -U postgres -d challenfit -c "SELECT 1;" >/dev/null 2>&1; do
+while ! psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_NAME" -c "SELECT 1;" >/dev/null 2>&1; do
     if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
         echo "❌ PostgreSQL 연결 실패"
+        echo "🔍 디버깅 정보:"
+        echo "   - Host: $DB_HOST"
+        echo "   - User: $DB_USERNAME" 
+        echo "   - Database: $DB_NAME"
+        echo "🔍 실제 연결 시도 결과:"
+        psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_NAME" -c "SELECT 1;"
         exit 1
     fi
     echo "🟡 PostgreSQL 연결 대기 중... ($COUNT/$MAX_RETRIES)"
