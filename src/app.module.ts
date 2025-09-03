@@ -96,7 +96,8 @@ import { PrivateChatModule } from './common/routes/private-chat/private-chat.mod
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: false, // 프로덕션에선 false
+        synchronize: true, // 프로덕션에선 false
+        // logging: true,
       }),
     }),
     // TypeORM 연결 설정
