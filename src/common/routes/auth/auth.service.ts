@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
@@ -22,20 +23,17 @@ import { RefreshToken } from 'src/common/entities/refresh_token.entity';
 import { AuthTokenResDto } from './dto/res.dto';
 import { validateOrReject } from 'class-validator';
 import * as jwt from 'jsonwebtoken';
-import { ForbiddenException } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    // REDIS Cache
-    @Inject(CACHE_MANAGER)
-    private cacheManager: Cache,
-    // DB
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(UserProfile)
     private readonly profileRepository: Repository<UserProfile>,
     @InjectRepository(UserSetting)
@@ -48,68 +46,40 @@ export class AuthService {
     private readonly mailerService: MailerService,
   ) {}
 
-  // 1. 휴대폰 SMS 인증 코드 전송
+  // -------------------------- SMS 인증 --------------------------
   async sendVerificationCode(
     phone: string,
   ): Promise<{ phone: string; code: string }> {
-    const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6자리 숫자 코드
-
-    const ttlSeconds = 300; // 5분 동안 유효
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const ttlSeconds = 300;
     const cacheKey = `sms:${phone}`;
-
-    console.log(
-      `🔍 SMS 코드 저장 시도: ${cacheKey} = ${code}, TTL: ${ttlSeconds}초`,
-    );
 
     try {
       await (this.cacheManager as any).set(cacheKey, code, { ttl: ttlSeconds });
-      console.log(`✅ SMS 코드 저장 성공: ${cacheKey}`);
-
-      // 저장 후 즉시 확인
-      const saved = await this.cacheManager.get(cacheKey);
-      console.log(`🔍 저장 확인: ${cacheKey} = ${saved}`);
     } catch (error) {
       console.error(`❌ SMS 코드 저장 실패: ${error.message}`);
     }
-
-    return {
-      phone,
-      code,
-    };
+    return { phone, code };
   }
 
-  // 1-2. 휴대폰 SMS 인증 코드 검증
   async verifySmsCode(
     phone: string,
     code: string,
   ): Promise<{ success: boolean; message: string }> {
     const cacheKey = `sms:${phone}`;
-
-    console.log(`🔍 SMS 코드 조회 시도: ${cacheKey}, 입력 코드: ${code}`);
-
     try {
       const cachedCode = await this.cacheManager.get<string>(cacheKey);
-      console.log(`🔍 캐시에서 조회된 코드: ${cachedCode}`);
-
-      if (!cachedCode) {
-        console.log(`❌ 캐시에 코드가 없음: ${cacheKey}`);
+      if (!cachedCode)
         return {
           success: false,
           message: '인증 코드가 만료되었거나 존재하지 않습니다.',
         };
-      }
-      if (cachedCode !== code) {
-        console.log(`❌ 코드 불일치: 캐시(${cachedCode}) vs 입력(${code})`);
+      if (cachedCode !== code)
         return { success: false, message: '인증 코드가 일치하지 않습니다.' };
-      }
-
-      // 인증 성공 시 캐시에서 삭제
       await this.cacheManager.del(cacheKey);
-      console.log(`✅ 인증 성공, 캐시 삭제: ${cacheKey}`);
-
       return { success: true, message: '인증이 완료되었습니다.' };
     } catch (error) {
-      console.error(`❌ SMS 코드 검증 실패: ${error.message}`);
+      console.error(` SMS 코드 검증 실패: ${error.message}`);
       return {
         success: false,
         message: '인증 코드 검증 중 오류가 발생했습니다.',
@@ -117,34 +87,31 @@ export class AuthService {
     }
   }
 
-  // 2. 회원가입 (E-mail, PassWord)
+  // -------------------------- 회원가입/로그인 --------------------------
   async signup(signupDto: SignupReqDto) {
     const { email, password, name, nickname, phone } = signupDto;
-
-    // 이메일 중복 체크
     const existing = await this.userRepository.findOne({ where: { email } });
-    if (existing) {
+    if (existing)
       throw new HttpException('이미 가입된 이메일입니다.', HttpStatus.CONFLICT);
-    }
 
-    // 닉네임 중복 체크
-    const existingNickname = await this.userRepository.findOne({ where: { nickname } });
-    if (existingNickname) {
-      throw new HttpException('이미 사용 중인 닉네임입니다.', HttpStatus.CONFLICT);
-    }
+    const existingNickname = await this.userRepository.findOne({
+      where: { nickname },
+    });
+    if (existingNickname)
+      throw new HttpException(
+        '이미 사용 중인 닉네임입니다.',
+        HttpStatus.CONFLICT,
+      );
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
+    const hashedPassword = await bcrypt.hash(password, 10);
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     let savedUser: User;
     try {
-      await validateOrReject(signupDto); // 유효성 검사
+      await validateOrReject(signupDto);
 
-      // (1). DB에 User 저장
       const user = queryRunner.manager.create(User, {
         email,
         password: hashedPassword,
@@ -156,7 +123,6 @@ export class AuthService {
       });
       savedUser = await queryRunner.manager.save(user);
 
-      // (2). DB에 UserProfile 저장
       const profile = queryRunner.manager.create(UserProfile, {
         user: savedUser,
         birth_date: signupDto.birth_date,
@@ -167,39 +133,25 @@ export class AuthService {
         introduction: signupDto.introduction,
         profile_image_url: signupDto.profile_image_url,
       });
-      const savedProfile = await queryRunner.manager.save(profile);
-      console.log('savedProfile', savedProfile);
+      await queryRunner.manager.save(profile);
 
-      // (3). DB에 UserSetting 저장
       const setting = queryRunner.manager.create(UserSetting, {
         user: savedUser,
         marketing_opt_in: signupDto.marketing_opt_in ?? false,
         no_push_alert: signupDto.no_push_alert ?? false,
       });
-      const savedSetting = await queryRunner.manager.save(setting);
-      console.log('savedSetting', savedSetting);
+      await queryRunner.manager.save(setting);
 
       const accessToken = this.generateAccessToken(savedUser.idx);
       const refreshToken = this.generateRefreshToken(savedUser.idx);
-
-      // (4). DB에 refreshToken 저장
       const refreshEntity = queryRunner.manager.create(RefreshToken, {
         token: refreshToken,
         user: savedUser,
       });
-      const savedRefreshToken = await queryRunner.manager.save(refreshEntity);
-      console.log('savedRefreshToken', savedRefreshToken);
+      await queryRunner.manager.save(refreshEntity);
 
       await queryRunner.commitTransaction();
-
-      // // 이메일 인증 메일 발송
-      // try {
-      //   await this.sendEmailVerification(savedUser);
-      // } catch (emailError) {
-      //   console.error(`이메일 인증 메일 발송 실패: ${emailError.message}`);
-      // }
       return { accessToken, refreshToken, user: savedUser, profile };
-      // catch문 에러 로그
     } catch (error) {
       await queryRunner.rollbackTransaction();
       console.error(`회원가입 중 오류 발생: ${error.message}`);
@@ -212,42 +164,34 @@ export class AuthService {
     }
   }
 
-  // 3. 로그인 (E-mail, PassWword)
   async login(loginDto: LoginReqDto) {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOne({
       where: { email },
       relations: ['refreshToken', 'profile'],
     });
-    if (!user) {
+    if (!user)
       throw new HttpException(
         '존재하지 않는 사용자입니다.',
         HttpStatus.NOT_FOUND,
       );
-    }
-
-    if (user.status === UserStatus.BANNED) {
+    if (user.status === UserStatus.BANNED)
       throw new ForbiddenException('차단된 사용자입니다.');
-    }
-
     const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) {
+    if (!isPasswordMatch)
       throw new HttpException(
         '비밀번호가 일치하지 않습니다.',
         HttpStatus.UNAUTHORIZED,
       );
-    }
 
     const accessToken = this.generateAccessToken(user.idx);
     const refreshToken = this.generateRefreshToken(user.idx);
     await this.createRefreshTokenUsingUser(user.idx, refreshToken);
-
     return { result: 'ok', accessToken, refreshToken, user };
   }
 
-  // 5,6,7,8. OAuth 소셜 로그인 처리 (카카오, 네이버, 구글, 애플)
+  // -------------------------- 소셜 OAuth 공통 --------------------------
   async oauthLogin(oauthUser: any): Promise<AuthTokenResDto> {
-    // provider 값 검증 및 enum 캐스팅
     const rawProvider = oauthUser.provider as string;
     if (!Object.values(UserProvider).includes(rawProvider as UserProvider)) {
       throw new BadRequestException('지원하지 않는 로그인 제공자입니다.');
@@ -261,78 +205,99 @@ export class AuthService {
       },
     });
 
-    // 소셜 로그인 유저가 존재하는지 확인
     if (user) {
-      // 이미 가입된 소셜 유저가 차단 상태인지 확인
-      if (user.status === UserStatus.BANNED) {
+      if (user.status === UserStatus.BANNED)
         throw new ForbiddenException('차단된 사용자입니다.');
-      }
     } else {
-      // 신규 소셜 가입 유저 생성
       user = this.userRepository.create({
         email: oauthUser.email,
         nickname: oauthUser.nickname,
-        name: oauthUser.name || oauthUser.nickname, // name 필드에 카카오 이름 매핑
-        phone: '', // 카카오에서는 전화번호를 기본 제공하지 않으므로 빈값
-        provider: provider,
+        name: oauthUser.name || oauthUser.nickname,
+        phone: '',
+        provider,
         provider_uid: oauthUser.providerId,
         status: UserStatus.ACTIVE,
       });
       await this.userRepository.save(user);
 
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
+      const qr = this.dataSource.createQueryRunner();
+      await qr.connect();
+      await qr.startTransaction();
       try {
-        // 카카오 생년월일 조합 (birthyear + birthday)
-        let birth_date: Date | undefined = undefined;
+        let birth_date: Date | undefined;
         if (oauthUser.birthyear && oauthUser.birthday) {
           const year = oauthUser.birthyear;
-          const monthDay = oauthUser.birthday; // MMDD 형태
-          const month = monthDay.substring(0, 2);
-          const day = monthDay.substring(2, 4);
-          birth_date = new Date(`${year}-${month}-${day}`);
+          const monthDay = oauthUser.birthday; // MMDD
+          birth_date = new Date(
+            `${year}-${monthDay.substring(0, 2)}-${monthDay.substring(2, 4)}`,
+          );
         }
-
-        const profile = queryRunner.manager.create(UserProfile, { 
+        const profile = qr.manager.create(UserProfile, {
           user,
           profile_image_url: oauthUser.profile_image_url,
-          birth_date: birth_date,
+          birth_date,
         });
-        await queryRunner.manager.save(profile);
-
-        const setting = queryRunner.manager.create(UserSetting, { user });
-        await queryRunner.manager.save(setting);
-
-        await queryRunner.commitTransaction();
-      } catch (error) {
-        console.error(`OAuth 사용자 초기화 중 오류 발생: ${error.message}`);
-        await queryRunner.rollbackTransaction();
+        await qr.manager.save(profile);
+        const setting = qr.manager.create(UserSetting, { user });
+        await qr.manager.save(setting);
+        await qr.commitTransaction();
+      } catch (e) {
+        await qr.rollbackTransaction();
         throw new InternalServerErrorException(
-          `OAuth 사용자 초기화 실패: ${error.message}`,
+          `OAuth 사용자 초기화 실패: ${e.message}`,
         );
       } finally {
-        await queryRunner.release();
+        await qr.release();
       }
     }
 
     const accessToken = this.generateAccessToken(user.idx);
     const refreshToken = this.generateRefreshToken(user.idx);
     await this.createRefreshTokenUsingUser(user.idx, refreshToken);
-
     return { accessToken, refreshToken };
   }
 
-  // 9. 토큰 갱신 - Refresh Token을 사용해 새로운 Access Token 발급
+  // 콜백 공통 처리: 앱 딥링크(code) 리다이렉트 or 웹 폴백(JSON)
+  async handleOAuthCallbackAndRedirect(oauthUser: any, res: Response) {
+    const tokens = await this.oauthLogin(oauthUser);
+
+    const appLink = this.configService.get<string>('APP_DEEP_LINK'); // ex) challenfit://oauth-callback
+    if (appLink && appLink.trim().length > 0) {
+      const code = await this.issueOneTimeCode(tokens);
+      const redirectUrl = `${appLink}?code=${encodeURIComponent(code)}`;
+      return res.redirect(302, redirectUrl);
+    }
+
+    // 앱 딥링크가 없으면 웹 폴백(JSON)
+    return res.json(tokens);
+  }
+
+  // 1회용 코드 발급 (기본 TTL: 60초)
+  async issueOneTimeCode(tokens: {
+    accessToken: string;
+    refreshToken: string;
+  }): Promise<string> {
+    const code = randomBytes(16).toString('hex');
+    const key = `oauth:code:${code}`;
+    await this.cacheManager.set(key, tokens, 60); // 60초
+    return code;
+  }
+
+  // 1회용 코드 소비: 토큰 반환
+  async consumeOneTimeCode(code: string): Promise<AuthTokenResDto> {
+    const key = `oauth:code:${code}`;
+    const tokens = await this.cacheManager.get<AuthTokenResDto>(key);
+    if (!tokens) throw new BadRequestException('Invalid or expired code');
+    await this.cacheManager.del(key);
+    return tokens;
+  }
+
+  // -------------------------- 토큰/로그아웃 --------------------------
   async refreshTokens(refreshToken: string): Promise<AuthTokenResDto> {
     try {
-      // 리프레시 토큰 검증
       const decoded = this.jwtService.verify(refreshToken, {
         secret: this.configService.get('JWT_SECRET'),
       });
-
-      // 토큰 타입 확인
       if (decoded.tokenType !== 'refresh') {
         throw new HttpException(
           '유효하지 않은 토큰 타입입니다.',
@@ -340,42 +305,32 @@ export class AuthService {
         );
       }
 
-      // DB에서 리프레시 토큰 확인
       const refreshTokenEntity = await this.refreshTokenRepository.findOne({
         where: { user: { idx: decoded.sub }, token: refreshToken },
         relations: ['user'],
       });
-
       if (!refreshTokenEntity) {
         throw new HttpException(
           '유효하지 않은 리프레시 토큰입니다.',
           HttpStatus.UNAUTHORIZED,
         );
       }
-
-      // 사용자 상태 확인
       if (refreshTokenEntity.user.status !== UserStatus.ACTIVE) {
         throw new ForbiddenException('비활성화된 사용자입니다.');
       }
 
-      // 새로운 토큰 발급
       const newAccessToken = this.generateAccessToken(
         refreshTokenEntity.user.idx,
       );
       const newRefreshToken = this.generateRefreshToken(
         refreshTokenEntity.user.idx,
       );
-
-      // 리프레시 토큰 업데이트
       await this.createRefreshTokenUsingUser(
         refreshTokenEntity.user.idx,
         newRefreshToken,
       );
 
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-      };
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         throw new HttpException(
@@ -390,7 +345,6 @@ export class AuthService {
     }
   }
 
-  // 10. 로그아웃 - Refresh Token 삭제
   async logout(userId: string): Promise<{ message: string }> {
     try {
       await this.refreshTokenRepository.delete({ user: { idx: userId } });
@@ -402,71 +356,55 @@ export class AuthService {
     }
   }
 
-  // ------------------------------ 공용 모듈 ------------------------------
-  // *** 액세스 토큰 생성 ***
+  // -------------------------- 공용 유틸 --------------------------
   generateAccessToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'access' };
     return this.jwtService.sign(payload); // JwtModule에서 secret, expiresIn 설정됨
+    // ex) JwtModule.register({ secret: JWT_SECRET, signOptions: { expiresIn: '1h' } })
   }
 
-  // *** 리프레시 토큰 생성 ***
   generateRefreshToken(user_idx: string) {
     const payload = { sub: user_idx, tokenType: 'refresh' };
-    return this.jwtService.sign(payload, { expiresIn: '30d' }); // 기간만 명시
+    return this.jwtService.sign(payload, { expiresIn: '30d' });
   }
-
-  /***
-   * 사용자 ID와 리프레시 토큰을 사용하여 RefreshToken 엔티티를 생성하거나 업데이트함.
-   * 만약 사용자에 대한 RefreshToken 엔티티가 이미 존재하면 토큰 값을 업데이트하고,
-   * 존재하지 않으면 새로운 RefreshToken 엔티티를 생성함.
-   *
-   * @param user_idx - 사용자 ID
-   * @param refreshToken - 새로 생성된 리프레시 토큰
-   */
 
   private async createRefreshTokenUsingUser(
     user_idx: string,
     refreshToken: string,
   ) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
     try {
-      // 기존 리프레시 토큰 존재 여부 조회
-      let refreshTokenEntity = await queryRunner.manager.findOne(
+      let refreshTokenEntity = await qr.manager.findOne(
         this.refreshTokenRepository.target,
         {
           where: { user: { idx: user_idx } },
         },
       );
-      // 이미 존재할 경우 → 토큰 갱신
       if (refreshTokenEntity) {
         refreshTokenEntity.token = refreshToken;
-        // 존재하지 않을 경우 → 새 엔티티 생성
       } else {
         refreshTokenEntity = this.refreshTokenRepository.create({
           user: { idx: user_idx },
           token: refreshToken,
         });
       }
-      await queryRunner.manager.save(refreshTokenEntity);
-      await queryRunner.commitTransaction();
+      await qr.manager.save(refreshTokenEntity);
+      await qr.commitTransaction();
     } catch (error) {
-      console.error(`error: ${error}`);
-      await queryRunner.rollbackTransaction();
+      await qr.rollbackTransaction();
       throw new InternalServerErrorException(
         `리프레시 토큰 저장 실패: ${error.message}`,
       );
     } finally {
-      await queryRunner.release();
+      await qr.release();
     }
   }
 
-  // *** 이메일 인증 토큰 생성 및 메일 전송 ***
   async sendEmailVerification(user: User): Promise<void> {
     const token = uuidv4();
-    await this.cacheManager.set(`email_verification:${token}`, user.idx, 3600); // 1시간 유효
+    await this.cacheManager.set(`email_verification:${token}`, user.idx, 3600);
     const verifyUrl = `${this.configService.get('FRONTEND_ORIGIN')}/auth/verify-email?token=${token}`;
     await this.mailerService.sendMail({
       to: user.email,
@@ -476,17 +414,14 @@ export class AuthService {
     });
   }
 
-  // *** 인증 토큰 검증 및 상태 업데이트 ***
   async verifyEmail(token: string): Promise<void> {
     const userIdx = await this.cacheManager.get<string>(
       `email_verification:${token}`,
     );
     if (!userIdx)
       throw new BadRequestException('유효하지 않거나 만료된 토큰입니다.');
-
     const user = await this.userRepository.findOne({ where: { idx: userIdx } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
-
     user.status = UserStatus.ACTIVE;
     await this.userRepository.save(user);
     await this.cacheManager.del(`email_verification:${token}`);
