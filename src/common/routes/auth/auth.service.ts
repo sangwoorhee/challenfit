@@ -296,7 +296,7 @@ export class AuthService {
         status: UserStatus.ACTIVE,
       });
       await this.userRepository.save(user);
-
+      //
       const qr = this.dataSource.createQueryRunner();
       await qr.connect();
       await qr.startTransaction();
