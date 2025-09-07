@@ -6,9 +6,7 @@ import {
   UseGuards,
   Query,
   UseInterceptors,
-  Res,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginReqDto, SignupReqDto, VerifySmsCodeReqDto } from './dto/req.dto';
 import { AuthTokenResDto } from './dto/res.dto';
@@ -24,124 +22,164 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // 1. 휴대폰 SMS 인증 코드 전송
+  // POST : http://localhost:3000/auth/verify-sms
   @Post('verify-sms')
   @ApiOperation({
     summary: '휴대폰 SMS 인증 코드 전송',
-    description: 'POST : /auth/verify-sms',
+    description: 'POST : http://localhost:3000/auth/verify-sms',
   })
   async verifySms(@Body('phone') phone: string) {
     return await this.authService.sendVerificationCode(phone);
   }
 
   // 1-2. 휴대폰 SMS 인증 코드 검증
+  // POST : http://localhost:3000/auth/verify-sms-code
   @Post('verify-sms-code')
   @ApiOperation({
     summary: '휴대폰 SMS 인증 코드 검증',
-    description: 'POST : /auth/verify-sms-code',
+    description: 'POST : http://localhost:3000/auth/verify-sms-code',
   })
   async verifySmsCode(@Body() dto: VerifySmsCodeReqDto) {
     return await this.authService.verifySmsCode(dto.phone, dto.code);
   }
 
-  // 2. 회원가입
+  // 2. 회원가입 (E-mail, PassWord)
+  // POST : http://localhost:3000/auth/signup
   @Post('signup')
   @ApiOperation({
     summary: '회원가입 (E-mail, PassWword)',
-    description: 'POST : /auth/signup',
+    description: 'POST : http://localhost:3000/auth/signup',
   })
   async signup(@Body() signupDto: SignupReqDto) {
     return await this.authService.signup(signupDto);
   }
 
-  // 3. 로그인
+  // 3. 로그인 (E-mail, PassWord)
+  // POST : http://localhost:3000/auth/login
   @Post('login')
   @ApiOperation({
     summary: '로그인 (E-mail, PassWword)',
-    description: 'POST : /auth/login',
+    description: 'POST : http://localhost:3000/auth/login',
   })
   async login(@Body() loginDto: LoginReqDto): Promise<AuthTokenResDto> {
     return await this.authService.login(loginDto);
   }
 
-  // 4. 이메일 인증
+  // 4. 회원가입 시 이메일 인증
+  // GET : http://localhost:3000/auth/verify-email
   @Get('verify-email')
   @ApiOperation({
     summary: '이메일 인증',
-    description: 'GET : /auth/verify-email',
+    description: 'GET : http://localhost:3000/auth/verify-email',
   })
   async verifyEmail(@Query('token') token: string) {
     await this.authService.verifyEmail(token);
     return { message: '이메일 인증이 완료되었습니다.' };
   }
 
-  // 5. 카카오 로그인 시작
+  // 5. 카카오 로그인
+  // GET : http://localhost:3000/auth/kakao
+  // GET : http://localhost:3000/auth/kakao/callback
   @Get('kakao')
   @UseGuards(AuthGuard('kakao'))
-  @ApiOperation({ summary: '카카오 로그인', description: 'GET : /auth/kakao' })
-  kakaoLogin() {}
+  @ApiOperation({
+    summary: '카카오 로그인',
+    description: 'GET : http://localhost:3000/auth/kakao',
+  })
+  kakaoLogin() {
+    // Passport가 자동으로 처리
+  }
 
-  // 5-1. 카카오 콜백 → 앱 딥링크(code)로 리다이렉트 (웹 폴백 지원)
+  // 카카오 로그인 콜백
   @Get('kakao/callback')
   @UseGuards(AuthGuard('kakao'))
   @ApiOperation({
     summary: '카카오 로그인 콜백',
-    description: 'GET : /auth/kakao/callback',
+    description: 'GET : http://localhost:3000/auth/kakao/callback',
   })
-  async kakaoCallback(@User() user: any, @Res() res: Response) {
-    return this.authService.handleOAuthCallbackAndRedirect(user, res);
+  async kakaoCallback(@User() user) {
+    return await this.authService.oauthLogin(user);
   }
 
   // 6. 네이버 로그인
+  // GET : http://localhost:3000/auth/naver
+  // GET : http://localhost:3000/auth/naver/callback
   @Get('naver')
   @UseGuards(AuthGuard('naver'))
-  @ApiOperation({ summary: '네이버 로그인', description: 'GET : /auth/naver' })
-  naverLogin() {}
+  @ApiOperation({
+    summary: '네이버 로그인',
+    description: 'GET : http://localhost:3000/auth/naver',
+  })
+  naverLogin() {
+    // Passport가 자동으로 처리
+  }
 
+  // 네이버 로그인 콜백
   @Get('naver/callback')
   @UseGuards(AuthGuard('naver'))
   @ApiOperation({
     summary: '네이버 로그인 콜백',
-    description: 'GET : /auth/naver/callback',
+    description: 'GET : http://localhost:3000/auth/naver/callback',
   })
-  async naverCallback(@User() user: any, @Res() res: Response) {
-    return this.authService.handleOAuthCallbackAndRedirect(user, res);
+  async naverCallback(@User() user) {
+    return await this.authService.oauthLogin(user);
   }
 
   // 7. 구글 로그인
+  // GET : http://localhost:3000/auth/google
+  // GET : http://localhost:3000/auth/google/callback
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: '구글 로그인', description: 'GET : /auth/google' })
-  googleLogin() {}
+  @ApiOperation({
+    summary: '구글 로그인',
+    description: 'GET : http://localhost:3000/auth/google',
+  })
+  googleLogin() {
+    // Passport가 자동으로 처리
+  }
 
+  // 구글 로그인 콜백
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({
     summary: '구글 로그인 콜백',
-    description: 'GET : /auth/google/callback',
+    description: 'GET : http://localhost:3000/auth/google/callback',
   })
-  async googleCallback(@User() user: any, @Res() res: Response) {
-    return this.authService.handleOAuthCallbackAndRedirect(user, res);
+  async googleCallback(@User() user) {
+    return await this.authService.oauthLogin(user);
   }
 
   // 8. 애플 로그인
+  // GET : http://localhost:3000/auth/apple
+  // GET : http://localhost:3000/auth/apple/callback
   @Get('apple')
   @UseGuards(AuthGuard('apple'))
-  @ApiOperation({ summary: '애플 로그인', description: 'GET : /auth/apple' })
-  appleLogin() {}
+  @ApiOperation({
+    summary: '애플 로그인',
+    description: 'GET : http://localhost:3000/auth/apple',
+  })
+  appleLogin() {
+    // Passport가 자동으로 처리
+  }
 
+  // 애플 로그인 콜백
   @Get('apple/callback')
   @UseGuards(AuthGuard('apple'))
   @ApiOperation({
     summary: '애플 로그인 콜백',
-    description: 'GET : /auth/apple/callback',
+    description: 'GET : http://localhost:3000/auth/apple/callback',
   })
-  async appleCallback(@User() user: any, @Res() res: Response) {
-    return this.authService.handleOAuthCallbackAndRedirect(user, res);
+  async appleCallback(@User() user) {
+    return await this.authService.oauthLogin(user);
   }
 
   // 9. 토큰 갱신
+  // POST : http://localhost:3000/auth/refresh
   @Post('refresh')
-  @ApiOperation({ summary: '토큰 갱신', description: 'POST : /auth/refresh' })
+  @ApiOperation({
+    summary: '토큰 갱신',
+    description: 'POST : http://localhost:3000/auth/refresh',
+  })
   async refresh(
     @Body('refreshToken') refreshToken: string,
   ): Promise<AuthTokenResDto> {
@@ -149,24 +187,16 @@ export class AuthController {
   }
 
   // 10. 로그아웃
+  // POST : http://localhost:3000/auth/logout
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(JwtRefreshInterceptor)
+  // @ApiBearerAuth()
   @ApiOperation({
     summary: '로그아웃 (리프레시 토큰 삭제)',
-    description: 'POST : /auth/logout',
+    description: 'POST : http://localhost:3000/auth/logout',
   })
   async logout(@User() user: UserAfterAuth): Promise<{ message: string }> {
     return await this.authService.logout(user.idx);
-  }
-
-  // 11. (모바일) 일회용 code → 토큰 교환
-  @Post('exchange')
-  @ApiOperation({
-    summary: 'OAuth 일회용 코드 교환',
-    description: 'POST : /auth/exchange',
-  })
-  async exchange(@Body('code') code: string): Promise<AuthTokenResDto> {
-    return await this.authService.consumeOneTimeCode(code);
   }
 }
