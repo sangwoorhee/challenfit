@@ -7,6 +7,8 @@ import {
   IsBoolean,
   IsDateString,
   IsInt,
+  IsIn,
+  IsUrl,
 } from 'class-validator';
 
 // 회원가입 요청 DTO
@@ -76,6 +78,36 @@ export class SignupReqDto {
   @IsOptional()
   @IsBoolean()
   no_push_alert?: boolean;
+}
+
+export class SocialLoginReqDto {
+  @IsIn(['kakao', 'naver', 'google', 'apple'])
+  provider: 'kakao' | 'naver' | 'google' | 'apple';
+
+  @IsString()
+  socialId: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  nickname?: string;
+
+  @IsOptional()
+  @IsUrl()
+  profileImageUrl?: string;
+
+  // 카카오 토큰 검증용(선택)
+  @IsOptional()
+  @IsString()
+  kakaoAccessToken?: string;
+
+  // 다른 프로바이더용(선택)
+  @IsOptional()
+  @IsString()
+  idToken?: string;
 }
 
 // 로그인

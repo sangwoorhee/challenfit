@@ -128,9 +128,14 @@ export class AuthService {
     }
 
     // 닉네임 중복 체크
-    const existingNickname = await this.userRepository.findOne({ where: { nickname } });
+    const existingNickname = await this.userRepository.findOne({
+      where: { nickname },
+    });
     if (existingNickname) {
-      throw new HttpException('이미 사용 중인 닉네임입니다.', HttpStatus.CONFLICT);
+      throw new HttpException(
+        '이미 사용 중인 닉네임입니다.',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const saltRounds = 10;
@@ -247,81 +252,106 @@ export class AuthService {
 
   // 5,6,7,8. OAuth 소셜 로그인 처리 (카카오, 네이버, 구글, 애플)
   async oauthLogin(oauthUser: any): Promise<AuthTokenResDto> {
-    // provider 값 검증 및 enum 캐스팅
+    // 0) provider 검증
     const rawProvider = oauthUser.provider as string;
     if (!Object.values(UserProvider).includes(rawProvider as UserProvider)) {
       throw new BadRequestException('지원하지 않는 로그인 제공자입니다.');
     }
     const provider = rawProvider as UserProvider;
 
+    // 1) 이미 같은 소셜 계정이 있는지
     let user = await this.userRepository.findOne({
-      where: {
-        provider: oauthUser.provider,
-        provider_uid: oauthUser.providerId,
-      },
+      where: { provider, provider_uid: oauthUser.providerId },
     });
 
-    // 소셜 로그인 유저가 존재하는지 확인
-    if (user) {
-      // 이미 가입된 소셜 유저가 차단 상태인지 확인
-      if (user.status === UserStatus.BANNED) {
-        throw new ForbiddenException('차단된 사용자입니다.');
-      }
-    } else {
-      // 신규 소셜 가입 유저 생성
+    // 2) 이메일 충돌 방지: 같은 이메일의 다른 계정이 이미 있으면 정책대로
+    const existingByEmail = oauthUser.email
+      ? await this.userRepository.findOne({ where: { email: oauthUser.email } })
+      : null;
+
+    if (!user && existingByEmail) {
+      throw new HttpException(
+        '이미 해당 이메일로 가입된 계정이 있습니다. 이메일로 로그인한 뒤 소셜 계정을 연결해주세요.',
+        HttpStatus.CONFLICT,
+      );
+      // existingByEmail.provider = provider;
+      // existingByEmail.provider_uid = oauthUser.providerId;
+      // user = await this.userRepository.save(existingByEmail);
+    }
+
+    // 3) 신규 생성 경로
+    if (!user) {
+      const nickname = await this.ensureUniqueNickname(
+        oauthUser.nickname ||
+          (oauthUser.email ? oauthUser.email.split('@')[0] : 'user'),
+      );
+
       user = this.userRepository.create({
-        email: oauthUser.email,
-        nickname: oauthUser.nickname,
-        name: oauthUser.name || oauthUser.nickname, // name 필드에 카카오 이름 매핑
-        phone: '', // 카카오에서는 전화번호를 기본 제공하지 않으므로 빈값
-        provider: provider,
+        email: oauthUser.email ?? null, // 이메일 동의 안 했을 수 있음
+        nickname,
+        name: oauthUser.name || nickname,
+        phone: '',
+        provider,
         provider_uid: oauthUser.providerId,
         status: UserStatus.ACTIVE,
       });
       await this.userRepository.save(user);
 
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
+      const qr = this.dataSource.createQueryRunner();
+      await qr.connect();
+      await qr.startTransaction();
       try {
-        // 카카오 생년월일 조합 (birthyear + birthday)
-        let birth_date: Date | undefined = undefined;
+        let birth_date: Date | undefined;
         if (oauthUser.birthyear && oauthUser.birthday) {
-          const year = oauthUser.birthyear;
-          const monthDay = oauthUser.birthday; // MMDD 형태
-          const month = monthDay.substring(0, 2);
-          const day = monthDay.substring(2, 4);
-          birth_date = new Date(`${year}-${month}-${day}`);
+          const y = oauthUser.birthyear;
+          const md = oauthUser.birthday; // MMDD
+          birth_date = new Date(
+            `${y}-${md.substring(0, 2)}-${md.substring(2, 4)}`,
+          );
         }
 
-        const profile = queryRunner.manager.create(UserProfile, { 
+        const profile = qr.manager.create(UserProfile, {
           user,
-          profile_image_url: oauthUser.profile_image_url,
-          birth_date: birth_date,
+          profile_image_url: oauthUser.profile_image_url ?? null,
+          birth_date,
         });
-        await queryRunner.manager.save(profile);
+        await qr.manager.save(profile);
 
-        const setting = queryRunner.manager.create(UserSetting, { user });
-        await queryRunner.manager.save(setting);
+        const setting = qr.manager.create(UserSetting, { user });
+        await qr.manager.save(setting);
 
-        await queryRunner.commitTransaction();
-      } catch (error) {
-        console.error(`OAuth 사용자 초기화 중 오류 발생: ${error.message}`);
-        await queryRunner.rollbackTransaction();
+        await qr.commitTransaction();
+      } catch (e) {
+        await qr.rollbackTransaction();
         throw new InternalServerErrorException(
-          `OAuth 사용자 초기화 실패: ${error.message}`,
+          `OAuth 사용자 초기화 실패: ${e.message}`,
         );
       } finally {
-        await queryRunner.release();
+        await qr.release();
       }
     }
 
+    // 4) 토큰 발급 + 저장
     const accessToken = this.generateAccessToken(user.idx);
     const refreshToken = this.generateRefreshToken(user.idx);
     await this.createRefreshTokenUsingUser(user.idx, refreshToken);
 
     return { accessToken, refreshToken };
+  }
+
+  // 닉네임 유니크 보정
+  private async ensureUniqueNickname(base: string): Promise<string> {
+    const cleaned = base.trim().replace(/\s+/g, '_');
+    let candidate = cleaned || 'user';
+    let tries = 0;
+    while (
+      await this.userRepository.findOne({ where: { nickname: candidate } })
+    ) {
+      tries += 1;
+      candidate = `${cleaned}_${Math.floor(1000 + Math.random() * 9000)}`;
+      if (tries > 5) break; // 과도 루프 방지
+    }
+    return candidate;
   }
 
   // 9. 토큰 갱신 - Refresh Token을 사용해 새로운 Access Token 발급
