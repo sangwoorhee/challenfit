@@ -15,9 +15,11 @@ import { NaverStrategy } from './social-login/naver.strategy';
 import { GoogleStrategy } from './social-login/google.strategy';
 import { AppleStrategy } from './social-login/apple.strategy';
 import { JwtRefreshInterceptor } from 'src/common/interceptor/jwt-refresh.interceptor';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
+    HttpModule,
     PassportModule,
     TypeOrmModule.forFeature([User, UserProfile, UserSetting, RefreshToken]),
     JwtModule.registerAsync({
