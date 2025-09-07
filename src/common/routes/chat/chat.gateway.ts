@@ -174,59 +174,35 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: JoinRoomDto,
   ) {
-    console.log('joinRoom called:', data);
-    console.log('client.data.user:', client.data.user);
-    console.log('client.handshake.auth:', client.handshake.auth);
-    const { challengeRoomIdx, userIdx } = data;
+    const { challengeRoomIdx, userIdx, nickname } = data;
     const roomName = `room-${challengeRoomIdx}`;
-    console.log(this.isRedisAvailable);
 
     try {
-      // 룸 참가
       client.join(roomName);
 
-      // 클라이언트 룸 정보 업데이트
       const clientInfo = this.connectedClients.get(client.id);
-      if (clientInfo) {
-        clientInfo.rooms.add(roomName);
-      }
+      if (clientInfo) clientInfo.rooms.add(roomName);
 
-      // 현재 접속자 목록 전송
       const onlineUsers =
         await this.chatService.getRoomOnlineUsers(challengeRoomIdx);
       client.emit('onlineUsers', onlineUsers);
 
-      const message = `${data.nickname}님이 입장하였습니다.`;
-
-      // 메시지 저장
-      const savedMessage = await this.chatService.saveMessage({
+      const payload = {
         userIdx,
-        challengeRoomIdx,
-        message,
-        messageType: ChatMessageType.SYSTEM_PARTICIPATE,
-        attachmentUrl: undefined,
-      });
+        nickname: nickname || client.data.user?.nickname || '',
+        message: `${nickname || client.data.user?.nickname || '누군가'}님이 입장하였습니다.`,
+        messageType: 'SYSTEM_PARTICIPATE',
+        timestamp: new Date().toISOString(),
+      };
 
-      // 다른 서버의 클라이언트에게도 알림
       if (this.isRedisAvailable) {
         await this.redisPubSub.publish('chat:broadcast', {
           room: roomName,
           event: 'userJoined',
-          payload: {
-            userIdx: '',
-            nickname: '',
-            timestamp: new Date(),
-            savedMessage,
-          },
+          payload,
         });
       } else {
-        // Redis 없이 현재 서버의 클라이언트에게만 브로드캐스트
-        this.server.to(roomName).emit('userJoined', {
-          userIdx,
-          nickname: client.data.user.nickname,
-          timestamp: new Date(),
-          savedMessage,
-        });
+        this.server.to(roomName).emit('userJoined', payload);
       }
 
       this.logger.log(`User ${userIdx} joined room ${challengeRoomIdx}`);
